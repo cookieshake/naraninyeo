@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 from naraninyeo.models.message import MessageRequest, MessageResponse
+from naraninyeo.services.message import save_message
+from naraninyeo.services.response import get_random_response
 
 router = APIRouter()
 
@@ -10,11 +12,10 @@ async def root():
 @router.post("/new_message", response_model=MessageResponse)
 async def handle_message(request: MessageRequest) -> MessageResponse:
     """
-    Handle incoming messages and return a response.
+    Handle incoming messages and save them to MongoDB.
     """
-    # 여기서 메시지 처리 로직을 구현할 수 있습니다
-    # 예: 특정 키워드에 대한 응답, 메시지 필터링 등
+    await save_message(request)
     return MessageResponse(
         do_reply=True,
-        message=request.content  # 원본 메시지 내용을 그대로 반환
-    ) 
+        message=get_random_response()
+    )
