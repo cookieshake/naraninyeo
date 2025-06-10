@@ -1,6 +1,5 @@
 from naraninyeo.models.message import MessageRequest, MessageDocument
 from naraninyeo.core.database import db
-from motor.motor_asyncio import UpdateOne
 from typing import Optional
 
 def should_respond(message: str) -> bool:
