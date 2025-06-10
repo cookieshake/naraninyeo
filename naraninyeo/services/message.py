@@ -20,7 +20,8 @@ async def save_message(message_request: MessageRequest, response_content: Option
     """
     message_doc = MessageDocument(
         _id=message_request.logId,
-        room_id=message_request.room,
+        room=message_request.room,
+        channel_id=message_request.channelId,
         author_name=message_request.author.name,
         content=message_request.content,
         has_response=response_content is not None,

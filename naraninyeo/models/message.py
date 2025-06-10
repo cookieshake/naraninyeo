@@ -22,7 +22,8 @@ class MessageRequest(BaseModel):
 
 class MessageDocument(BaseModel):
     message_id: str = Field(alias="_id")
-    room_id: str
+    room: str
+    channel_id: str
     author_name: str
     content: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
