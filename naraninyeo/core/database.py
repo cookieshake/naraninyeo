@@ -15,7 +15,7 @@ class Database:
 
     @property
     def get_db(self) -> AsyncIOMotorDatabase:
-        if not self.db:
+        if self.db is None:
             raise RuntimeError("Database not initialized")
         return self.db
 
