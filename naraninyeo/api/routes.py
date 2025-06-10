@@ -15,20 +15,13 @@ async def handle_message(request: MessageRequest) -> MessageResponse:
     Handle incoming messages and save them to MongoDB.
     Only respond if the message starts with '/'.
     """
-    # Save user's message
-    await save_message(request)
-    
     needs_response = should_respond(request.content)
-    if needs_response:
-        response_message = get_random_response()
-        # Save bot's response
-        await save_message(request, is_bot=True)
-        return MessageResponse(
-            do_reply=True,
-            message=response_message
-        )
+    response_message = get_random_response() if needs_response else None
+    
+    # Save message with response if any
+    await save_message(request, response_message)
     
     return MessageResponse(
-        do_reply=False,
-        message=""
+        do_reply=needs_response,
+        message=response_message if needs_response else ""
     )

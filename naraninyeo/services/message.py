@@ -1,6 +1,7 @@
 from naraninyeo.models.message import MessageRequest, MessageDocument
 from naraninyeo.core.database import db
 from motor.motor_asyncio import UpdateOne
+from typing import Optional
 
 def should_respond(message: str) -> bool:
     """
@@ -9,20 +10,22 @@ def should_respond(message: str) -> bool:
     """
     return message.strip().startswith('/')
 
-async def save_message(message_request: MessageRequest, is_bot: bool = False) -> None:
+async def save_message(message_request: MessageRequest, response_content: Optional[str] = None) -> None:
     """
     Save message to database with simplified fields.
     If a message with the same logId exists, it will be updated.
     
     Args:
         message_request: The message request to save
-        is_bot: Whether this is a bot's response message
+        response_content: The bot's response content if any
     """
     message_doc = MessageDocument(
-        _id=f"{message_request.logId}{'_bot' if is_bot else ''}",
+        _id=message_request.logId,
         room_id=message_request.room,
         author_name=message_request.author.name,
-        content=message_request.content
+        content=message_request.content,
+        has_response=response_content is not None,
+        response_content=response_content
     )
     
     # Use upsert to handle duplicates

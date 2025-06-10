@@ -26,6 +26,8 @@ class MessageDocument(BaseModel):
     author_name: str
     content: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    has_response: bool = False
+    response_content: Optional[str] = None
 
 class MessageResponse(BaseModel):
     do_reply: bool
