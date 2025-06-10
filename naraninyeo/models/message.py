@@ -20,9 +20,12 @@ class MessageRequest(BaseModel):
     logId: str
     isMultiChat: bool
 
-class MessageDocument(MessageRequest):
+class MessageDocument(BaseModel):
+    message_id: str = Field(alias="_id")
+    room_id: str
+    author_name: str
+    content: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 class MessageResponse(BaseModel):
     do_reply: bool
