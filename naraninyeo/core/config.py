@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "naraninyeo"
 
+    # Gemini API settings
+    GOOGLE_API_KEY: str
+
     class Config:
         env_file = ".env"
 

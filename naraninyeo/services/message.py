@@ -1,36 +1,34 @@
-from naraninyeo.models.message import MessageRequest, MessageDocument
+import random
+
+from naraninyeo.models.message import MessageRequest
 from naraninyeo.core.database import db
-from typing import Optional
+from naraninyeo.handlers.response import generate_llm_response, get_random_response
 
-def should_respond(message: str) -> bool:
+async def save_message(request: MessageRequest, response: str | None = None):
     """
-    Determine if we should respond to the message.
-    Returns True if the message starts with '/', False otherwise.
+    메시지를 MongoDB에 저장합니다.
     """
-    return message.strip().startswith('/')
+    message_data = {
+        "content": request.content,
+        "response": response,
+        "timestamp": request.timestamp
+    }
+    await db.messages.insert_one(message_data)
 
-async def save_message(message_request: MessageRequest, response_content: Optional[str] = None) -> None:
+async def should_respond(request: MessageRequest) -> bool:
     """
-    Save message to database with simplified fields.
-    If a message with the same logId exists, it will be updated.
-    
-    Args:
-        message_request: The message request to save
-        response_content: The bot's response content if any
+    메시지가 응답이 필요한지 확인합니다.
     """
-    message_doc = MessageDocument(
-        _id=message_request.logId,
-        room=message_request.room,
-        channel_id=message_request.channelId,
-        author_name=message_request.author.name,
-        content=message_request.content,
-        has_response=response_content is not None,
-        response_content=response_content
-    )
+    return request.content.startswith('/')
+
+async def get_response(request: MessageRequest) -> str:
+    """
+    LLM을 사용하여 응답을 생성합니다.
+    """
+    try:
+        if random.random() < 0.5:
+            return await generate_llm_response(request.content) 
+    except Exception as e:
+        print(e)
+    return get_random_response()
     
-    # Use upsert to handle duplicates
-    await db.get_db.messages.update_one(
-        {"_id": message_doc.message_id},
-        {"$set": message_doc.model_dump(by_alias=True)},
-        upsert=True
-    ) 
