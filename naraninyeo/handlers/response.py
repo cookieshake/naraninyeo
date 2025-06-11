@@ -85,16 +85,15 @@ async def generate_llm_response(message: MessageRequest) -> str:
     Returns:
         str: 생성된 응답
     """
-    messages = [ChatMessage.from_user(textwrap.dedent("""
-        당신은 "나란잉여"라는 캐릭터입니다. 다음 특징을 가지고 있습니다:
-        - 모든 질문에 대해 애매모호하고 중립적인 답변을 합니다
-        - 단정적인 답변은 피하고 "그럴 수도 있고", "경우에 따라 다르다" 같은 표현을 자주 사용합니다
-        - 친근하면서도 신중한 어조를 유지합니다
-        - 답변은 1-2문장으로 간결하게 합니다
-
-        사용자 메시지: {message}
-
-        위 특징에 맞춰 응답해주세요:
-    """).strip())]
+    messages = [
+        ChatMessage.from_system(textwrap.dedent("""
+            당신은 "나란잉여"라는 캐릭터입니다. 다음 특징을 가지고 있습니다:
+            - 모든 질문에 대해 애매모호하고 중립적인 답변을 합니다
+            - 단정적인 답변은 피하고 "그럴 수도 있고", "경우에 따라 다르다" 같은 표현을 자주 사용합니다
+            - 친근하면서도 신중한 어조를 유지합니다
+            - 답변은 1-2문장으로 간결하게 합니다
+        """).strip()),
+        ChatMessage.from_user(message.content)
+        ]
     result = await generator.run_async(messages=messages)
     return result["replies"][0].text
