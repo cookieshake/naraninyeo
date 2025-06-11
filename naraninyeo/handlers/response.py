@@ -69,7 +69,7 @@ generator = GoogleGenAIChatGenerator(
     ).model_dump(),
     safety_settings=[
         types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_UNSPECIFIED,
+            category=types.HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY,
             threshold=types.HarmBlockThreshold.BLOCK_NONE
         ).model_dump(),
         types.SafetySetting(
