@@ -1,7 +1,5 @@
 import random
 
-from google.genai import types
-
 from haystack import AsyncPipeline
 from haystack_integrations.components.generators.google_ai import GoogleAIGeminiChatGenerator
 from haystack.dataclasses import ChatMessage
