@@ -2,7 +2,7 @@ import random
 from typing import List
 from google.generativeai import GenerationConfig
 from google.generativeai.types import HarmBlockThreshold, HarmCategory
-from haystack import Pipeline
+from haystack import AsyncPipeline
 from haystack_integrations.components.generators.google_ai import GoogleAIGeminiChatGenerator
 from haystack.dataclasses import ChatMessage
 from haystack.utils import Secret
@@ -75,7 +75,7 @@ generator = GoogleAIGeminiChatGenerator(
         HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE
     }
 )
-pipeline = Pipeline()
+pipeline = AsyncPipeline()
 pipeline.add_component("generator", generator)
 
 async def generate_llm_response(message: str) -> str:
@@ -89,5 +89,5 @@ async def generate_llm_response(message: str) -> str:
         str: 생성된 응답
     """
     messages = [ChatMessage.from_user(message)]
-    result = await pipeline.arun({"generator": {"messages": messages}})
+    result = await pipeline.run_async({"generator": {"messages": messages}})
     return result["generator"]["replies"][0].content
