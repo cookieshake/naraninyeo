@@ -63,8 +63,7 @@ generator = GoogleAIGeminiChatGenerator(
     api_key=Secret.from_token(settings.GOOGLE_API_KEY),
     model="gemini-2.5-flash-preview-05-20",
     generation_config={
-        "candidate_count": 1,
-        "max_output_tokens": 300
+        "candidate_count": 1
     },
     safety_settings={
         HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
