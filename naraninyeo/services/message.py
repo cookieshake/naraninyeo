@@ -39,8 +39,8 @@ async def get_response(request: MessageRequest) -> str:
     """
     try:
         if random.random() < 0.5:
-            return await generate_llm_response(request.content) 
+            return await generate_llm_response(request) 
     except Exception as e:
         traceback.print_exc()
-    return get_random_response(request.content)
+    return get_random_response(request)
     

@@ -1,4 +1,5 @@
 import random
+import textwrap
 
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from haystack import AsyncPipeline
@@ -6,6 +7,7 @@ from haystack_integrations.components.generators.google_ai import GoogleAIGemini
 from haystack.dataclasses import ChatMessage
 from haystack.utils import Secret
 from naraninyeo.core.config import settings
+from naraninyeo.models.message import MessageRequest
 
 RANDOM_RESPONSES = [
     "음… 그렇게 볼 수도 있겠네요.",
@@ -50,11 +52,11 @@ RANDOM_RESPONSES = [
     "그런 시선으로 바라보면 그렇겠네요."
 ]
 
-def get_random_response(message: str) -> str:
+def get_random_response(message: MessageRequest) -> str:
     """
     Get a random response from the predefined list
     """
-    rand = random.Random(message)
+    rand = random.Random(message.content)
     return rand.choice(RANDOM_RESPONSES) 
 
 
@@ -73,7 +75,7 @@ generator = GoogleAIGeminiChatGenerator(
     }
 )
 
-async def generate_llm_response(message: str) -> str:
+async def generate_llm_response(message: MessageRequest) -> str:
     """
     LLM을 사용하여 사용자의 메시지에 대한 응답을 생성합니다.
     
@@ -83,6 +85,16 @@ async def generate_llm_response(message: str) -> str:
     Returns:
         str: 생성된 응답
     """
-    messages = [ChatMessage.from_user(message)]
+    messages = [ChatMessage.from_user(textwrap.dedent("""
+        당신은 "나란잉여"라는 캐릭터입니다. 다음 특징을 가지고 있습니다:
+        - 모든 질문에 대해 애매모호하고 중립적인 답변을 합니다
+        - 단정적인 답변은 피하고 "그럴 수도 있고", "경우에 따라 다르다" 같은 표현을 자주 사용합니다
+        - 친근하면서도 신중한 어조를 유지합니다
+        - 답변은 1-2문장으로 간결하게 합니다
+
+        사용자 메시지: {message}
+
+        위 특징에 맞춰 응답해주세요:
+    """).strip())]
     result = await generator.run_async(messages=messages)
-    return str(result["replies"])
+    return result["replies"][0].text
