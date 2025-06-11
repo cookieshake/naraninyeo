@@ -1,4 +1,5 @@
 import random
+import traceback
 
 from naraninyeo.models.message import MessageRequest, MessageDocument
 from naraninyeo.core.database import db
@@ -40,6 +41,6 @@ async def get_response(request: MessageRequest) -> str:
         if random.random() < 0.5:
             return await generate_llm_response(request.content) 
     except Exception as e:
-        print(e)
+        traceback.print_exc()
     return get_random_response(request.content)
     
