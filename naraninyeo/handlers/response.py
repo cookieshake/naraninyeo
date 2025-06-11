@@ -90,8 +90,6 @@ generator = GoogleGenAIChatGenerator(
         ).model_dump()
     ]
 )
-pipeline = AsyncPipeline()
-pipeline.add_component("generator", generator)
 
 async def generate_llm_response(message: str) -> str:
     """
@@ -104,6 +102,5 @@ async def generate_llm_response(message: str) -> str:
         str: 생성된 응답
     """
     messages = [ChatMessage.from_user(message)]
-    result = await pipeline.run_async({"generator": {"messages": messages}})
-    replies: list[ChatMessage] = result["generator"]["replies"]
-    return replies[0].text
+    result = await generator.run_async(messages=messages)
+    return result["replies"][0].text
