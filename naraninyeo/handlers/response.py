@@ -90,8 +90,6 @@ generator = GoogleGenAIChatGenerator(
         }
     ]
 )
-pipeline = AsyncPipeline()
-pipeline.add_component("generator", generator)
 
 async def generate_llm_response(message: str) -> str:
     """
@@ -105,4 +103,5 @@ async def generate_llm_response(message: str) -> str:
     """
     messages = [ChatMessage.from_user(message)]
     result = await generator.run_async(messages=messages)
+    print(result)
     return result["replies"][0].text
