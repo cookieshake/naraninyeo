@@ -5,6 +5,7 @@ from google.generativeai.types import HarmBlockThreshold, HarmCategory
 from haystack import Pipeline
 from haystack_integrations.components.generators.google_ai import GoogleAIGeminiChatGenerator
 from haystack.dataclasses import ChatMessage
+from haystack.utils import Secret
 from naraninyeo.core.config import settings
 
 RANDOM_RESPONSES = [
@@ -60,7 +61,7 @@ def get_random_response(message: str) -> str:
 
 # Initialize the generator and pipeline
 generator = GoogleAIGeminiChatGenerator(
-    api_key=settings.GOOGLE_API_KEY,
+    api_key=Secret.from_token(settings.GOOGLE_API_KEY),
     model="gemini-2.5-flash-preview-05-20",
     generation_config=GenerationConfig( 
         candidate_count=1,
