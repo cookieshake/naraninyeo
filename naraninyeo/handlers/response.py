@@ -3,7 +3,7 @@ import random
 from google.genai import types
 
 from haystack import AsyncPipeline
-from haystack_integrations.components.generators.google_genai.chat.chat_generator import GoogleGenAIChatGenerator
+from haystack_integrations.components.generators.google_ai import GoogleAIGeminiChatGenerator
 from haystack.dataclasses import ChatMessage
 from haystack.utils import Secret
 from naraninyeo.core.config import settings
@@ -60,35 +60,20 @@ def get_random_response(message: str) -> str:
 
 
 # Initialize the generator and pipeline
-generator = GoogleGenAIChatGenerator(
+generator = GoogleAIGeminiChatGenerator(
     api_key=Secret.from_token(settings.GOOGLE_API_KEY),
     model="gemini-2.5-flash-preview-05-20",
-    generation_kwargs={
+    generation_config={
         "candidate_count": 1,
         "max_output_tokens": 300
     },
-    safety_settings=[
-        {
-            "category": "HARM_CATEGORY_CIVIC_INTEGRITY",
-            "threshold": "BLOCK_NONE"
-        },
-        {
-            "category": "HARM_CATEGORY_HARASSMENT",
-            "threshold": "BLOCK_NONE"
-        },
-        {
-            "category": "HARM_CATEGORY_HATE_SPEECH",
-            "threshold": "BLOCK_NONE"
-        },
-        {
-            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            "threshold": "BLOCK_NONE"
-        },
-        {
-            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-            "threshold": "BLOCK_NONE"
-        }
-    ]
+    safety_settings={
+        "HARM_CATEGORY_CIVIC_INTEGRITY": "BLOCK_NONE",
+        "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+        "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
+        "HARM_CATEGORY_SEXUALLY_EXPLICIT": "BLOCK_NONE",
+        "HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE"
+    }
 )
 
 async def generate_llm_response(message: str) -> str:
