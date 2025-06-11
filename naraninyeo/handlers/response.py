@@ -105,4 +105,5 @@ async def generate_llm_response(message: str) -> str:
     """
     messages = [ChatMessage.from_user(message)]
     result = await pipeline.run_async({"generator": {"messages": messages}})
-    return result["generator"]["replies"][0].content
+    replies: list[ChatMessage] = result["generator"]["replies"]
+    return replies[0].text
