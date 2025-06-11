@@ -86,4 +86,4 @@ async def generate_llm_response(message: str) -> str:
     """
     messages = [ChatMessage.from_user(message)]
     result = await generator.run_async(messages=messages)
-    return result["replies"][0].text
+    return str(result["replies"])
