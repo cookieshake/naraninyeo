@@ -30,5 +30,5 @@ async def get_response(request: MessageRequest) -> str:
             return await generate_llm_response(request.content) 
     except Exception as e:
         print(e)
-    return get_random_response()
+    return get_random_response(request.content)
     

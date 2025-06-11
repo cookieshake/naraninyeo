@@ -1,7 +1,9 @@
 import random
-from typing import Optional
+from typing import List
+from google.generativeai import GenerationConfig
+from google.generativeai.types import HarmBlockThreshold, HarmCategory
 from haystack import Pipeline
-from haystack.components.generators import GoogleGenerativeAIGenerator
+from haystack_integrations.components.generators.google_ai import GoogleAIGeminiChatGenerator
 from haystack.dataclasses import ChatMessage
 from naraninyeo.core.config import settings
 
@@ -48,17 +50,29 @@ RANDOM_RESPONSES = [
     "그런 시선으로 바라보면 그렇겠네요."
 ]
 
-def get_random_response() -> str:
+def get_random_response(message: str) -> str:
     """
     Get a random response from the predefined list
     """
-    return random.choice(RANDOM_RESPONSES) 
+    rand = random.Random(message)
+    return rand.choice(RANDOM_RESPONSES) 
 
 
 # Initialize the generator and pipeline
-generator = GoogleGenerativeAIGenerator(
+generator = GoogleAIGeminiChatGenerator(
     api_key=settings.GOOGLE_API_KEY,
-    model="gemini-2.5-flash-preview-05-20"
+    model="gemini-2.5-flash-preview-05-20",
+    generation_config=GenerationConfig( 
+        candidate_count=1,
+        max_output_tokens=300
+    ),
+    safety_settings={
+        HarmCategory.HARM_CATEGORY_UNSPECIFIED: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE
+    }
 )
 pipeline = Pipeline()
 pipeline.add_component("generator", generator)
@@ -66,7 +80,7 @@ pipeline.add_component("generator", generator)
 async def generate_llm_response(message: str) -> str:
     """
     LLM을 사용하여 사용자의 메시지에 대한 응답을 생성합니다.
-
+    
     Args:
         message (str): 사용자의 입력 메시지
         
@@ -74,5 +88,5 @@ async def generate_llm_response(message: str) -> str:
         str: 생성된 응답
     """
     messages = [ChatMessage.from_user(message)]
-    result = pipeline.run({"generator": {"messages": messages}})
-    return result["generator"]["replies"][0].content 
+    result = await pipeline.arun({"generator": {"messages": messages}})
+    return result["generator"]["replies"][0].content
