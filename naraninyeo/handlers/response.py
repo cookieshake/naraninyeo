@@ -63,33 +63,35 @@ def get_random_response(message: str) -> str:
 generator = GoogleGenAIChatGenerator(
     api_key=Secret.from_token(settings.GOOGLE_API_KEY),
     model="gemini-2.5-flash-preview-05-20",
-    generation_kwargs=types.GenerationConfig( 
-        candidate_count=1,
-        max_output_tokens=300
-    ).model_dump(),
+    generation_kwargs={
+        "candidate_count": 1,
+        "max_output_tokens": 300
+    },
     safety_settings=[
-        types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY,
-            threshold=types.HarmBlockThreshold.BLOCK_NONE
-        ).model_dump(),
-        types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
-            threshold=types.HarmBlockThreshold.BLOCK_NONE
-        ).model_dump(),
-        types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-            threshold=types.HarmBlockThreshold.BLOCK_NONE
-        ).model_dump(),
-        types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-            threshold=types.HarmBlockThreshold.BLOCK_NONE
-        ).model_dump(),
-        types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-            threshold=types.HarmBlockThreshold.BLOCK_NONE
-        ).model_dump()
+        {
+            "category": "HARM_CATEGORY_CIVIC_INTEGRITY",
+            "threshold": "BLOCK_NONE"
+        },
+        {
+            "category": "HARM_CATEGORY_HARASSMENT",
+            "threshold": "BLOCK_NONE"
+        },
+        {
+            "category": "HARM_CATEGORY_HATE_SPEECH",
+            "threshold": "BLOCK_NONE"
+        },
+        {
+            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            "threshold": "BLOCK_NONE"
+        },
+        {
+            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+            "threshold": "BLOCK_NONE"
+        }
     ]
 )
+pipeline = AsyncPipeline()
+pipeline.add_component("generator", generator)
 
 async def generate_llm_response(message: str) -> str:
     """
