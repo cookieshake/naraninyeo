@@ -66,28 +66,28 @@ generator = GoogleGenAIChatGenerator(
     generation_kwargs=types.GenerationConfig( 
         candidate_count=1,
         max_output_tokens=300
-    ),
+    ).model_dump(),
     safety_settings=[
         types.SafetySetting(
             category=types.HarmCategory.HARM_CATEGORY_UNSPECIFIED,
             threshold=types.HarmBlockThreshold.BLOCK_NONE
-        ),
+        ).model_dump(),
         types.SafetySetting(
             category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
             threshold=types.HarmBlockThreshold.BLOCK_NONE
-        ),
+        ).model_dump(),
         types.SafetySetting(
             category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
             threshold=types.HarmBlockThreshold.BLOCK_NONE
-        ),
+        ).model_dump(),
         types.SafetySetting(
             category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
             threshold=types.HarmBlockThreshold.BLOCK_NONE
-        ),
+        ).model_dump(),
         types.SafetySetting(
             category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
             threshold=types.HarmBlockThreshold.BLOCK_NONE
-        )
+        ).model_dump()
     ]
 )
 pipeline = AsyncPipeline()
