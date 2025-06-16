@@ -124,6 +124,7 @@ async def generate_llm_response(message: MessageDocument) -> str:
         """).strip()),
         ChatMessage.from_user(textwrap.dedent(f"""
             대답을 할 때 아래의 정보를 참고하세요
+            - 현재 대화방의 ID는 {message.room} 입니다.
             - 현재 위치는 대한민국의 수도 서울입니다.
             - 현재 시각은 {datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")} 입니다.
 
