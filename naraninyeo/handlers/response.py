@@ -100,9 +100,9 @@ async def generate_llm_response(message: MessageDocument) -> str:
     history.append(message)
     history_str = ""
     for h in history:
-        history_str += f"{h.created_at.astimezone(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")} {h.author_name} : {h.content}\n"
+        history_str += f"{h.created_at.astimezone(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")} {h.author_name} : {h.content[:50]}\n"
         if h.has_response:
-            history_str += f"{h.created_at.astimezone(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")} 나란잉여 : {h.response_content}\n"
+            history_str += f"{h.created_at.astimezone(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")} 나란잉여 : {h.response_content[:50]}\n"
     history_str = textwrap.dedent(history_str).strip()
 
     messages = [

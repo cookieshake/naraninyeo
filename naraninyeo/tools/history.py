@@ -24,5 +24,5 @@ async def get_history_by_timestamp(
 
     result = []
     for message in history:
-        result.append(f"{message.created_at.astimezone(ZoneInfo('Asia/Seoul')).strftime('%Y-%m-%d %H:%M:%S')} {message.author_name} : {message.content}")
+        result.append(f"{message.created_at.astimezone(ZoneInfo('Asia/Seoul')).strftime('%Y-%m-%d %H:%M:%S')} {message.author_name} : {message.content[:50]}")
     return "\n".join(result)

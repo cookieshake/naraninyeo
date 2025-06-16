@@ -33,7 +33,7 @@ async def _search_naver_api(query: str, limit: int, api_name: Literal["news", "b
 @tool
 async def search_naver_news(
     query: Annotated[str, "The query to search for"],
-    limit: Annotated[int, "The number of news to return. (default: 20)"] = 20
+    limit: Annotated[int, "The number of news to return. (default: 15)"] = 15
 ) -> str:
     """
     Search for news articles using the Naver API.
@@ -48,7 +48,7 @@ async def search_naver_news(
 @tool
 async def search_naver_blog(
     query: Annotated[str, "The query to search for"],
-    limit: Annotated[int, "The number of blogs to return. (default: 20)"] = 20
+    limit: Annotated[int, "The number of blogs to return. (default: 15)"] = 15
 ) -> str:
     """
     Search for blog articles using the Naver API.
@@ -63,7 +63,7 @@ async def search_naver_blog(
 @tool
 async def search_naver_webkr(
     query: Annotated[str, "The query to search for"],
-    limit: Annotated[int, "The number of web articles to return. (default: 20)"] = 20
+    limit: Annotated[int, "The number of web articles to return. (default: 15)"] = 15
 ) -> str:
     """
     Search for web articles using the Naver API.
