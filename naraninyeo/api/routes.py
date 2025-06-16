@@ -26,7 +26,7 @@ async def handle_message(request: MessageRequest) -> MessageResponse:
     )
     
     # Save message with response if any
-    await save_message(request)
+    await save_message(request_with_response)
     
     return MessageResponse(
         do_reply=needs_response,
