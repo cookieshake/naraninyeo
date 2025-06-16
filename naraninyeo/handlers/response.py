@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import random
 import textwrap
@@ -82,7 +83,8 @@ generator = GoogleAIGeminiChatGenerator(
 )
 
 tool_invoker = ToolInvoker(
-    tools=default_toolset
+    tools=default_toolset,
+    async_executor=ThreadPoolExecutor(max_workers=10)
 )
 
 async def generate_llm_response(message: MessageDocument) -> str:
