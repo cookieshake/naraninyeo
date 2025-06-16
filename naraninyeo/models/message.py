@@ -20,6 +20,15 @@ class MessageRequest(BaseModel):
     logId: str
     isMultiChat: bool
 
+    def to_mongo_document(self) -> "MessageDocument":
+        return MessageDocument(
+            _id=self.logId,
+            room=self.room,
+            channel_id=self.channelId,
+            author_name=self.author.name,
+            content=self.content
+        )
+
 class MessageDocument(BaseModel):
     message_id: str = Field(alias="_id")
     room: str

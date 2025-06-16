@@ -10,7 +10,7 @@ from haystack.dataclasses import ChatMessage
 from haystack.utils import Secret
 from naraninyeo.core.config import settings
 from naraninyeo.handlers.history import get_history
-from naraninyeo.models.message import MessageRequest
+from naraninyeo.models.message import MessageDocument, MessageRequest
 from naraninyeo.tools import default_toolset
 
 RANDOM_RESPONSES = [
@@ -56,7 +56,7 @@ RANDOM_RESPONSES = [
     "그런 시선으로 바라보면 그렇겠네요."
 ]
 
-def get_random_response(message: MessageRequest) -> str:
+def get_random_response(message: MessageDocument) -> str:
     """
     Get a random response from the predefined list
     """
@@ -84,7 +84,7 @@ tool_invoker = ToolInvoker(
     tools=default_toolset
 )
 
-async def generate_llm_response(message: MessageRequest) -> str:
+async def generate_llm_response(message: MessageDocument) -> str:
     """
     LLM을 사용하여 사용자의 메시지에 대한 응답을 생성합니다.
     
@@ -95,7 +95,7 @@ async def generate_llm_response(message: MessageRequest) -> str:
         str: 생성된 응답
     """
 
-    history = await get_history(message.room_id, message.created_at, 15)
+    history = await get_history(message.room, message.created_at, 15)
     history.append(message)
     history_str = ""
     for h in history:
@@ -121,7 +121,7 @@ async def generate_llm_response(message: MessageRequest) -> str:
 	•	 - 강조하거나 개입해야 할 대화를 인지했을 때 주제를 요약하거나 투명하게 전달합니다.
             - 대화를 더욱 긍정적, 협력적으로 이끌고, 사람들끼리 더욱 깊고 원만하게 소통할 수 있도록 돕는 역할이라는 점을 기억해주세요.
         """).strip()),
-        ChatMessage.from_user(textwrap.dedent(f"""\
+        ChatMessage.from_user(textwrap.dedent(f"""
             아래는 당신이 속한 채팅방의 대화의 기록입니다.
             
             {history_str}
