@@ -137,7 +137,7 @@ async def generate_llm_response(message: MessageDocument) -> str:
         ]
     replies = (await generator.run_async(messages=messages))["replies"]
     if replies[0].tool_calls:
-        tool_messages = await tool_invoker.run_async(replies[0].tool_calls)
+        tool_messages = (await tool_invoker.run_async(replies))["tool_messages"]
         replies = (await generator.run_async(messages=messages + replies + tool_messages))["replies"]
     return replies[0].text
 
