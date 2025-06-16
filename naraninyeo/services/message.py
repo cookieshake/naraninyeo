@@ -38,9 +38,7 @@ async def get_response(request: MessageRequest) -> str:
     LLM을 사용하여 응답을 생성합니다.
     """
     try:
-        if random.random() < 0.5:
-            return await generate_llm_response(request) 
+        return await generate_llm_response(request) 
     except Exception as e:
         traceback.print_exc()
     return get_random_response(request)
-    
