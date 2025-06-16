@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "naraninyeo"
 
+    # Naver API settings
+    NAVER_CLIENT_ID: str
+    NAVER_CLIENT_SECRET: str
+
     # Gemini API settings
     GOOGLE_API_KEY: str
 
