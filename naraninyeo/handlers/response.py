@@ -1,3 +1,4 @@
+from datetime import datetime
 import random
 import textwrap
 from zoneinfo import ZoneInfo
@@ -122,6 +123,10 @@ async def generate_llm_response(message: MessageDocument) -> str:
             - 대화를 더욱 긍정적, 협력적으로 이끌고, 사람들끼리 더욱 깊고 원만하게 소통할 수 있도록 돕는 역할이라는 점을 기억해주세요.
         """).strip()),
         ChatMessage.from_user(textwrap.dedent(f"""
+            대답을 할 때 아래의 정보를 참고하세요
+            - 현재 위치는 대한민국의 수도 서울입니다.
+            - 현재 시각은 {datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")} 입니다.
+
             아래는 당신이 속한 채팅방의 대화의 기록입니다.
             
             {history_str}
