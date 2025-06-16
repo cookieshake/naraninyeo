@@ -77,15 +77,11 @@ generator = GoogleAIGeminiChatGenerator(
         HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
         HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE
     },
-    tools=[
-        default_toolset
-    ]
+    tools=default_toolset
 )
 
 tool_invoker = ToolInvoker(
-    tools=[
-        default_toolset
-    ]
+    tools=default_toolset
 )
 
 async def generate_llm_response(message: MessageRequest) -> str:
