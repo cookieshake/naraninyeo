@@ -8,7 +8,7 @@ from haystack.tools import tool
 
 from naraninyeo.core.config import settings
 
-async def _search_naver_api(query: str, limit: int, api_name: Literal["news", "blog", "webkr"]) -> dict[str, str]:
+def _search_naver_api(query: str, limit: int, api_name: Literal["news", "blog", "webkr"]) -> dict[str, str]:
     url = f"https://openapi.naver.com/v1/search/{api_name}.json"
     headers = {
         "X-Naver-Client-Id": settings.NAVER_CLIENT_ID,
@@ -18,8 +18,8 @@ async def _search_naver_api(query: str, limit: int, api_name: Literal["news", "b
         "query": query,
         "display": limit
     }
-    async with httpx.AsyncClient() as client:
-        res = (await client.get(url, headers=headers, params=params)).json()
+    with httpx.Client() as client:
+        res = client.get(url, headers=headers, params=params).json()
     items = [
         {"title": i['title'], "description": i['description']}
         for i in res["items"]
@@ -31,46 +31,46 @@ async def _search_naver_api(query: str, limit: int, api_name: Literal["news", "b
     return items
 
 @tool
-async def search_naver_news(
+def search_naver_news(
     query: Annotated[str, "The query to search for"],
     limit: Annotated[int, "The number of news to return. (default: 15)"] = 15
 ) -> str:
     """
     Search for news articles using the Naver API.
     """
-    items = await _search_naver_api(query, limit, "news")
+    items = _search_naver_api(query, limit, "news")
     result = ""
     for i in items:
-        result += f"- title: {i['title']}\n"
-        result += f"  description: {i['description']}\n"
+        result += f"- title: {i['title']}\\n"
+        result += f"  description: {i['description']}\\n"
     return result
 
 @tool
-async def search_naver_blog(
+def search_naver_blog(
     query: Annotated[str, "The query to search for"],
     limit: Annotated[int, "The number of blogs to return. (default: 15)"] = 15
 ) -> str:
     """
     Search for blog articles using the Naver API.
     """
-    items = await _search_naver_api(query, limit, "blog")
+    items = _search_naver_api(query, limit, "blog")
     result = ""
     for i in items:
-        result += f"- title: {i['title']}\n"
-        result += f"  description: {i['description']}\n"
+        result += f"- title: {i['title']}\\n"
+        result += f"  description: {i['description']}\\n"
     return result
 
 @tool
-async def search_naver_webkr(
+def search_naver_webkr(
     query: Annotated[str, "The query to search for"],
     limit: Annotated[int, "The number of web articles to return. (default: 15)"] = 15
 ) -> str:
     """
     Search for web articles using the Naver API.
     """
-    items = await _search_naver_api(query, limit, "webkr")
+    items = _search_naver_api(query, limit, "webkr")
     result = ""
     for i in items:
-        result += f"- title: {i['title']}\n"
-        result += f"  description: {i['description']}\n"
+        result += f"- title: {i['title']}\\n"
+        result += f"  description: {i['description']}\\n"
     return result
