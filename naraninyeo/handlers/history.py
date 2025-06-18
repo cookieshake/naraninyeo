@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from naraninyeo.models.message import MessageDocument
 from naraninyeo.core.database import db
 
-async def get_history(room:str, timestamp: datetime = None, limit: int = 10) -> list[MessageDocument]:
+def get_history(room:str, timestamp: datetime = None, limit: int = 10) -> list[MessageDocument]:
     """
     메시지 기록을 가져옵니다.
     """
@@ -10,14 +10,14 @@ async def get_history(room:str, timestamp: datetime = None, limit: int = 10) -> 
         timestamp = datetime.now(timezone.utc)
     
     # 이전 메시지 가져오기
-    before_messages = await db.get_db.messages.find(
+    before_messages = list(db.get_db.messages.find(
         {"room": room, "created_at": {"$lt": timestamp}}
-    ).sort("created_at", -1).limit(limit).to_list(length=limit)
+    ).sort("created_at", -1).limit(limit))
     
     # 이후 메시지 가져오기
-    after_messages = await db.get_db.messages.find(
+    after_messages = list(db.get_db.messages.find(
         {"room": room, "created_at": {"$gte": timestamp}}
-    ).sort("created_at", 1).limit(limit).to_list(length=limit)
+    ).sort("created_at", 1).limit(limit))
     
     # 이전 메시지는 시간 역순으로 정렬되어 있으므로 다시 뒤집어서 시간순으로 만듦
     before_messages.reverse()

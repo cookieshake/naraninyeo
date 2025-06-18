@@ -18,11 +18,10 @@ def get_history_by_timestamp(
     and subsequent messages to provide conversational context around that point in time.
     The function balances the retrieval to show messages before and after the timestamp.
     """
-    import asyncio
     
     # Convert KST timestamp string to datetime with KST timezone
     dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo("Asia/Seoul"))
-    history = asyncio.run(get_history(room_id, dt, int(limit)))
+    history = get_history(room_id, dt, int(limit))
 
     result = []
     for message in history:

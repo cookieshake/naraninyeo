@@ -5,18 +5,18 @@ from naraninyeo.services.message import save_message, should_respond, get_respon
 router = APIRouter()
 
 @router.get("/")
-async def root():
+def root():
     return {"message": "Hello World"}
 
 @router.post("/new_message", response_model=MessageResponse)
-async def handle_message(request: MessageRequest) -> MessageResponse:
+def handle_message(request: MessageRequest) -> MessageResponse:
     """
     Handle incoming messages and save them to MongoDB.
     Only respond if the message starts with '/'.
     """
     request_doc = request.to_mongo_document()
-    needs_response = await should_respond(request_doc)
-    response_message = await get_response(request_doc) if needs_response else None
+    needs_response = should_respond(request_doc)
+    response_message = get_response(request_doc) if needs_response else None
 
     request_with_response = request_doc.model_copy(
         update={
@@ -26,7 +26,7 @@ async def handle_message(request: MessageRequest) -> MessageResponse:
     )
     
     # Save message with response if any
-    await save_message(request_with_response)
+    save_message(request_with_response)
     
     return MessageResponse(
         do_reply=needs_response,

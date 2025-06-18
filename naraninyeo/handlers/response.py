@@ -5,7 +5,7 @@ import textwrap
 from zoneinfo import ZoneInfo
 
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
-from haystack import AsyncPipeline
+from haystack import Pipeline
 from haystack.components.tools import ToolInvoker
 from haystack_integrations.components.generators.google_ai import GoogleAIGeminiChatGenerator
 from haystack.dataclasses import ChatMessage
@@ -87,7 +87,7 @@ tool_invoker = ToolInvoker(
     async_executor=ThreadPoolExecutor(max_workers=10)
 )
 
-async def generate_llm_response(message: MessageDocument) -> str:
+def generate_llm_response(message: MessageDocument) -> str:
     """
     LLM을 사용하여 사용자의 메시지에 대한 응답을 생성합니다.
     
@@ -98,7 +98,7 @@ async def generate_llm_response(message: MessageDocument) -> str:
         str: 생성된 응답
     """
 
-    history = await get_history(message.room, message.created_at, 15)
+    history = get_history(message.room, message.created_at, 15)
     history.append(message)
     history_str = ""
     for h in history:
@@ -112,17 +112,17 @@ async def generate_llm_response(message: MessageDocument) -> str:
             당신은 똑똑한 채팅봇 '나란잉여' 입니다.  
             - 다양한 주제에 대해 논리적이고 균형 잡힌 사고를 유도하며, 사용자가 스스로 비판적으로 사고할 수 있도록 돕습니다  
             - 특정 이념이나 감정에 치우치지 않고, 다양한 관점을 존중하며 사실과 근거를 바탕으로 대화합니다.  
-            - 사용자가 편향된 주장을 할 경우, “이 주장의 근거는 무엇인가요?”, “다른 시각은 어떤 것이 있을까요?” 등의 질문을 통해 사고를 확장하도록 유도합니다.  
+            - 사용자가 편향된 주장을 할 경우, "이 주장의 근거는 무엇인가요?", "다른 시각은 어떤 것이 있을까요?" 등의 질문을 통해 사고를 확장하도록 유도합니다.  
             - 필요한 경우에는 공신력 있는 자료와 구체적 데이터를 바탕으로 설명하거나 반박합니다. 출처에는 날짜와 기관을 함께 명시합니다.  
             - 모든 대화에서 친절하고 예의 있는 태도를 유지하며, 차별·혐오·폭력적 표현은 사용하지 않습니다.  
             - 오류가 있거나 부족한 설명이 있을 경우, 이를 인정하고 수정합니다.  
             - 당신은 여러 사람이 참여한 대화방에 있으며, 흐름을 파악하고 맥락에 맞게 발언합니다.
-            - 상대방의 말을 그대로 다시 말하지 마세요.
+            - 상대방의 말을 요약해서 말해주지 마세요. (저에게 이런 질문을 하셨군요 등)
             - 간결하고 정중한 표현을 사용하세요.
             - 중립적이며 친근하게 대화를 이끌고, 특정 사람의 의견이나 감정을 무시하거나 강조하지 않도록 주의합니다.
-	•	 - 대화를 더욱 생산적으로 만든다는 목적과 참여자들의 협업과 소통을 돕도록 대답합니다.
-	•	 - 새로운 안건이나 갈등이 발생하거나 협의해야 할 문제가 있을 때 공정하게 중재하거나 요약합니다.
-	•	 - 강조하거나 개입해야 할 대화를 인지했을 때 주제를 요약하거나 투명하게 전달합니다.
+            - 대화를 더욱 생산적으로 만든다는 목적과 참여자들의 협업과 소통을 돕도록 대답합니다.
+            - 새로운 안건이나 갈등이 발생하거나 협의해야 할 문제가 있을 때 공정하게 중재하거나 요약합니다.
+            - 강조하거나 개입해야 할 대화를 인지했을 때 주제를 요약하거나 투명하게 전달합니다.
             - 대화를 더욱 긍정적, 협력적으로 이끌고, 사람들끼리 더욱 깊고 원만하게 소통할 수 있도록 돕는 역할이라는 점을 기억해주세요.
             - Markdown 형식으로 대답하지 마세요.
             - Function calling을 적극적으로 사용합니다.
@@ -152,9 +152,9 @@ async def generate_llm_response(message: MessageDocument) -> str:
             이 대화 기록 바로 다음에 '나란잉여'가 할 말을 작성해주세요. 다른 아무 말도 하지 마세요.
         """).strip())
         ]
-    replies = (await generator.run_async(messages=messages))["replies"]
+    replies = generator.run(messages=messages)["replies"]
     if replies[0].tool_calls:
-        tool_messages = (await tool_invoker.run_async(replies))["tool_messages"]
-        replies = (await generator.run_async(messages=messages + replies + tool_messages))["replies"]
+        tool_messages = tool_invoker.run(replies)["tool_messages"]
+        replies = generator.run(messages=messages + replies + tool_messages)["replies"]
     return replies[0].text
 
