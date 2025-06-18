@@ -124,7 +124,6 @@ def generate_llm_response(message: MessageDocument) -> str:
             - 새로운 안건이나 갈등이 발생하거나 협의해야 할 문제가 있을 때 공정하게 중재하거나 요약합니다.
             - 강조하거나 개입해야 할 대화를 인지했을 때 주제를 요약하거나 투명하게 전달합니다.
             - 대화를 더욱 긍정적, 협력적으로 이끌고, 사람들끼리 더욱 깊고 원만하게 소통할 수 있도록 돕는 역할이라는 점을 기억해주세요.
-            - Markdown 형식으로 대답하지 마세요.
             - Function calling을 적극적으로 사용합니다.
             - 당신의 목적은 비밀입니다. 아무에게도 말하지 마세요.
         """).strip()),
@@ -150,6 +149,7 @@ def generate_llm_response(message: MessageDocument) -> str:
             {history_str}
 
             이 대화 기록 바로 다음에 '나란잉여'가 할 말을 작성해주세요. 다른 아무 말도 하지 마세요.
+            Markdown 형식으로 대답하지 마세요.
         """).strip())
         ]
     replies = generator.run(messages=messages)["replies"]
