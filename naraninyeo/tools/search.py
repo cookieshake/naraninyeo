@@ -8,7 +8,7 @@ from haystack.tools import tool
 
 from naraninyeo.core.config import settings
 
-def _search_naver_api(query: str, limit: int, api_name: Literal["news", "blog", "webkr"]) -> dict[str, str]:
+def _search_naver_api(query: str, limit: int, sort: Literal["sim", "date"], api_name: Literal["news", "blog", "webkr"]) -> dict[str, str]:
     url = f"https://openapi.naver.com/v1/search/{api_name}.json"
     headers = {
         "X-Naver-Client-Id": settings.NAVER_CLIENT_ID,
@@ -16,7 +16,8 @@ def _search_naver_api(query: str, limit: int, api_name: Literal["news", "blog", 
     }
     params = {
         "query": query,
-        "display": limit
+        "display": limit,
+        "sort": sort
     }
     with httpx.Client() as client:
         res = client.get(url, headers=headers, params=params).json()
@@ -33,12 +34,13 @@ def _search_naver_api(query: str, limit: int, api_name: Literal["news", "blog", 
 @tool
 def search_naver_news(
     query: Annotated[str, "The query to search for"],
-    limit: Annotated[int, "The number of news to return. (default: 15)"] = 15
+    limit: Annotated[int, "The number of news to return. (default: 15)"] = 15,
+    sort: Annotated[Literal["sim", "date"], "The sort order of the news. 'sim' sorts by highest similarity first, 'date' sorts by most recent date first."] = "sim"
 ) -> str:
     """
     Search for news articles using the Naver API.
     """
-    items = _search_naver_api(query, limit, "news")
+    items = _search_naver_api(query, limit, sort, "news")
     result = ""
     for i in items:
         result += f"- title: {i['title']}\\n"
@@ -48,12 +50,13 @@ def search_naver_news(
 @tool
 def search_naver_blog(
     query: Annotated[str, "The query to search for"],
-    limit: Annotated[int, "The number of blogs to return. (default: 15)"] = 15
+    limit: Annotated[int, "The number of blogs to return. (default: 15)"] = 15,
+    sort: Annotated[Literal["sim", "date"], "The sort order of the blogs. 'sim' sorts by highest similarity first, 'date' sorts by most recent date first."] = "sim"
 ) -> str:
     """
     Search for blog articles using the Naver API.
     """
-    items = _search_naver_api(query, limit, "blog")
+    items = _search_naver_api(query, limit, sort, "blog")
     result = ""
     for i in items:
         result += f"- title: {i['title']}\\n"
@@ -63,12 +66,13 @@ def search_naver_blog(
 @tool
 def search_naver_webkr(
     query: Annotated[str, "The query to search for"],
-    limit: Annotated[int, "The number of web articles to return. (default: 15)"] = 15
+    limit: Annotated[int, "The number of web articles to return. (default: 15)"] = 15,
+    sort: Annotated[Literal["sim", "date"], "The sort order of the web articles. 'sim' sorts by highest similarity first, 'date' sorts by most recent date first."] = "sim"
 ) -> str:
     """
     Search for web articles using the Naver API.
     """
-    items = _search_naver_api(query, limit, "webkr")
+    items = _search_naver_api(query, limit, sort, "webkr")
     result = ""
     for i in items:
         result += f"- title: {i['title']}\\n"
