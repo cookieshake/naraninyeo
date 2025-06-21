@@ -1,11 +1,11 @@
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from naraninyeo.api.routes import router
 from naraninyeo.core.config import settings
 from naraninyeo.core.database import db
 
-@contextmanager
-def lifespan(app: FastAPI):
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     db.connect_to_database()
     try:
         yield
