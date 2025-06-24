@@ -2,6 +2,8 @@ import asyncio
 from datetime import datetime
 import uuid
 from zoneinfo import ZoneInfo
+
+import httpx
 from naraninyeo.core.config import settings
 from naraninyeo.core.database import mc
 from naraninyeo.models.message import Attachment, Author, Channel, Message, MessageContent
@@ -81,8 +83,18 @@ async def parse_message(message_data: dict) -> Message:
         content=content,
         timestamp=timestamp
     )
-    
 
+async def send_response(response: Message):
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{settings.NARANINYEO_API_URL}/reply",
+            json={
+                "type": "text",
+                "room": response.channel.channel_id,
+                "data": response.content.text
+            }
+        )
+        response.raise_for_status()
 
 async def main():
     await mc.connect_to_database()
@@ -102,9 +114,11 @@ async def main():
                 loguru.logger.info(f"Received message: {value}")
                 message = await parse_message(value)
                 response = await handle_message(message)
-                if response:
-                    loguru.logger.info(f"Sending response: {response.content.text}")
-                await consumer.commit()
+                async with anyio.create_task_group() as tg:
+                    if response:
+                        loguru.logger.info(f"Sending response: {response.content.text}")
+                        tg.start_soon(send_response, response)
+                    tg.start_soon(consumer.commit)
             except Exception as e:
                 loguru.logger.error(f"Error processing message: {e}")
     finally:

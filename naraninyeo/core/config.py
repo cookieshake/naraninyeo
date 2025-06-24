@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
     KAFKA_GROUP_ID: str = "naraninyeo-group"
 
+    # Naraninyeo API settings
+    NARANINYEO_API_URL: str = "http://localhost:8000"
+
     class Config:
         env_file = ".env"
 
