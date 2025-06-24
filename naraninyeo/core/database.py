@@ -1,23 +1,23 @@
-from pymongo import MongoClient
+from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.database import Database
 from naraninyeo.core.config import settings
 
 class Database:
-    client: MongoClient = None
-    db: Database = None
+    client: AsyncIOMotorClient = None
+    _db: Database = None
 
-    def connect_to_database(self):
-        self.client = MongoClient(settings.MONGODB_URL)
-        self.db = self.client[settings.MONGODB_DB_NAME]
+    async def connect_to_database(self):
+        self.client = AsyncIOMotorClient(settings.MONGODB_URL)
+        self._db = self.client[settings.MONGODB_DB_NAME]
 
-    def close_database_connection(self):
+    async def close_database_connection(self):
         if self.client:
             self.client.close()
 
     @property
-    def get_db(self) -> Database:
-        if self.db is None:
+    def db(self) -> Database:
+        if self._db is None:
             raise RuntimeError("Database not initialized")
-        return self.db
+        return self._db
 
-db = Database() 
+mc = Database() 

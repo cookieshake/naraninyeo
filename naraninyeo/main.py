@@ -1,26 +1,118 @@
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from naraninyeo.api.routes import router
+import asyncio
+from datetime import datetime
+import uuid
+from zoneinfo import ZoneInfo
 from naraninyeo.core.config import settings
-from naraninyeo.core.database import db
+from naraninyeo.core.database import mc
+from naraninyeo.models.message import Attachment, Author, Channel, Message, MessageContent
+from naraninyeo.services.message import handle_message
+import json
+import loguru
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    db.connect_to_database()
+import anyio
+from aiokafka import AIOKafkaConsumer
+
+async def parse_message(message_data: dict) -> Message:
+    message_id = message_data["json"]["id"]
+    channel = Channel(
+        channel_id=message_data["json"]["chat_id"],
+        channel_name=message_data["room"] or "unknown"
+    )
+    author = Author(
+        author_id=message_data["json"]["user_id"],
+        author_name=message_data["sender"] or "unknown"
+    )
+    attachment = json.loads(message_data["json"]["attachment"])
+    match message_data["json"]["type"]:
+        case "2":
+            content = MessageContent(
+                text=message_data["json"]["message"],
+                attachments=[
+                    await Attachment.create_with_content_url(
+                        attachment_id=str(uuid.uuid4()),
+                        attachment_type="image",
+                        content_url=attachment["url"]
+                    )
+                ]
+            )
+        case "3":
+            content = MessageContent(
+                text=message_data["json"]["message"],
+                attachments=[
+                    await Attachment.create_with_content_url(
+                        attachment_id=str(uuid.uuid4()),
+                        attachment_type="video",
+                        content_url=attachment["url"]
+                    )
+                ]
+            )
+        case "18":
+            content = MessageContent(
+                text=message_data["json"]["message"],
+                attachments=[
+                    await Attachment.create_with_content_url(
+                        attachment_id=str(uuid.uuid4()),
+                        attachment_type="file",
+                        content_url=attachment["url"]
+                    )
+                ]
+            )
+        case "27":
+            content = MessageContent(
+                text=message_data["json"]["message"],
+                attachments=await asyncio.gather(*[
+                    Attachment.create_with_content_url(
+                        attachment_id=str(uuid.uuid4()),
+                        attachment_type="image",
+                        content_url=url
+                    )
+                    for url in attachment["imageUrls"]
+                ])
+            )
+        case _:
+            content = MessageContent(
+                text=message_data["json"]["message"]
+            )
+    timestamp = datetime.fromtimestamp(int(message_data["json"]["created_at"]), tz=ZoneInfo("Asia/Seoul"))
+    return Message(
+        message_id=message_id,
+        channel=channel,
+        author=author,
+        content=content,
+        timestamp=timestamp
+    )
+    
+
+
+async def main():
+    await mc.connect_to_database()
+    consumer = AIOKafkaConsumer(
+        settings.KAFKA_TOPIC,
+        bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
+        group_id=settings.KAFKA_GROUP_ID,
+        auto_offset_reset="earliest",
+        enable_auto_commit=False
+    )
+    loguru.logger.info(f"Starting consumer for topic: {settings.KAFKA_TOPIC}")
+    await consumer.start()
     try:
-        yield
+        async for msg in consumer:
+            try:
+                value = json.loads(msg.value.decode("utf-8"))
+                loguru.logger.info(f"Received message: {value}")
+                message = await parse_message(value)
+                response = await handle_message(message)
+                if response:
+                    loguru.logger.info(f"Sending response: {response.content.text}")
+                await consumer.commit()
+            except Exception as e:
+                loguru.logger.error(f"Error processing message: {e}")
     finally:
-        db.close_database_connection()
-
-app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
-
-app.include_router(router)
+        loguru.logger.info("Stopping consumer")
+        await consumer.stop()
+        loguru.logger.info("Consumer stopped")
+        loguru.logger.info("Closing database connection")
+        await mc.close_database_connection()
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        "main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG
-    ) 
+    anyio.run(main)

@@ -1,34 +1,39 @@
-import random
+
 import traceback
+from typing import Optional
+import anyio
 
-from naraninyeo.models.message import MessageRequest, MessageDocument
-from naraninyeo.core.database import db
-from naraninyeo.handlers.response import generate_llm_response, get_random_response
+from naraninyeo.handlers.message import should_respond
+from naraninyeo.models.message import Message, MessageContent, Author
+from naraninyeo.handlers.response import generate_llm_response
 
-def save_message(doc: MessageDocument):
-    """
-    메시지를 MongoDB에 저장합니다.
-    """
-    # Use upsert to handle duplicates
-    db.get_db.messages.update_one(
-        {"_id": doc.message_id},
-        {"$set": doc.model_dump(by_alias=True)},
-        upsert=True
-    ) 
+bot_author = Author(
+    author_id="bot-naraninyeo",
+    author_name="나란잉여"
+)
 
-
-def should_respond(request: MessageDocument) -> bool:
+async def handle_message(request: Message) -> Optional[Message]:
     """
-    메시지가 응답이 필요한지 확인합니다.
-    """
-    return request.content.startswith('/')
-
-def get_response(request: MessageDocument) -> str:
-    """
-    LLM을 사용하여 응답을 생성합니다.
+    Handle incoming messages and save them to MongoDB.
+    Only respond if the message starts with '/'.
     """
     try:
-        return generate_llm_response(request) 
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(request.save)
+            needs_response = await should_respond(request)
+            if needs_response:
+                response_message = await generate_llm_response(request)
+                reply_message = Message(
+                    message_id=f"{request.message_id}-reply",
+                    channel=request.channel,
+                    author=bot_author,
+                    content=MessageContent(text=response_message),
+                    timestamp=request.timestamp
+                )
+                tg.start_soon(reply_message.save)
+                return reply_message
+            else:
+                return None
     except Exception as e:
         traceback.print_exc()
-    return get_random_response(request)
+        return None

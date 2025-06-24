@@ -12,7 +12,7 @@ from haystack.dataclasses import ChatMessage
 from haystack.utils import Secret
 from naraninyeo.core.config import settings
 from naraninyeo.handlers.history import get_history
-from naraninyeo.models.message import MessageDocument, MessageRequest
+from naraninyeo.models.message import Message
 from naraninyeo.tools import default_toolset
 
 RANDOM_RESPONSES = [
@@ -58,11 +58,11 @@ RANDOM_RESPONSES = [
     "그런 시선으로 바라보면 그렇겠네요."
 ]
 
-def get_random_response(message: MessageDocument) -> str:
+async def get_random_response(message: Message) -> str:
     """
     Get a random response from the predefined list
     """
-    rand = random.Random(message.content)
+    rand = random.Random(message.content.text)
     return rand.choice(RANDOM_RESPONSES) 
 
 
@@ -87,7 +87,7 @@ tool_invoker = ToolInvoker(
     async_executor=ThreadPoolExecutor(max_workers=10)
 )
 
-def generate_llm_response(message: MessageDocument) -> str:
+async def generate_llm_response(message: Message) -> str:
     """
     LLM을 사용하여 사용자의 메시지에 대한 응답을 생성합니다.
     
@@ -98,13 +98,11 @@ def generate_llm_response(message: MessageDocument) -> str:
         str: 생성된 응답
     """
 
-    history = get_history(message.room, message.created_at, 15)
+    history = await get_history(message.channel.channel_id, message.timestamp, 15)
     history.append(message)
     history_str = ""
     for h in history:
-        history_str += f"{h.created_at.astimezone(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")} {h.author_name} : {h.content[:50]}\n"
-        if h.has_response:
-            history_str += f"{h.created_at.astimezone(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")} 나란잉여 : {str(h.response_content)[:50]}\n"
+        history_str += f"{h.text_repr}\n"
     history_str = textwrap.dedent(history_str).strip()
 
     messages = [
@@ -140,7 +138,7 @@ def generate_llm_response(message: MessageDocument) -> str:
         """).strip()),
         ChatMessage.from_user(textwrap.dedent(f"""
             대답을 할 때 아래의 정보를 참고하세요
-            - 현재 대화방의 ID는 {message.room} 입니다.
+            - 현재 대화방의 ID는 {message.channel.channel_id} 입니다.
             - 현재 위치는 대한민국의 수도 서울입니다.
             - 현재 시각은 {datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")} 입니다.
 
