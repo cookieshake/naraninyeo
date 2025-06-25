@@ -2,9 +2,7 @@ import html
 import re
 import httpx
 from typing import Annotated, Literal
-from datetime import datetime
-from zoneinfo import ZoneInfo
-from haystack.tools import tool
+from agno.tools import tool
 
 from naraninyeo.core.config import settings
 
@@ -31,7 +29,7 @@ def _search_naver_api(query: str, limit: int, sort: Literal["sim", "date"], api_
         i["description"] = html.unescape(i["description"])
     return items
 
-@tool
+@tool(show_result=True)
 def search_naver_news(
     query: Annotated[str, "The query to search for"],
     limit: Annotated[int, "The number of news to return. (default: 15)"] = 15,
@@ -43,11 +41,12 @@ def search_naver_news(
     items = _search_naver_api(query, limit, sort, "news")
     result = ""
     for i in items:
-        result += f"- title: {i['title']}\\n"
-        result += f"  description: {i['description']}\\n"
+        result += f"title: {i['title']}\\n"
+        result += f"description: {i['description']}\\n"
+        result += "\\n"
     return result
 
-@tool
+@tool(show_result=True)
 def search_naver_blog(
     query: Annotated[str, "The query to search for"],
     limit: Annotated[int, "The number of blogs to return. (default: 15)"] = 15,
@@ -59,11 +58,12 @@ def search_naver_blog(
     items = _search_naver_api(query, limit, sort, "blog")
     result = ""
     for i in items:
-        result += f"- title: {i['title']}\\n"
-        result += f"  description: {i['description']}\\n"
+        result += f"title: {i['title']}\\n"
+        result += f"description: {i['description']}\\n"
+        result += "\\n"
     return result
 
-@tool
+@tool(show_result=True)
 def search_naver_webkr(
     query: Annotated[str, "The query to search for"],
     limit: Annotated[int, "The number of web articles to return. (default: 15)"] = 15,
@@ -75,6 +75,7 @@ def search_naver_webkr(
     items = _search_naver_api(query, limit, sort, "webkr")
     result = ""
     for i in items:
-        result += f"- title: {i['title']}\\n"
-        result += f"  description: {i['description']}\\n"
+        result += f"title: {i['title']}\\n"
+        result += f"description: {i['description']}\\n"
+        result += "\\n"
     return result

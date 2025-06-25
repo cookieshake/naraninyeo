@@ -18,22 +18,21 @@ async def handle_message(request: Message) -> Optional[Message]:
     Only respond if the message starts with '/'.
     """
     try:
-        async with anyio.create_task_group() as tg:
-            tg.start_soon(request.save)
-            needs_response = await should_respond(request)
-            if needs_response:
-                response_message = await generate_llm_response(request)
-                reply_message = Message(
-                    message_id=f"{request.message_id}-reply",
-                    channel=request.channel,
-                    author=bot_author,
-                    content=MessageContent(text=response_message),
-                    timestamp=request.timestamp
-                )
-                tg.start_soon(reply_message.save)
-                return reply_message
-            else:
-                return None
+        await request.save()
+        needs_response = await should_respond(request)
+        if needs_response:
+            response_message = await generate_llm_response(request)
+            reply_message = Message(
+                message_id=f"{request.message_id}-reply",
+                channel=request.channel,
+                author=bot_author,
+                content=MessageContent(text=response_message),
+                timestamp=request.timestamp
+            )
+            await reply_message.save()
+            return reply_message
+        else:
+            return None
     except Exception as e:
         traceback.print_exc()
         return None
