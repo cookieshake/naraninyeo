@@ -14,4 +14,5 @@ dependencies = [
     "agno>=1.6.4",
     "google-genai>=1.21.1",
     "openai>=1.91.0",
+    "ollama>=0.5.1",
 ]
