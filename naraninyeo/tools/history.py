@@ -6,7 +6,7 @@ from agno.tools import tool
 from naraninyeo.handlers.history import get_history
 
 @tool(show_result=True)
-def get_history_by_timestamp(
+async def get_history_by_timestamp(
     room_id: Annotated[str, "The room id to get the history from"],
     timestamp: Annotated[str, "The timestamp to get the history from. (YYYY-MM-DD HH:MM:SS) KST"],
     limit: Annotated[float, "The number of messages to get. (default: 10)"] = 10.0
@@ -21,9 +21,9 @@ def get_history_by_timestamp(
     
     # Convert KST timestamp string to datetime with KST timezone
     dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo("Asia/Seoul"))
-    history = get_history(room_id, dt, int(limit))
+    history = await get_history(room_id, dt, int(limit))
 
     result = []
     for message in history:
-        result.append(f"{message.created_at.astimezone(ZoneInfo('Asia/Seoul')).strftime('%Y-%m-%d %H:%M:%S')} {message.author_name} : {message.content[:50]}")
+        result.append(message.text_repr)
     return "\n".join(result)

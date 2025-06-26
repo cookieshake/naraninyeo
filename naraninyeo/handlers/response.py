@@ -82,7 +82,7 @@ search_agent = Agent(
         Never use Markdown or special characters.
     """,
     model=Gemini(
-        id="gemini-2.5-flash-lite-preview-06-17",
+        id="gemini-2.0-flash-lite",
         api_key=settings.GOOGLE_API_KEY,
         safety_settings=not_safe_settings
     ),
@@ -99,7 +99,7 @@ answer_team = Team(
     members=[search_agent],
     mode="coordinate",
     model=Gemini(
-        id="gemini-2.5-flash-lite-preview-06-17",
+        id="gemini-2.0-flash",
         api_key=settings.GOOGLE_API_KEY,
         safety_settings=not_safe_settings
     ),
