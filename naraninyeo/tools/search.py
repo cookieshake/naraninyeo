@@ -34,7 +34,6 @@ async def _search_naver_api(query: str, limit: int, sort: Literal["sim", "date"]
 async def search_naver_news(
     query: str,
     limit: int = 15,
-    sort_by_similarity: bool = True,
     sort_by_date: bool = False
 ) -> str:
     """
@@ -43,10 +42,9 @@ async def search_naver_news(
     Args:
         query: The query to search for
         limit: The number of news to return. (default: 15)
-        sort_by_similarity: Whether to sort by similarity. (default: True)
-        sort_by_date: Whether to sort by date. (default: False)
+        sort_by_date: Whether to sort by most recent date first. (default: False)
     """
-    sort = "sim" if sort_by_similarity else "date" if sort_by_date else "sim"
+    sort = "date" if sort_by_date else "sim"
     items = await _search_naver_api(query, limit, sort, "news")
     result = ""
     for i in items:
@@ -59,7 +57,6 @@ async def search_naver_news(
 async def search_naver_blog(
     query: str,
     limit: int = 15,
-    sort_by_similarity: bool = True,
     sort_by_date: bool = False
 ) -> str:
     """
@@ -68,10 +65,9 @@ async def search_naver_blog(
     Args:
         query: The query to search for
         limit: The number of blogs to return. (default: 15)
-        sort_by_similarity: Whether to sort by similarity. (default: True)
-        sort_by_date: Whether to sort by date. (default: False)
+        sort_by_date: Whether to sort by most recent date first. (default: False)
     """
-    sort = "sim" if sort_by_similarity else "date" if sort_by_date else "sim"
+    sort = "date" if sort_by_date else "sim"
     items = await _search_naver_api(query, limit, sort, "blog")
     result = ""
     for i in items:
@@ -84,7 +80,6 @@ async def search_naver_blog(
 async def search_naver_web(
     query: str,
     limit: int = 15,
-    sort_by_similarity: bool = True,
     sort_by_date: bool = False
 ) -> str:
     """
@@ -93,10 +88,9 @@ async def search_naver_web(
     Args:
         query: The query to search for
         limit: The number of web pages to return. (default: 15)
-        sort_by_similarity: Whether to sort by similarity. (default: True)
-        sort_by_date: Whether to sort by date. (default: False)
+        sort_by_date: Whether to sort by most recent date first. (default: False)
     """
-    sort = "sim" if sort_by_similarity else "date" if sort_by_date else "sim"
+    sort = "date" if sort_by_date else "sim"
     items = await _search_naver_api(query, limit, sort, "webkr")
     result = ""
     for i in items:
