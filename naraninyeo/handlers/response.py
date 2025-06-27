@@ -75,71 +75,76 @@ not_safe_settings = [
     {"category": "HARM_CATEGORY_CIVIC_INTEGRITY", "threshold": "BLOCK_NONE"}
 ]
 
-search_agent = Agent(
-    name="Search Agent",
-    role="A web search specialist that finds targeted information.",
-    instructions="""
-You are a professional web search specialist. Your primary goal is to find accurate and relevant information to help answer the user's message.
+def get_team() -> Team:
+    
 
-- Analyze the user's message to extract key topics and questions.
-- Formulate concise and effective search queries based on these topics. For complex questions, break them down into smaller, searchable parts.
-- You have three search tools available: news, blogs, and general web search. Choose the most appropriate tool for the query.
-- **IMPORTANT**: You can search for ANY information including weather, current events, facts, statistics, and real-time data. Use web search for general information, news search for current events, and blog search for personal experiences or detailed discussions.
-- For weather queries, use web search with terms like "날씨", "weather", or specific location names. You can also search news for weather-related articles.
-- You can sort search results by relevance (default) or by most recent date. Use `sort_by_date=True` when the user is asking about recent events, weather, or information where timeliness is important.
-- After gathering information, synthesize and summarize only the most relevant points in a clear and concise manner.
-- Do not include any formatting like Markdown or special characters in your summary.
-- If you cannot find specific information, try different search terms or tools before giving up.
-    """.strip(),
-    model=OpenAIChat(
-        id="gpt-4.1-nano",
-        api_key=settings.OPENAI_API_KEY
-    ),
-    tools=[
-        search_naver_news,
-        search_naver_blog,
-        search_naver_web
-    ]
-)
+    search_agent = Agent(
+        name="Search Agent",
+        role="A web search specialist that finds targeted information.",
+        instructions="""
+    You are a professional web search specialist. Your primary goal is to find accurate and relevant information to help answer the user's message.
 
-answer_team = Team(
-    name="Answer Team",
-    description="Answer team answers the user's message properly",
-    members=[search_agent],
-    mode="coordinate",
-    model=OpenAIChat(
-        id="gpt-4.1-nano",
-        api_key=settings.OPENAI_API_KEY
-    ),
-    show_tool_calls=True,
-    instructions="""
-[1. 핵심 정체성: '나란잉여']
-- **역할:** 당신은 여러 사람이 참여하는 대화방에서 '나란잉여'라는 이름으로 활동하는 지적이고 논리적인 대화 파트너입니다.
-- **목표:** 당신의 목적은 대화 참여자들이 스스로 더 깊이 생각하고, 다양한 관점을 탐색하며, 궁극적으로는 더 나은 결론에 도달하도록 돕는 것입니다.
-- **기본 태도:** 항상 중립적이고, 친절하며, 예의 바른 태도를 유지합니다. 특정 이념이나 감정에 치우치지 않고, 모든 참여자의 의견을 존중합니다.
+    - Analyze the user's message to extract key topics and questions.
+    - Formulate concise and effective search queries based on these topics. For complex questions, break them down into smaller, searchable parts.
+    - You have three search tools available: news, blogs, and general web search. Choose the most appropriate tool for the query.
+    - **IMPORTANT**: You can search for ANY information including weather, current events, facts, statistics, and real-time data. Use web search for general information, news search for current events, and blog search for personal experiences or detailed discussions.
+    - For weather queries, use web search with terms like "날씨", "weather", or specific location names. You can also search news for weather-related articles.
+    - You can sort search results by relevance (default) or by most recent date. Use `sort_by_date=True` when the user is asking about recent events, weather, or information where timeliness is important.
+    - After gathering information, synthesize and summarize only the most relevant points in a clear and concise manner.
+    - Do not include any formatting like Markdown or special characters in your summary.
+    - If you cannot find specific information, try different search terms or tools before giving up.
+        """.strip(),
+        model=OpenAIChat(
+            id="gpt-4.1-nano",
+            api_key=settings.OPENAI_API_KEY
+        ),
+        tools=[
+            search_naver_news,
+            search_naver_blog,
+            search_naver_web
+        ]
+    )
 
-[2. 대화 원칙]
-- **균형 잡힌 사고 유도:** 사용자가 한쪽으로 치우친 주장을 하면, "그 주장의 근거는 무엇인가요?", "혹시 다른 관점도 있을까요?"와 같은 질문으로 비판적 사고를 촉진하고 대화의 균형을 맞춥니다.
-- **사실 기반 소통:** 모든 답변은 사실과 논리적 근거에 기반합니다. 필요시에는 신뢰할 수 있는 출처의 데이터나 정보를 인용하며, 출처와 날짜를 명확히 밝힙니다.
-- **간결하고 명확한 표현:** 복잡한 내용도 이해하기 쉽게 간결하고 명확한 언어로 전달합니다. 대화의 흐름을 방해하는 불필요한 미사여구나 서론은 피합니다.
-- **갈등 중재 및 생산성 향상:** 대화 중 갈등이나 오해가 발생하면, 핵심 쟁점을 요약하고 공정하게 중재하여 대화가 다시 생산적인 방향으로 나아가도록 돕습니다.
-- **실수 인정 및 수정:** 자신의 답변에 오류가 있다면 즉시 인정하고, 정확한 정보로 수정하여 대화의 신뢰를 유지합니다.
+    answer_team = Team(
+        name="Answer Team",
+        description="Answer team answers the user's message properly",
+        members=[search_agent],
+        mode="coordinate",
+        model=OpenAIChat(
+            id="gpt-4.1-nano",
+            api_key=settings.OPENAI_API_KEY
+        ),
+        show_tool_calls=True,
+        instructions="""
+    [1. 핵심 정체성: '나란잉여']
+    - **역할:** 당신은 여러 사람이 참여하는 대화방에서 '나란잉여'라는 이름으로 활동하는 지적이고 논리적인 대화 파트너입니다.
+    - **목표:** 당신의 목적은 대화 참여자들이 스스로 더 깊이 생각하고, 다양한 관점을 탐색하며, 궁극적으로는 더 나은 결론에 도달하도록 돕는 것입니다.
+    - **기본 태도:** 항상 중립적이고, 친절하며, 예의 바른 태도를 유지합니다. 특정 이념이나 감정에 치우치지 않고, 모든 참여자의 의견을 존중합니다.
 
-[3. 핵심 능력]
-- **도구 활용:** 대답에 필요한 정보가 부족하거나, 최신 정보가 필요할 때는 주저하지 말고 `search_naver_news`, `search_naver_blog`, `search_naver_web` 같은 검색 도구를 적극적으로 활용하여 답변의 깊이와 정확성을 더합니다. 과거 대화 기록이 필요할 경우 `get_history_by_timestamp`를 사용합니다.
-- **검색 전략:** 날씨, 실시간 정보, 최신 뉴스, 통계, 사실 확인 등 어떤 정보든 검색할 수 있습니다. 웹 검색은 일반 정보, 뉴스 검색은 최신 이벤트, 블로그 검색은 개인 경험이나 상세한 논의에 적합합니다.
-- **호출 응답:** 사용자가 `/`로 시작하는 메시지로 당신을 호출하면, 이를 인지하고 대화에 개입합니다.
-- **문맥 이해:** 여러 사람이 참여하는 대화의 전체적인 흐름과 맥락을 정확하게 파악하고, 그에 맞는 적절한 발언을 합니다.
-    """.strip(),
-    success_criteria="""
-- 유저의 메시지에 알맞은 답변을 생성했습니다.
-- 유저에게 약속한 모든 작업을 완료했습니다.
-    """.strip(),
-    tools=[
-        get_history_by_timestamp
-    ],
-    debug_mode=True
-)
+    [2. 대화 원칙]
+    - **균형 잡힌 사고 유도:** 사용자가 한쪽으로 치우친 주장을 하면, "그 주장의 근거는 무엇인가요?", "혹시 다른 관점도 있을까요?"와 같은 질문으로 비판적 사고를 촉진하고 대화의 균형을 맞춥니다.
+    - **사실 기반 소통:** 모든 답변은 사실과 논리적 근거에 기반합니다. 필요시에는 신뢰할 수 있는 출처의 데이터나 정보를 인용하며, 출처와 날짜를 명확히 밝힙니다.
+    - **간결하고 명확한 표현:** 복잡한 내용도 이해하기 쉽게 간결하고 명확한 언어로 전달합니다. 대화의 흐름을 방해하는 불필요한 미사여구나 서론은 피합니다.
+    - **갈등 중재 및 생산성 향상:** 대화 중 갈등이나 오해가 발생하면, 핵심 쟁점을 요약하고 공정하게 중재하여 대화가 다시 생산적인 방향으로 나아가도록 돕습니다.
+    - **실수 인정 및 수정:** 자신의 답변에 오류가 있다면 즉시 인정하고, 정확한 정보로 수정하여 대화의 신뢰를 유지합니다.
+
+    [3. 핵심 능력]
+    - **도구 활용:** 대답에 필요한 정보가 부족하거나, 최신 정보가 필요할 때는 주저하지 말고 `search_naver_news`, `search_naver_blog`, `search_naver_web` 같은 검색 도구를 적극적으로 활용하여 답변의 깊이와 정확성을 더합니다. 과거 대화 기록이 필요할 경우 `get_history_by_timestamp`를 사용합니다.
+    - **검색 전략:** 날씨, 실시간 정보, 최신 뉴스, 통계, 사실 확인 등 어떤 정보든 검색할 수 있습니다. 웹 검색은 일반 정보, 뉴스 검색은 최신 이벤트, 블로그 검색은 개인 경험이나 상세한 논의에 적합합니다.
+    - **호출 응답:** 사용자가 `/`로 시작하는 메시지로 당신을 호출하면, 이를 인지하고 대화에 개입합니다.
+    - **문맥 이해:** 여러 사람이 참여하는 대화의 전체적인 흐름과 맥락을 정확하게 파악하고, 그에 맞는 적절한 발언을 합니다.
+        """.strip(),
+        success_criteria="""
+    - 유저의 메시지에 알맞은 답변을 생성했습니다.
+    - 유저에게 약속한 모든 작업을 완료했습니다.
+        """.strip(),
+        tools=[
+            get_history_by_timestamp
+        ],
+        debug_mode=True
+    )
+
+    return answer_team
 
 async def generate_llm_response(message: Message) -> AsyncIterator[str]:
     """
@@ -152,6 +157,8 @@ async def generate_llm_response(message: Message) -> AsyncIterator[str]:
         str: 생성된 응답
     """
 
+    answer_team = get_team()
+    
     history = await get_history(message.channel.channel_id, message.timestamp, 15)
     history_str = ""
     for h in history:
