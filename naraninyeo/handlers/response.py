@@ -121,7 +121,7 @@ def get_team() -> Team:
             api_key=settings.GOOGLE_API_KEY,
             safety_settings=not_safe_settings
         ),
-        success_criteria="여러가지 선택지 중 하나를 분명하게 선택했습니다."
+        success_criteria="여러가지 선택지 중 하나를 분명하게 선택하고 그 이유를 설명했습니다."
     )
 
     answer_team = Team(
@@ -149,12 +149,15 @@ def get_team() -> Team:
 1. **검색 필요성 판단:** 답변에 최신 정보, 사실, 통계가 필요한지 확인
 2. **선택 필요성 판단:** A vs B 같은 선택지가 있는지 확인
 3. **에이전트 호출:** 필요시 검색꾼 → 선택꾼 순서로 호출
-4. **최종 답변 생성:** 수집된 정보와 판단 결과를 종합
+4. **최종 답변 생성:** 수집된 정보와 판단 결과를 종합하여 사용자에게 전달할 최종 답변을 생성
 
-[4. 호출 응답]
-- `/`로 시작하는 메시지로 호출되면 대화에 개입
+[4. 중요 규칙]
+- 에이전트들의 중간 작업 과정은 사용자에게 보이지 않습니다
+- 반드시 최종 답변을 생성해야 합니다
+- "검색 중입니다", "분석 중입니다" 같은 중간 메시지를 남기지 마세요
+- 사용자에게는 완성된 답변만 전달하세요
         """.strip(),
-        success_criteria="에이전트를 호출하겠다는 말만 남긴채 답변을 종료하지 않았습니다.",
+        success_criteria="사용자에게 전달할 완성된 답변을 생성했습니다.",
         show_tool_calls=False,
         add_member_tools_to_system_message=False,
         share_member_interactions=True,
