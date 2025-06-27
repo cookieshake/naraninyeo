@@ -21,9 +21,9 @@ async def handle_message(request: Message) -> AsyncIterator[Message]:
         await request.save()
         needs_response = await should_respond(request)
         if needs_response:
-            async for chunk in generate_llm_response(request):
+            async for i,chunk in generate_llm_response(request):
                 reply_message = Message(
-                    message_id=f"{request.message_id}-reply",
+                    message_id=f"{request.message_id}-reply-{i}",
                     channel=request.channel,
                     author=bot_author,
                     content=MessageContent(text=chunk),
