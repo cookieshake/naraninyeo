@@ -79,6 +79,11 @@ class TeamResponse(BaseModel):
     response: str = Field(description="나란잉여의 응답")
     is_final: bool = Field(description="마지막 답변인지 여부")
 
+common_context = {
+    "current_datetime": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S %A"),
+    "current_location": "Seoul, South Korea"
+}
+
 def get_team() -> Team:
     search_agent = Agent(
         name="검색꾼",
@@ -98,6 +103,7 @@ def get_team() -> Team:
             api_key=settings.OPENAI_API_KEY
         ),
         success_criteria="최소 한 번 이상 검색을 수행했습니다.",
+        context=common_context,
         tools=[
             search_naver_news,
             search_naver_blog,
@@ -122,7 +128,8 @@ def get_team() -> Team:
             id="gpt-4.1-nano",
             api_key=settings.OPENAI_API_KEY
         ),
-        success_criteria="여러가지 선택지 중 하나를 분명하게 선택하고 그 이유를 설명했습니다."
+        success_criteria="여러가지 선택지 중 하나를 분명하게 선택하고 그 이유를 설명했습니다.",
+        context=common_context
     )
 
     answer_team = Team(
@@ -158,12 +165,14 @@ def get_team() -> Team:
 - 사용자에게는 완성된 답변만 전달하세요
         """.strip(),
         success_criteria="사용자에게 전달할 완성된 답변을 생성했습니다.",
+        add_location_to_instructions=True,
         show_tool_calls=False,
         add_member_tools_to_system_message=False,
         share_member_interactions=True,
         tool_choice="auto",
         show_members_responses=True,
-        debug_mode=True
+        debug_mode=True,
+        context=common_context
     )
     return answer_team
 
@@ -187,7 +196,6 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
     history_str = textwrap.dedent(history_str).strip()
 
     message = f"""
-현재 시각: {datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")}
 대화방 ID: {message.channel.channel_id}
 
 대화 기록:
@@ -195,7 +203,7 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
 {history_str}
 ---
 
-위 대화에 이어질 '나란잉여'의 응답을 왕에게 말하는 듯한 정중한 말투로 생성하세요.
+위 대화에 이어질 '나란잉여'의 응답을 생성하세요.
 유저에게는 에이전트의 답변이 보이지 않습니다.
 에이전트의 답변을 참고하여 유저에게 전달할 답변을 생성하세요.
     """.strip()
