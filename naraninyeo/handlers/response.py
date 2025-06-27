@@ -80,8 +80,10 @@ class TeamResponse(BaseModel):
     is_final: bool = Field(description="마지막 답변인지 여부")
 
 common_context = {
-    "current_datetime": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S %A"),
-    "current_location": "Seoul, South Korea"
+    "current_context": lambda : f"""
+현재 시각: {datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S %A")}
+현재 위치: "Seoul, South Korea"
+""".strip()
 }
 
 def get_team() -> Team:
@@ -89,6 +91,10 @@ def get_team() -> Team:
         name="검색꾼",
         role="답변에 필요한 정보를 검색하는 전문가",
         instructions="""
+```
+{current_context}
+```
+
 - 사용자 메시지를 분석하여 주요 주제와 질문을 추출하세요
 - 간결하고 효과적인 검색 쿼리를 작성하세요
 - 뉴스, 블로그, 일반 웹 검색 중 적합한 도구를 선택하세요
@@ -104,6 +110,7 @@ def get_team() -> Team:
         ),
         success_criteria="최소 한 번 이상 검색을 수행했습니다.",
         context=common_context,
+        add_state_in_messages=True,
         tools=[
             search_naver_news,
             search_naver_blog,
@@ -115,6 +122,10 @@ def get_team() -> Team:
         name="선택꾼",
         role="여러 가지 선택지 중 하나를 선택하고 그 이유를 설명하는 전문가",
         instructions="""
+```
+{current_context}
+```
+
 - 검색꾼이 수집한 정보를 바탕으로 판단을 내리세요
 - A vs B 같은 선택지가 있을 때 각 선택지의 장단점을 분석하세요
 - 더 나은 선택지를 선택하고 그 이유를 명확히 설명하세요
@@ -129,7 +140,8 @@ def get_team() -> Team:
             api_key=settings.OPENAI_API_KEY
         ),
         success_criteria="여러가지 선택지 중 하나를 분명하게 선택하고 그 이유를 설명했습니다.",
-        context=common_context
+        context=common_context,
+        add_state_in_messages=True,
     )
 
     answer_team = Team(
@@ -165,14 +177,14 @@ def get_team() -> Team:
 - 사용자에게는 완성된 답변만 전달하세요
         """.strip(),
         success_criteria="사용자에게 전달할 완성된 답변을 생성했습니다.",
-        add_location_to_instructions=True,
         show_tool_calls=False,
         add_member_tools_to_system_message=False,
         share_member_interactions=True,
         tool_choice="auto",
         show_members_responses=True,
         debug_mode=True,
-        context=common_context
+        context=common_context,
+        add_state_in_messages=True,
     )
     return answer_team
 
@@ -196,6 +208,10 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
     history_str = textwrap.dedent(history_str).strip()
 
     message = f"""
+```
+{{current_context}}
+```
+
 대화방 ID: {message.channel.channel_id}
 
 대화 기록:
