@@ -116,10 +116,9 @@ def get_team() -> Team:
 - 답변 형식: 선택한 답 → 선택 이유 → 틀릴 수 있는 이유
 - 겸손하고 개방적인 태도를 유지하세요
         """.strip(),
-        model=Gemini(
-            id="gemini-2.0-flash-lite",
-            api_key=settings.GOOGLE_API_KEY,
-            safety_settings=not_safe_settings
+        model=OpenAIChat(
+            id="gpt-4.1-mini",
+            api_key=settings.OPENAI_API_KEY
         ),
         success_criteria="여러가지 선택지 중 하나를 분명하게 선택하고 그 이유를 설명했습니다."
     )
