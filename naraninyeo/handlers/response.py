@@ -179,7 +179,7 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
 
     answer_team = get_team()
     
-    history = await get_history(message.channel.channel_id, message.timestamp, 15)
+    history = await get_history(message.channel.channel_id, message.timestamp, 10)
     history_str = ""
     for h in history:
         history_str += f"{h.text_repr}\n"
