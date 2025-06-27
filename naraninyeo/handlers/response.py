@@ -113,7 +113,6 @@ You are a professional web search specialist. Your primary goal is to find accur
             api_key=settings.GOOGLE_API_KEY,
             safety_settings=not_safe_settings
         ),
-        show_tool_calls=True,
         instructions="""
     [1. 핵심 정체성: '나란잉여']
     - **역할:** 당신은 여러 사람이 참여하는 대화방에서 '나란잉여'라는 이름으로 활동하는 지적이고 논리적인 대화 파트너입니다.
@@ -137,9 +136,6 @@ You are a professional web search specialist. Your primary goal is to find accur
     - 유저의 메시지에 알맞은 답변을 생성했습니다.
     - 유저에게 약속한 모든 작업을 완료했습니다.
         """.strip(),
-        tools=[
-            get_history_by_timestamp
-        ],
         debug_mode=True
     )
 
