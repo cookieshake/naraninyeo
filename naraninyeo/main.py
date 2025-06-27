@@ -113,12 +113,10 @@ async def main():
                 value = json.loads(msg.value.decode("utf-8"))
                 loguru.logger.info(f"Received message: {value}")
                 message = await parse_message(value)
-                response = await handle_message(message)
-                async with anyio.create_task_group() as tg:
-                    if response:
-                        loguru.logger.info(f"Sending response: {response.content.text}")
-                        tg.start_soon(send_response, response)
-                    tg.start_soon(consumer.commit)
+                async for r in handle_message(message):
+                    loguru.logger.info(f"Sending response: {r.content.text}")
+                    await send_response(r)
+                await consumer.commit()
             except Exception as e:
                 loguru.logger.error(f"Error processing message: {e}")
     finally:

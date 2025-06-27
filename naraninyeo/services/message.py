@@ -1,6 +1,6 @@
 
 import traceback
-from typing import Optional
+from typing import AsyncIterator, Optional
 import anyio
 
 from naraninyeo.handlers.message import should_respond
@@ -12,7 +12,7 @@ bot_author = Author(
     author_name="나란잉여"
 )
 
-async def handle_message(request: Message) -> Optional[Message]:
+async def handle_message(request: Message) -> AsyncIterator[Message]:
     """
     Handle incoming messages and save them to MongoDB.
     Only respond if the message starts with '/'.
@@ -21,18 +21,15 @@ async def handle_message(request: Message) -> Optional[Message]:
         await request.save()
         needs_response = await should_respond(request)
         if needs_response:
-            response_message = await generate_llm_response(request)
-            reply_message = Message(
-                message_id=f"{request.message_id}-reply",
-                channel=request.channel,
-                author=bot_author,
-                content=MessageContent(text=response_message),
-                timestamp=request.timestamp
-            )
-            await reply_message.save()
-            return reply_message
-        else:
-            return None
+            async for chunk in generate_llm_response(request):
+                reply_message = Message(
+                    message_id=f"{request.message_id}-reply",
+                    channel=request.channel,
+                    author=bot_author,
+                    content=MessageContent(text=chunk),
+                    timestamp=request.timestamp
+                )
+                await reply_message.save()
+                yield reply_message
     except Exception as e:
         traceback.print_exc()
-        return None

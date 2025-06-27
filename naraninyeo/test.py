@@ -21,11 +21,9 @@ async def main():
                 content=MessageContent(text=text),
                 timestamp=datetime.now()
             )
-            reply = await handle_message(message)
-            if reply:
-                print(f"나란잉여: {reply.content.text}")
-            else:
-                print("나란잉여: 메시지를 보내지 않았습니다.")
+            async for reply in handle_message(message):
+                if reply:
+                    print(f"나란잉여: {reply.content.text}")
     finally:
         await mc.close_database_connection()
 

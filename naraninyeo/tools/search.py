@@ -30,15 +30,23 @@ async def _search_naver_api(query: str, limit: int, sort: Literal["sim", "date"]
         i["description"] = html.unescape(i["description"])
     return items
 
-@tool(show_result=True)
+@tool(show_result=True, strict=True)
 async def search_naver_news(
-    query: Annotated[str, "The query to search for"],
-    limit: Annotated[int, "The number of news to return. (default: 15)"] = 15,
-    sort: Annotated[Literal["sim", "date"], "The sort order of the news. 'sim' sorts by highest similarity first, 'date' sorts by most recent date first."] = "sim"
+    query: str,
+    limit: int = 15,
+    sort_by_similarity: bool = True,
+    sort_by_date: bool = False
 ) -> str:
     """
     Search for news articles using the Naver API.
+    
+    Args:
+        query: The query to search for
+        limit: The number of news to return. (default: 15)
+        sort_by_similarity: Whether to sort by similarity. (default: True)
+        sort_by_date: Whether to sort by date. (default: False)
     """
+    sort = "sim" if sort_by_similarity else "date" if sort_by_date else "sim"
     items = await _search_naver_api(query, limit, sort, "news")
     result = ""
     for i in items:
@@ -47,15 +55,23 @@ async def search_naver_news(
         result += "\\n"
     return result
 
-@tool(show_result=True)
+@tool(show_result=True, strict=True)
 async def search_naver_blog(
-    query: Annotated[str, "The query to search for"],
-    limit: Annotated[int, "The number of blogs to return. (default: 15)"] = 15,
-    sort: Annotated[Literal["sim", "date"], "The sort order of the blogs. 'sim' sorts by highest similarity first, 'date' sorts by most recent date first."] = "sim"
+    query: str,
+    limit: int = 15,
+    sort_by_similarity: bool = True,
+    sort_by_date: bool = False
 ) -> str:
     """
     Search for blog articles using the Naver API.
+    
+    Args:
+        query: The query to search for
+        limit: The number of blogs to return. (default: 15)
+        sort_by_similarity: Whether to sort by similarity. (default: True)
+        sort_by_date: Whether to sort by date. (default: False)
     """
+    sort = "sim" if sort_by_similarity else "date" if sort_by_date else "sim"
     items = await _search_naver_api(query, limit, sort, "blog")
     result = ""
     for i in items:
@@ -64,15 +80,23 @@ async def search_naver_blog(
         result += "\\n"
     return result
 
-@tool(show_result=True)
-async def search_naver_webkr(
-    query: Annotated[str, "The query to search for"],
-    limit: Annotated[int, "The number of web articles to return. (default: 15)"] = 15,
-    sort: Annotated[Literal["sim", "date"], "The sort order of the web articles. 'sim' sorts by highest similarity first, 'date' sorts by most recent date first."] = "sim"
+@tool(show_result=True, strict=True)
+async def search_naver_web(
+    query: str,
+    limit: int = 15,
+    sort_by_similarity: bool = True,
+    sort_by_date: bool = False
 ) -> str:
     """
-    Search for web articles using the Naver API.
+    Search for web pages using the Naver API.
+    
+    Args:
+        query: The query to search for
+        limit: The number of web pages to return. (default: 15)
+        sort_by_similarity: Whether to sort by similarity. (default: True)
+        sort_by_date: Whether to sort by date. (default: False)
     """
+    sort = "sim" if sort_by_similarity else "date" if sort_by_date else "sim"
     items = await _search_naver_api(query, limit, sort, "webkr")
     result = ""
     for i in items:

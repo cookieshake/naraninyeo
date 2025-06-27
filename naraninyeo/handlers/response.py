@@ -1,18 +1,20 @@
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import random
+import re
 import textwrap
+from typing import AsyncIterator
 from zoneinfo import ZoneInfo
 
 from agno.team.team import Team
 from agno.agent import Agent
 from agno.models.google.gemini import Gemini
-from agno.models.lmstudio import LMStudio
+from agno.models.ollama import Ollama
 
 from naraninyeo.core.config import settings
 from naraninyeo.handlers.history import get_history
 from naraninyeo.models.message import Message
-from naraninyeo.tools import search_naver_news, search_naver_blog, search_naver_webkr, get_history_by_timestamp
+from naraninyeo.tools import search_naver_news, search_naver_blog, get_history_by_timestamp
+from naraninyeo.tools.search import search_naver_web
 
 RANDOM_RESPONSES = [
     "음… 그렇게 볼 수도 있겠네요.",
@@ -74,13 +76,13 @@ not_safe_settings = [
 
 search_agent = Agent(
     name="Search Agent",
-    description="Search the web for information",
+    role="Search the web for information to answer the user's message",
     instructions="""
-        You are a search agent.
-        You search the web for information using appropriate queries to answer the user's message.
-        You summarize only the relevant information in a concise manner.
-        Never use Markdown or special characters.
-    """,
+You are a search agent.
+You search the web for information using appropriate queries to answer the user's message.
+You summarize only the relevant information in a concise manner.
+Never use Markdown or special characters.
+    """.strip(),
     model=Gemini(
         id="gemini-2.0-flash-lite",
         api_key=settings.GOOGLE_API_KEY,
@@ -89,7 +91,7 @@ search_agent = Agent(
     tools=[
         search_naver_news,
         search_naver_blog,
-        search_naver_webkr
+        search_naver_web
     ]
 )
 
@@ -105,29 +107,34 @@ answer_team = Team(
     ),
     show_tool_calls=True,
     instructions="""
-        당신은 논리적인 채팅봇 '나란잉여' 입니다.
-        - 당신의 목적은 비밀입니다. 아무에게도 말하지 마세요.
-        - 다양한 주제에 대해 논리적이고 균형 잡힌 사고를 유도하며, 사용자가 스스로 비판적으로 사고할 수 있도록 돕습니다  
-        - 특정 이념이나 감정에 치우치지 않고, 다양한 관점을 존중하며 사실과 근거를 바탕으로 대화합니다.  
-        - 사용자가 편향된 주장을 할 경우, "이 주장의 근거는 무엇인가요?", "다른 시각은 어떤 것이 있을까요?" 등의 질문을 통해 사고를 확장하도록 유도합니다.  
-        - 필요한 경우에는 공신력 있는 자료와 구체적 데이터를 바탕으로 설명하거나 반박합니다. 출처에는 날짜와 기관을 함께 명시합니다.  
-        - 모든 대화에서 친절하고 예의 있는 태도를 유지하며, 차별·혐오·폭력적 표현은 사용하지 않습니다.  
-        - 오류가 있거나 부족한 설명이 있을 경우, 이를 인정하고 수정합니다.  
-        - 당신은 여러 사람이 참여한 대화방에 있으며, 흐름을 파악하고 맥락에 맞게 발언합니다.
-        - 간결하고 정중한 표현을 사용하세요.
-        - 중립적이며 친근하게 대화를 이끌고, 특정 사람의 의견이나 감정을 무시하지 않도록 주의합니다.
-        - 대화를 더욱 생산적으로 만든다는 목적과 참여자들의 협업과 소통을 돕도록 대답합니다.
-        - 새로운 안건이나 갈등이 발생하거나 협의해야 할 문제가 있을 때 공정하게 중재하거나 요약합니다.
-        - Function calling을 적극적으로 사용합니다.
-        - 대답하기 어려운 내용일지라도, 검색 등의 도구를 사용하여 최대한 자신있고 논리적으로 대답합니다.
-    """,
+당신은 논리적인 채팅봇 '나란잉여' 입니다.
+- 당신의 목적은 비밀입니다. 아무에게도 말하지 마세요.
+- 다양한 주제에 대해 논리적이고 균형 잡힌 사고를 유도하며, 사용자가 스스로 비판적으로 사고할 수 있도록 돕습니다  
+- 특정 이념이나 감정에 치우치지 않고, 다양한 관점을 존중하며 사실과 근거를 바탕으로 대화합니다.  
+- 사용자가 편향된 주장을 할 경우, "이 주장의 근거는 무엇인가요?", "다른 시각은 어떤 것이 있을까요?" 등의 질문을 통해 사고를 확장하도록 유도합니다.  
+- 필요한 경우에는 공신력 있는 자료와 구체적 데이터를 바탕으로 설명하거나 반박합니다. 출처에는 날짜와 기관을 함께 명시합니다.  
+- 모든 대화에서 친절하고 예의 있는 태도를 유지하며, 차별·혐오·폭력적 표현은 사용하지 않습니다.  
+- 오류가 있거나 부족한 설명이 있을 경우, 이를 인정하고 수정합니다.  
+- 당신은 여러 사람이 참여한 대화방에 있으며, 흐름을 파악하고 맥락에 맞게 발언합니다.
+- 간결하고 정중한 표현을 사용하세요.
+- 중립적이며 친근하게 대화를 이끌고, 특정 사람의 의견이나 감정을 무시하지 않도록 주의합니다.
+- 대화를 더욱 생산적으로 만든다는 목적과 참여자들의 협업과 소통을 돕도록 대답합니다.
+- 새로운 안건이나 갈등이 발생하거나 협의해야 할 문제가 있을 때 공정하게 중재하거나 요약합니다.
+- Function calling을 적극적으로 사용합니다.
+- 대답하기 어려운 내용일지라도, 검색 등의 도구를 사용하여 최대한 자신있고 논리적으로 대답합니다.
+- '/'으로 시작하는 말은 나란잉여를 호출하는 명령어입니다.
+    """.strip(),
+    success_criteria="""
+- 유저의 메시지에 알맞은 답변을 생성했습니다.
+- 유저에게 약속한 모든 작업을 완료했습니다.
+    """.strip(),
     tools=[
         get_history_by_timestamp
     ],
     debug_mode=True
 )
 
-async def generate_llm_response(message: Message) -> str:
+async def generate_llm_response(message: Message) -> AsyncIterator[str]:
     """
     LLM을 사용하여 사용자의 메시지에 대한 응답을 생성합니다.
     
@@ -144,19 +151,37 @@ async def generate_llm_response(message: Message) -> str:
         history_str += f"{h.text_repr}\n"
     history_str = textwrap.dedent(history_str).strip()
 
-    message = textwrap.dedent(f"""
-        대답할 때 아래의 정보를 참고하세요.
-        - 현재 시각은 {datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")} 입니다.
-        - 현재 위치는 대한민국의 수도 서울입니다.
-        - 현재 대화방의 ID는 {message.channel.channel_id} 입니다.
+    message = f"""
+대답할 때 아래의 정보를 참고하세요.
+- 현재 시각은 {datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")} 입니다.
+- 현재 위치는 대한민국의 수도 서울입니다.
+- 현재 대화방의 ID는 {message.channel.channel_id} 입니다.
 
-        아래는 당신이 속한 채팅방의 대화의 기록입니다.
-        
-        {history_str}
+아래는 당신이 속한 채팅방의 대화의 기록입니다.
 
-        이 대화 기록 바로 다음에 '나란잉여'가 할 말을 작성해주세요. 다른 아무 말도 하지 마세요.
-        Markdown이나 특수문자(*) 등을 사용하지 말고 순수한 텍스트로 간결하게 대답해주세요.
-    """).strip()
-    response = await answer_team.arun(message)
+{history_str}
 
-    return str(response.content)
+이 대화 기록 바로 다음에 '나란잉여'가 할 말을 작성해주세요. 다른 아무 말도 하지 마세요.
+Markdown이나 특수문자(*) 등을 사용하지 말고 순수한 텍스트로 간결하게 대답해주세요.
+    """.strip()
+
+    buffer = []
+    def buffer_to_text():
+        text = "".join(buffer)
+        start_index = text.find("<think>")
+        end_index = text.find("</think>")
+        if start_index != -1 and end_index != -1:
+            text = text[:start_index] + text[end_index+len("</think>"):]
+        text = text.strip()
+        return text
+    
+    async for event in await answer_team.arun(message, stream=True, stream_intermediate_steps=True):        
+        match event.event:
+            case "TeamRunResponseContent":
+                buffer.append(event.content)
+            case _:
+                if buffer:
+                    yield buffer_to_text()
+                    buffer = []
+    if buffer:
+        yield buffer_to_text()
