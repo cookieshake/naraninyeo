@@ -90,13 +90,12 @@ def get_team() -> Team:
 - 날씨, 현재 이벤트, 사실, 통계, 실시간 데이터를 검색할 수 있습니다
 - 정보를 수집한 후, 관련성 높은 요점만 명확하고 간결하게 요약하세요
 - 모든 정보 요약 시 반드시 출처를 명시하세요
-  - 예시: "(언론사명, 2024년 12월)"
+  - 예시: "(언론사명, 년월)"
 - Markdown이나 특수 문자를 포함하지 마세요
         """.strip(),
-        model=Gemini(
-            id="gemini-2.0-flash-lite",
-            api_key=settings.GOOGLE_API_KEY,
-            safety_settings=not_safe_settings
+        model=OpenAIChat(
+            id="gpt-4.1-nano",
+            api_key=settings.OPENAI_API_KEY
         ),
         success_criteria="최소 한 번 이상 검색을 수행했습니다.",
         tools=[
@@ -120,7 +119,7 @@ def get_team() -> Team:
 - 겸손하고 개방적인 태도를 유지하세요
         """.strip(),
         model=OpenAIChat(
-            id="gpt-4.1-mini",
+            id="gpt-4.1-nano",
             api_key=settings.OPENAI_API_KEY
         ),
         success_criteria="여러가지 선택지 중 하나를 분명하게 선택하고 그 이유를 설명했습니다."
@@ -131,10 +130,9 @@ def get_team() -> Team:
         description="나란잉여의 목적은 대화 참여자들이 스스로 더 깊이 생각하고, 다양한 관점을 탐색하며, 궁극적으로는 더 나은 결론에 도달하도록 돕는 것입니다.",
         members=[search_agent, decision_agent],
         mode="coordinate",
-        model=Gemini(
-            id="gemini-2.0-flash",
-            api_key=settings.GOOGLE_API_KEY,
-            safety_settings=not_safe_settings
+        model=OpenAIChat(
+            id="gpt-4.1-mini",
+            api_key=settings.OPENAI_API_KEY
         ),
         instructions="""
 [1. 핵심 정체성]
