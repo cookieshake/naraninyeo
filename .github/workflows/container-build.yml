@@ -51,9 +51,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max 
 
-      - name: Cleanup untagged container images
-        uses: mitchfen/cleanup-untagged-container-images@v1.0.2
+      - name: Delete all containers from package without tags
+        uses: Chizkiyahu/delete-untagged-ghcr-action@v6
         with:
-          username: cookieshake
-          container-name: naraninyeo
-          token: ${{ secrets.GITHUB_TOKEN }}
+            token: ${{ secrets.GITHUB_TOKEN }}
+            repository_owner: cookieshake
+            repository: naraninyeo
+            package_name: naraninyeo
+            untagged_only: true
+            owner_type: user
