@@ -9,7 +9,6 @@ from agno.team.team import Team
 from agno.agent import Agent
 from agno.models.google.gemini import Gemini
 from agno.models.openai.chat import OpenAIChat
-from agno.models.ollama import Ollama
 
 from naraninyeo.core.config import settings
 from naraninyeo.handlers.history import get_history
@@ -76,27 +75,26 @@ not_safe_settings = [
 ]
 
 def get_team() -> Team:
-    
-
     search_agent = Agent(
         name="Search Agent",
         role="A web search specialist that finds targeted information.",
         instructions="""
-    You are a professional web search specialist. Your primary goal is to find accurate and relevant information to help answer the user's message.
+You are a professional web search specialist. Your primary goal is to find accurate and relevant information to help answer the user's message.
 
-    - Analyze the user's message to extract key topics and questions.
-    - Formulate concise and effective search queries based on these topics. For complex questions, break them down into smaller, searchable parts.
-    - You have three search tools available: news, blogs, and general web search. Choose the most appropriate tool for the query.
-    - **IMPORTANT**: You can search for ANY information including weather, current events, facts, statistics, and real-time data. Use web search for general information, news search for current events, and blog search for personal experiences or detailed discussions.
-    - For weather queries, use web search with terms like "날씨", "weather", or specific location names. You can also search news for weather-related articles.
-    - You can sort search results by relevance (default) or by most recent date. Use `sort_by_date=True` when the user is asking about recent events, weather, or information where timeliness is important.
-    - After gathering information, synthesize and summarize only the most relevant points in a clear and concise manner.
-    - Do not include any formatting like Markdown or special characters in your summary.
-    - If you cannot find specific information, try different search terms or tools before giving up.
+- Analyze the user's message to extract key topics and questions.
+- Formulate concise and effective search queries based on these topics. For complex questions, break them down into smaller, searchable parts.
+- You have three search tools available: news, blogs, and general web search. Choose the most appropriate tool for the query.
+- **IMPORTANT**: You can search for ANY information including weather, current events, facts, statistics, and real-time data. Use web search for general information, news search for current events, and blog search for personal experiences or detailed discussions.
+- For weather queries, use web search with terms like "날씨", "weather", or specific location names. You can also search news for weather-related articles.
+- You can sort search results by relevance (default) or by most recent date. Use `sort_by_date=True` when the user is asking about recent events, weather, or information where timeliness is important.
+- After gathering information, synthesize and summarize only the most relevant points in a clear and concise manner.
+- Do not include any formatting like Markdown or special characters in your summary.
+- If you cannot find specific information, try different search terms or tools before giving up.
         """.strip(),
-        model=OpenAIChat(
-            id="gpt-4.1-nano",
-            api_key=settings.OPENAI_API_KEY
+        model=Gemini(
+            id="gemini-2.0-flash-lite",
+            api_key=settings.GOOGLE_API_KEY,
+            safety_settings=not_safe_settings
         ),
         tools=[
             search_naver_news,
@@ -110,9 +108,10 @@ def get_team() -> Team:
         description="Answer team answers the user's message properly",
         members=[search_agent],
         mode="coordinate",
-        model=OpenAIChat(
-            id="gpt-4.1-nano",
-            api_key=settings.OPENAI_API_KEY
+        model=Gemini(
+            id="gemini-2.0-flash",
+            api_key=settings.GOOGLE_API_KEY,
+            safety_settings=not_safe_settings
         ),
         show_tool_calls=True,
         instructions="""
