@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     # Gemini API settings
     GOOGLE_API_KEY: str
 
+    # OpenAI API settings
+    OPENAI_API_KEY: str
+
     # Kafka settings
     KAFKA_TOPIC: str = "naraninyeo-topic"
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"

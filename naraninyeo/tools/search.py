@@ -30,7 +30,7 @@ async def _search_naver_api(query: str, limit: int, sort: Literal["sim", "date"]
         i["description"] = html.unescape(i["description"])
     return items
 
-@tool(show_result=True, strict=True)
+@tool(show_result=True)
 async def search_naver_news(
     query: str,
     limit: int = 15,
@@ -53,7 +53,7 @@ async def search_naver_news(
         result += "\\n"
     return result
 
-@tool(show_result=True, strict=True)
+@tool(show_result=True)
 async def search_naver_blog(
     query: str,
     limit: int = 15,
@@ -76,7 +76,7 @@ async def search_naver_blog(
         result += "\\n"
     return result
 
-@tool(show_result=True, strict=True)
+@tool(show_result=True)
 async def search_naver_web(
     query: str,
     limit: int = 15,

@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 from agno.team.team import Team
 from agno.agent import Agent
 from agno.models.google.gemini import Gemini
+from agno.models.openai.chat import OpenAIChat
 from agno.models.ollama import Ollama
 
 from naraninyeo.core.config import settings
@@ -90,10 +91,9 @@ You are a professional web search specialist. Your primary goal is to find accur
 - Do not include any formatting like Markdown or special characters in your summary.
 - If you cannot find specific information, try different search terms or tools before giving up.
     """.strip(),
-    model=Gemini(
-        id="gemini-2.0-flash-lite",
-        api_key=settings.GOOGLE_API_KEY,
-        safety_settings=not_safe_settings
+    model=OpenAIChat(
+        id="gpt-4.1-nano",
+        api_key=settings.OPENAI_API_KEY
     ),
     tools=[
         search_naver_news,
@@ -107,10 +107,9 @@ answer_team = Team(
     description="Answer team answers the user's message properly",
     members=[search_agent],
     mode="coordinate",
-    model=Gemini(
-        id="gemini-2.0-flash",
-        api_key=settings.GOOGLE_API_KEY,
-        safety_settings=not_safe_settings
+    model=OpenAIChat(
+        id="gpt-4.1-nano",
+        api_key=settings.OPENAI_API_KEY
     ),
     show_tool_calls=True,
     instructions="""
