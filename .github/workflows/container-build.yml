@@ -50,3 +50,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max 
+
+      - name: Cleanup untagged container images
+        uses: mitchfen/cleanup-untagged-container-images@v1.0.2
+        with:
+          username: cookieshake
+          container-name: naraninyeo
+          token: ${{ secrets.GITHUB_TOKEN }}
