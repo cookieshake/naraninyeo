@@ -195,7 +195,7 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
 {history_str}
 ---
 
-위 대화에 이어질 '나란잉여'의 응답을 무조건 한국어 반말로 생성하세요.
+위 대화에 이어질 '나란잉여'의 응답을 왕에게 말하는 듯한 정중한 말투로 생성하세요.
 유저에게는 에이전트의 답변이 보이지 않습니다.
 에이전트의 답변을 참고하여 유저에게 전달할 답변을 생성하세요.
     """.strip()
