@@ -1,6 +1,7 @@
-
+from datetime import datetime
 import traceback
 from typing import AsyncIterator, Optional
+from zoneinfo import ZoneInfo
 import anyio
 
 from naraninyeo.handlers.message import should_respond
@@ -22,14 +23,16 @@ async def handle_message(request: Message) -> AsyncIterator[Message]:
         needs_response = await should_respond(request)
         if needs_response:
             i = 0
-            async for chunk in generate_llm_response(request):
+            async for event in generate_llm_response(request):
                 i += 1
+                if not event["is_final"]:
+                    event["response"] = event["response"] + " (더 있음)"
                 reply_message = Message(
                     message_id=f"{request.message_id}-reply-{i}",
                     channel=request.channel,
                     author=bot_author,
-                    content=MessageContent(text=chunk),
-                    timestamp=request.timestamp
+                    content=MessageContent(text=event["response"]),
+                    timestamp=datetime.now()
                 )
                 await reply_message.save()
                 yield reply_message

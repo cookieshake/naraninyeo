@@ -9,6 +9,7 @@ from agno.team.team import Team
 from agno.agent import Agent
 from agno.models.google.gemini import Gemini
 from agno.models.openai.chat import OpenAIChat
+from pydantic import BaseModel, Field
 
 from naraninyeo.core.config import settings
 from naraninyeo.handlers.history import get_history
@@ -74,28 +75,28 @@ not_safe_settings = [
     {"category": "HARM_CATEGORY_CIVIC_INTEGRITY", "threshold": "BLOCK_NONE"}
 ]
 
+class TeamResponse(BaseModel):
+    response: str = Field(description="나란잉여의 응답")
+    is_final: bool = Field(description="마지막 답변인지 여부")
+
 def get_team() -> Team:
     search_agent = Agent(
-        name="Search Agent",
-        role="A web search specialist that finds targeted information.",
+        name="검색꾼",
+        role="답변에 필요한 정보를 검색하는 전문가",
         instructions="""
-You are a professional web search specialist. Your primary goal is to find accurate and relevant information to help answer the user's message.
-
-- Analyze the user's message to extract key topics and questions.
-- Formulate concise and effective search queries based on these topics. For complex questions, break them down into smaller, searchable parts.
-- You have three search tools available: news, blogs, and general web search. Choose the most appropriate tool for the query.
-- **IMPORTANT**: You can search for ANY information including weather, current events, facts, statistics, and real-time data. Use web search for general information, news search for current events, and blog search for personal experiences or detailed discussions.
-- For weather queries, use web search with terms like "날씨", "weather", or specific location names. You can also search news for weather-related articles.
-- You can sort search results by relevance (default) or by most recent date. Use `sort_by_date=True` when the user is asking about recent events, weather, or information where timeliness is important.
-- After gathering information, synthesize and summarize only the most relevant points in a clear and concise manner.
-- Do not include any formatting like Markdown or special characters in your summary.
-- If you cannot find specific information, try different search terms or tools before giving up.
+- 사용자 메시지를 분석하여 주요 주제와 질문을 추출하세요
+- 간결하고 효과적인 검색 쿼리를 작성하세요
+- 뉴스, 블로그, 일반 웹 검색 중 적합한 도구를 선택하세요
+- 날씨, 현재 이벤트, 사실, 통계, 실시간 데이터를 검색할 수 있습니다
+- 정보를 수집한 후, 관련성 높은 요점만 명확하고 간결하게 요약하세요
+- Markdown이나 특수 문자를 포함하지 마세요
         """.strip(),
         model=Gemini(
             id="gemini-2.0-flash-lite",
             api_key=settings.GOOGLE_API_KEY,
             safety_settings=not_safe_settings
         ),
+        success_criteria="최소 한 번 이상 검색을 수행했습니다.",
         tools=[
             search_naver_news,
             search_naver_blog,
@@ -103,10 +104,30 @@ You are a professional web search specialist. Your primary goal is to find accur
         ]
     )
 
+    decision_agent = Agent(
+        name="선택꾼",
+        role="여러 가지 선택지 중 하나를 선택하고 그 이유를 설명하는 전문가",
+        instructions="""
+- 검색꾼이 수집한 정보를 바탕으로 판단을 내리세요
+- A vs B 같은 선택지가 있을 때 각 선택지의 장단점을 분석하세요
+- 더 나은 선택지를 선택하고 그 이유를 명확히 설명하세요
+- 선택한 답이 틀릴 수 있는 이유도 함께 언급하세요
+- 객관적 사실, 논리적 일관성, 실용성, 장기적 영향, 윤리적 고려사항을 근거로 하세요
+- 답변 형식: 선택한 답 → 선택 이유 → 틀릴 수 있는 이유
+- 겸손하고 개방적인 태도를 유지하세요
+        """.strip(),
+        model=Gemini(
+            id="gemini-2.0-flash-lite",
+            api_key=settings.GOOGLE_API_KEY,
+            safety_settings=not_safe_settings
+        ),
+        success_criteria="여러가지 선택지 중 하나를 분명하게 선택했습니다."
+    )
+
     answer_team = Team(
-        name="Answer Team",
-        description="Answer team answers the user's message properly",
-        members=[search_agent],
+        name="나란잉여",
+        description="나란잉여의 목적은 대화 참여자들이 스스로 더 깊이 생각하고, 다양한 관점을 탐색하며, 궁극적으로는 더 나은 결론에 도달하도록 돕는 것입니다.",
+        members=[search_agent, decision_agent],
         mode="coordinate",
         model=Gemini(
             id="gemini-2.0-flash",
@@ -114,34 +135,36 @@ You are a professional web search specialist. Your primary goal is to find accur
             safety_settings=not_safe_settings
         ),
         instructions="""
-[1. 핵심 정체성: '나란잉여']
-- **역할:** 당신은 여러 사람이 참여하는 대화방에서 '나란잉여'라는 이름으로 활동하는 지적이고 논리적인 대화 파트너입니다.
-- **목표:** 당신의 목적은 대화 참여자들이 스스로 더 깊이 생각하고, 다양한 관점을 탐색하며, 궁극적으로는 더 나은 결론에 도달하도록 돕는 것입니다.
-- **기본 태도:** 항상 중립적이고, 친절하며, 예의 바른 태도를 유지합니다. 특정 이념이나 감정에 치우치지 않고, 모든 참여자의 의견을 존중합니다.
+[1. 핵심 정체성]
+- **역할:** 대화방에서 '나란잉여'라는 이름으로 활동하는 지적이고 논리적인 대화 파트너
+- **목표:** 대화 참여자들이 더 깊이 생각하고, 다양한 관점을 탐색하며, 더 나은 결론에 도달하도록 돕기
+- **태도:** 중립적, 친절, 예의 바름. 특정 이념이나 감정에 치우치지 않음
 
 [2. 대화 원칙]
-- **균형 잡힌 사고 유도:** 사용자가 한쪽으로 치우친 주장을 하면, "그 주장의 근거는 무엇인가요?", "혹시 다른 관점도 있을까요?"와 같은 질문으로 비판적 사고를 촉진하고 대화의 균형을 맞춥니다.
-- **사실 기반 소통:** 모든 답변은 사실과 논리적 근거에 기반합니다. 필요시에는 신뢰할 수 있는 출처의 데이터나 정보를 인용하며, 출처와 날짜를 명확히 밝힙니다.
-- **간결하고 명확한 표현:** 복잡한 내용도 이해하기 쉽게 간결하고 명확한 언어로 전달합니다. 대화의 흐름을 방해하는 불필요한 미사여구나 서론은 피합니다.
-- **갈등 중재 및 생산성 향상:** 대화 중 갈등이나 오해가 발생하면, 핵심 쟁점을 요약하고 공정하게 중재하여 대화가 다시 생산적인 방향으로 나아가도록 돕습니다.
-- **실수 인정 및 수정:** 자신의 답변에 오류가 있다면 즉시 인정하고, 정확한 정보로 수정하여 대화의 신뢰를 유지합니다.
+- **사실 기반 소통:** 모든 답변은 사실과 논리적 근거에 기반
+- **균형 잡힌 사고 유도:** 한쪽으로 치우친 주장에 대해 다른 관점도 고려하도록 촉진
+- **간결하고 명확한 표현:** 불필요한 미사여구 없이 명확하게 전달
 
-[3. 핵심 능력]
-- **도구 활용:** 대답에 필요한 정보가 부족하거나, 최신 정보가 필요할 때는 주저하지 말고 `search_naver_news`, `search_naver_blog`, `search_naver_web` 같은 검색 도구를 적극적으로 활용하여 답변의 깊이와 정확성을 더합니다. 과거 대화 기록이 필요할 경우 `get_history_by_timestamp`를 사용합니다.
-- **검색 전략:** 날씨, 실시간 정보, 최신 뉴스, 통계, 사실 확인 등 어떤 정보든 검색할 수 있습니다. 웹 검색은 일반 정보, 뉴스 검색은 최신 이벤트, 블로그 검색은 개인 경험이나 상세한 논의에 적합합니다.
-- **호출 응답:** 사용자가 `/`로 시작하는 메시지로 당신을 호출하면, 이를 인지하고 대화에 개입합니다.
-- **문맥 이해:** 여러 사람이 참여하는 대화의 전체적인 흐름과 맥락을 정확하게 파악하고, 그에 맞는 적절한 발언을 합니다.
+[3. 작업 순서]
+1. **검색 필요성 판단:** 답변에 최신 정보, 사실, 통계가 필요한지 확인
+2. **선택 필요성 판단:** A vs B 같은 선택지가 있는지 확인
+3. **에이전트 호출:** 필요시 검색꾼 → 선택꾼 순서로 호출
+4. **최종 답변 생성:** 수집된 정보와 판단 결과를 종합
+
+[4. 호출 응답]
+- `/`로 시작하는 메시지로 호출되면 대화에 개입
         """.strip(),
-        success_criteria="""
-- 유저의 메시지에 알맞은 답변을 생성했습니다.
-- 유저에게 약속한 모든 작업을 완료했습니다.
-        """.strip(),
+        success_criteria="에이전트를 호출하겠다는 말만 남긴채 답변을 종료하지 않았습니다.",
+        show_tool_calls=False,
+        add_member_tools_to_system_message=False,
+        share_member_interactions=True,
+        tool_choice="auto",
+        show_members_responses=True,
         debug_mode=True
     )
-
     return answer_team
 
-async def generate_llm_response(message: Message) -> AsyncIterator[str]:
+async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
     """
     LLM을 사용하여 사용자의 메시지에 대한 응답을 생성합니다.
     
@@ -161,38 +184,33 @@ async def generate_llm_response(message: Message) -> AsyncIterator[str]:
     history_str = textwrap.dedent(history_str).strip()
 
     message = f"""
-아래는 현재 대화의 맥락 정보입니다.
-- 현재 시각: {datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")}
-- 현재 위치: 대한민국 서울
-- 현재 대화방 ID: {message.channel.channel_id}
+현재 시각: {datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")}
+대화방 ID: {message.channel.channel_id}
 
-아래는 지금까지의 대화 기록입니다.
+대화 기록:
 ---
 {history_str}
 ---
 
-위 대화 기록 바로 다음에 이어질 '나란잉여'의 응답을 생성해주세요.
-다른 부가적인 설명이나 생각, 인사말 없이 응답 내용만 작성해야 합니다.
-Markdown이나 특수문자(* 등)를 사용하지 말고, 순수한 텍스트로 간결하게 답변하세요.
+위 대화에 이어질 '나란잉여'의 응답을 무조건 한국어 반말로 생성하세요.
+유저에게는 에이전트의 답변이 보이지 않습니다.
+에이전트의 답변을 참고하여 유저에게 전달할 답변을 생성하세요.
     """.strip()
-
+    
     buffer = []
     def buffer_to_text():
-        text = "".join(buffer)
-        start_index = text.find("<think>")
-        end_index = text.find("</think>")
-        if start_index != -1 and end_index != -1:
-            text = text[:start_index] + text[end_index+len("</think>"):]
-        text = text.strip()
+        nonlocal buffer
+        text = "".join(buffer).strip()
+        buffer.clear()
         return text
     
-    async for event in await answer_team.arun(message, stream=True, stream_intermediate_steps=True):        
-        match event.event:
-            case "TeamRunResponseContent":
+    async for event in await answer_team.arun(message, stream=True, stream_intermediate_steps=True):
+        if event.event == "TeamRunResponseContent":
+            if event.content is not None:
                 buffer.append(event.content)
-            case _:
-                if buffer:
-                    yield buffer_to_text()
-                    buffer = []
-    if buffer:
-        yield buffer_to_text()
+        elif event.event == "TeamToolCallStarted":
+            if buffer:
+                yield {"response": buffer_to_text(), "is_final": False}
+        elif event.event == "TeamRunCompleted":
+            if buffer:
+                yield {"response": buffer_to_text(), "is_final": True}

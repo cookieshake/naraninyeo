@@ -9,6 +9,8 @@ from naraninyeo.core.database import mc
 
 async def main():
     await mc.connect_to_database()
+    # 모든 메시지 기록 삭제
+    await mc.db.messages.delete_many({"channel.channel_id": "test"})
     try:
         while True:
             text = input("유저: ")
