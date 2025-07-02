@@ -41,9 +41,10 @@ async def search_naver_news(
     
     Args:
         query: The query to search for
-        limit: The number of news to return. (default: 15)
+        limit: The number of news to return. (default: 15, min: 10)
         sort_by_date: Whether to sort by most recent date first. (default: False)
     """
+    limit = max(10, limit)
     sort = "date" if sort_by_date else "sim"
     items = await _search_naver_api(query, limit, sort, "news")
     result = ""
@@ -64,9 +65,10 @@ async def search_naver_blog(
     
     Args:
         query: The query to search for
-        limit: The number of blogs to return. (default: 15)
+        limit: The number of blogs to return. (default: 15, min: 10)
         sort_by_date: Whether to sort by most recent date first. (default: False)
     """
+    limit = max(10, limit)
     sort = "date" if sort_by_date else "sim"
     items = await _search_naver_api(query, limit, sort, "blog")
     result = ""
@@ -87,9 +89,10 @@ async def search_naver_web(
     
     Args:
         query: The query to search for
-        limit: The number of web pages to return. (default: 15)
+        limit: The number of web pages to return. (default: 15, min: 10)
         sort_by_date: Whether to sort by most recent date first. (default: False)
     """
+    limit = max(10, limit)
     sort = "date" if sort_by_date else "sim"
     items = await _search_naver_api(query, limit, sort, "webkr")
     result = ""
