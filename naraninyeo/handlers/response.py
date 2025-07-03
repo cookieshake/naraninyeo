@@ -214,24 +214,25 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
     answer_team = get_team()
     
     history = await get_history(message.channel.channel_id, message.timestamp, 10)
-    history_str = ""
-    for h in history:
-        history_str += f"{h.text_repr}\n"
-    history_str = textwrap.dedent(history_str).strip()
+    history = [msg for msg in history if msg.message_id != message.message_id]
+    history_str = "\n".join([m.text_repr for m in history])
 
-    message = f"""
+    prompt_message = f"""
 ```
 {{current_context}}
 ```
 
 대화방 ID: {message.channel.channel_id}
 
-대화 기록:
+이전 대화 기록:
 ---
 {history_str}
 ---
 
-위 대화에 이어질 '나란잉여'의 응답을 생성하세요.
+새로 들어온 메시지:
+{message.text_repr}
+
+위 메시지에 대한 '나란잉여'의 응답을 생성하세요.
 유저에게는 에이전트의 답변이 보이지 않습니다.
 에이전트의 답변을 참고하여 유저에게 전달할 답변을 생성하세요.
     """.strip()
@@ -243,7 +244,7 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
         buffer.clear()
         return text
     
-    async for event in await answer_team.arun(message, stream=True, stream_intermediate_steps=True):
+    async for event in await answer_team.arun(prompt_message, stream=True, stream_intermediate_steps=True):
         if event.event == "TeamRunResponseContent":
             if event.content is not None:
                 buffer.append(event.content)
