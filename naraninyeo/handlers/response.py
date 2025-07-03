@@ -175,5 +175,5 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
     """.strip()
 
     response = await answer_agent.arun(prompt_message)
-    yield TeamResponse(response=response.content, is_final=True).model_dump()
+    yield TeamResponse(response=response.messages[-1].content, is_final=True).model_dump()
 
