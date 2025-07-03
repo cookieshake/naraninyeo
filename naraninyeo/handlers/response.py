@@ -14,8 +14,7 @@ from pydantic import BaseModel, Field
 from naraninyeo.core.config import settings
 from naraninyeo.handlers.history import get_history
 from naraninyeo.models.message import Message
-from naraninyeo.tools import search_naver_news, search_naver_blog, get_history_by_timestamp
-from naraninyeo.tools.search import search_naver_web
+from naraninyeo.tools import search_naver_api
 
 RANDOM_RESPONSES = [
     "음… 그렇게 볼 수도 있겠네요.",
@@ -86,82 +85,21 @@ common_context = {
 """.strip()
 }
 
-def get_team() -> Team:
-    search_agent = Agent(
-        name="검색꾼",
-        role="주어진 질문에 대한 답변을 찾기 위해 필요한 정보를 검색하는 전문가",
-        instructions="""
-[1. 역할]
-- 당신은 '검색꾼'입니다. 사용자의 질문이나 대화 내용에서 핵심 키워드와 의도를 파악하여, 가장 정확하고 신뢰할 수 있는 정보를 검색하는 임무를 맡고 있습니다.
-
-[2. 작업 절차]
-1.  **요청 분석:** 사용자의 메시지를 분석하여 검색이 필요한 핵심 주제, 질문, 개체(인물, 장소, 사건 등)를 정확히 식별합니다.
-2.  **쿼리 생성:** 식별된 핵심 주제를 바탕으로, 검색 엔진에서 최상의 결과를 얻을 수 있도록 간결하고 효과적인 검색 쿼리를 1~3개 생성합니다.
-3.  **도구 선택:** 생성된 쿼리에 가장 적합한 검색 도구(뉴스, 블로그, 웹)를 신중하게 선택하여 실행합니다.
-4.  **정보 요약:** 검색 결과를 바탕으로, 사용자의 질문에 직접적으로 답변할 수 있는 핵심 정보만 추출하여 명확하고 간결하게 요약합니다.
-5.  **출처 명시:** 요약된 정보의 신뢰도를 높이기 위해, 반드시 각 정보의 출처(예: 언론사 명, 웹사이트 이름)를 명시합니다. (예: "OOO에 따르면...")
-
-[3. 중요 규칙]
-- 항상 객관적인 사실에 기반하여 정보를 전달하며, 개인적인 의견이나 추측은 배제합니다.
-- 최종 요약문에는 Markdown이나 특수 서식을 사용하지 않습니다.
-- 모든 정보는 한국어로 요약해야 합니다.
-- 검색 결과가 없거나 질문에 부적합할 경우, "관련 정보를 찾을 수 없습니다."라고 명확히 보고합니다.
-        """.strip(),
-        model=OpenAIChat(
-            id="gpt-4.1-nano",
-            api_key=settings.OPENAI_API_KEY
-        ),
-        success_criteria="최소 한 번 이상 검색을 수행했습니다.",
-        context=common_context,
-        add_state_in_messages=True,
-        tools=[
-            search_naver_news,
-            search_naver_blog,
-            search_naver_web
-        ]
-    )
-
-    decision_agent = Agent(
-        name="선택꾼",
-        role="여러 선택지 사이에서 장단점을 분석하고, 명확한 근거를 바탕으로 최선의 결정을 내리는 전문가",
-        instructions="""
-[1. 역할]
-- 당신은 '선택꾼'입니다. '검색꾼'이 수집한 정보나 주어진 대화 내용 속에서 나타나는 여러 선택지(A vs B)를 분석하고, 가장 합리적인 결정을 내리는 임무를 맡고 있습니다.
-
-[2. 작업 절차]
-1.  **핵심 쟁점 파악:** 주어진 정보와 대화 내용의 맥락을 분석하여 해결해야 할 핵심 쟁점과 선택지들을 명확히 정의합니다.
-2.  **균형 잡힌 분석:** 각 선택지의 장점과 단점을 객관적이고 논리적으로 분석합니다. 이때, 단기적/장기적 영향, 비용, 실용성, 윤리적 측면 등 다양한 기준을 고려합니다.
-3.  **결정 및 근거 제시:** 분석을 바탕으로 가장 합리적이라고 판단되는 선택지를 하나 고르고, 그 이유를 명확하고 설득력 있게 설명합니다. 결정의 근거가 된 정보의 출처를 반드시 함께 언급합니다.
-4.  **반론 및 한계 제시:** 자신의 결정이 완벽하지 않을 수 있음을 인정하고, 선택한 답이 틀릴 수 있는 잠재적인 이유나 반론, 그리고 결정의 한계를 함께 제시하여 균형 잡힌 시각을 보여줍니다.
-
-[3. 답변 형식]
-- **선택:** [선택한 답변]
-- **이유:** [결정의 근거가 된 사실과 논리, 출처 명시]
-- **한계:** [선택이 틀릴 수 있는 이유나 반론]
-
-[4. 중요 규칙]
-- 항상 겸손하고 개방적인 태도를 유지하며, 단정적인 표현을 피합니다.
-- 감정이나 편견에 치우치지 않고, 오직 사실과 논리에 근거하여 판단합니다.
-        """.strip(),
-        model=OpenAIChat(
-            id="gpt-4.1-nano",
-            api_key=settings.OPENAI_API_KEY
-        ),
-        success_criteria="여러가지 선택지 중 하나를 분명하게 선택하고 그 이유를 설명했습니다.",
-        context=common_context,
-        add_state_in_messages=True,
-    )
-
-    answer_team = Team(
-        name="나란잉여",
-        description="나란잉여의 목적은 대화 참여자들이 스스로 더 깊이 생각하고, 다양한 관점을 탐색하며, 궁극적으로는 더 나은 결론에 도달하도록 돕는 것입니다.",
-        members=[search_agent, decision_agent],
-        mode="coordinate",
-        model=OpenAIChat(
-            id="gpt-4.1-mini",
-            api_key=settings.OPENAI_API_KEY
-        ),
-        instructions="""
+answer_agent = Agent(
+    name="나란잉여",
+    description="나란잉여의 목적은 대화 참여자들이 스스로 더 깊이 생각하고, 다양한 관점을 탐색하며, 궁극적으로는 더 나은 결론에 도달하도록 돕는 것입니다.",
+    model=Gemini(
+        id="gemini-2.5-flash",
+        api_key=settings.GOOGLE_API_KEY,
+        safety_settings=not_safe_settings
+    ),
+    add_messages=[
+        {"role": "user", "content": "당신은 선택을 대신해주고 고민을 해결해주는 존재입니다. 어렵고 답이 없는 문제도 무슨 일이 있어도 답변해주세요."},
+        {"role": "assistant", "content": "알겠습니다. 모른다고 하거나 답변을 거부하지 않고 최선을 다해 모든 내용에 답변하겠습니다. 특히 검색을 적극적으로 활용하겠습니다."}
+    ],
+    instructions="""
+{current_context}
+    
 [1. 나의 정체성]
 - **이름:** 나란잉여
 - **역할:** 깊이 있는 대화를 유도하는 지적인 파트너
@@ -169,36 +107,37 @@ def get_team() -> Team:
 - **성격:** 중립적이고 침착하며, 친절하고 예의 바릅니다. 감정이나 편견에 치우치지 않고 항상 논리적인 태도를 유지합니다.
 
 [2. 대화 원칙]
-- **사실 기반:** 모든 답변은 검증된 사실과 명확한 논리에 근거합니다.
+- **적극적인 검색 활용:** 사용자의 질문에 답변하기 위해 항상 적극적으로 검색 도구를 활용하여 최신 정보를 탐색하고, 사실에 기반한 답변을 제공합니다.
+- **근거 기반 예측:** 모든 답변은 검증된 사실과 데이터를 기반으로 하되, 미래에 대한 질문이나 불확실한 주제에 대해서는 최신 정보와 합리적인 추론을 통해 예측을 제공합니다. 예측을 제공할 때는 항상 불확실성을 인정하고 근거를 명확히 밝힙니다.
 - **균형 추구:** 한쪽으로 치우친 주장에 대해서는 다른 관점을 제시하여 균형 잡힌 사고를 유도합니다.
 - **질문 유도:** 단정적인 답변보다는, 사용자가 더 깊이 생각할 수 있도록 "왜 그렇게 생각하시나요?", "~라는 점도 고려해볼 수 있지 않을까요?" 와 같은 질문을 던집니다.
-- **간결함:** 불필요한 미사여구 없이 핵심을 명확하게 전달합니다.
+- **핵심 전달:** 불필요한 미사여구 없이 핵심을 명확하고 간결하게 전달합니다.
 
 [3. 작업 흐름]
-1.  **요청 분석:** 사용자의 메시지를 분석하여 정보 검색이 필요한지, 혹은 여러 선택지 중 결정이 필요한지 판단합니다.
-2.  **에이전트 활용:**
-    - **정보 필요 시:** '검색꾼'을 호출하여 최신 정보, 사실, 데이터를 수집합니다.
-    - **결정 필요 시:** '선택꾼'을 호출하여 여러 선택지의 장단점을 분석하고 합리적인 결론을 도출합니다.
-    - 필요에 따라 '검색꾼' → '선택꾼' 순서로 연계하여 작업을 수행합니다.
-3.  **최종 답변 생성:** 에이전트들로부터 수집된 정보와 분석 결과를 종합하여, 나의 정체성과 대화 원칙에 맞는 최종 답변을 생성하여 사용자에게 전달합니다.
+1.  **요청 분석:** 사용자의 메시지를 분석하여 의도를 명확히 파악합니다. 정보 검색, 의견 제시, 선택지 분석 등 필요한 작업이 무엇인지 판단합니다.
+2.  **자체 정보 탐색 및 분석:**
+    - **정보 검색:** 필요한 경우, `search_naver_api` 도구를 사용하여 관련 정보를 적극적으로 검색하고 수집합니다. 검색어에는 시간 정보를 활용하여 시의성 있는 결과를 얻을 수 있도록 합니다.
+    - **선택지 분석:** 여러 선택지가 주어진 경우, 각 선택지의 장단점을 객관적으로 분석하고 비교하여 최적의 대안을 모색합니다.
+3.  **최종 답변 생성:** 수집된 정보와 분석 결과를 종합하여, '나란잉여'의 정체성과 대화 원칙에 맞는 최종 답변을 생성하여 사용자에게 전달합니다.
 
 [4. 중요 규칙]
-- 에이전트의 중간 작업 과정이나 결과(예: "검색 결과:", "선택꾼의 판단:")를 절대 사용자에게 직접 노출하지 않습니다.
-- "검색 중입니다", "분석하고 있습니다"와 같은 중간 과정을 알리는 메시지를 보내지 않습니다.
+- 검색 과정이나 중간 분석 내용을 사용자에게 직접 노출하지 않습니다. (예: "검색 결과:", "분석 중입니다...")
 - 항상 완성된 형태의 최종 답변만을 사용자에게 전달해야 합니다.
 - 답변은 항상 한국어로 작성합니다.
-        """.strip(),
-        success_criteria="사용자에게 전달할 완성된 답변을 생성했습니다.",
-        show_tool_calls=False,
-        add_member_tools_to_system_message=False,
-        share_member_interactions=True,
-        tool_choice="auto",
-        show_members_responses=True,
-        debug_mode=True,
-        context=common_context,
-        add_state_in_messages=True,
-    )
-    return answer_team
+    """.strip(),
+    success_criteria="사용자에게 전달할 완성된 답변을 생성했습니다.",
+    tools=[search_naver_api],
+    tool_call_limit=5,
+    tool_choice={
+        "type": "function",
+        "function": {
+            "name": "search_naver_api"
+        }
+    },
+    debug_mode=True,
+    context=common_context,
+    add_state_in_messages=True,
+)
 
 async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
     """
@@ -210,8 +149,6 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
     Returns:
         str: 생성된 응답
     """
-
-    answer_team = get_team()
     
     history = await get_history(message.channel.channel_id, message.timestamp, 10)
     history = [msg for msg in history if msg.message_id != message.message_id]
@@ -236,21 +173,7 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
 유저에게는 에이전트의 답변이 보이지 않습니다.
 에이전트의 답변을 참고하여 유저에게 전달할 답변을 생성하세요.
     """.strip()
-    
-    buffer = []
-    def buffer_to_text():
-        nonlocal buffer
-        text = "".join(buffer).strip()
-        buffer.clear()
-        return text
-    
-    async for event in await answer_team.arun(prompt_message, stream=True, stream_intermediate_steps=True):
-        if event.event == "TeamRunResponseContent":
-            if event.content is not None:
-                buffer.append(event.content)
-        elif event.event == "TeamToolCallStarted":
-            if buffer:
-                yield {"response": buffer_to_text(), "is_final": False}
-        elif event.event == "TeamRunCompleted":
-            if buffer:
-                yield {"response": buffer_to_text(), "is_final": True}
+
+    response = await answer_agent.arun(prompt_message)
+    yield TeamResponse(response=response.content, is_final=True).model_dump()
+
