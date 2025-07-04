@@ -10,6 +10,7 @@ async def get_history(room:str, timestamp: datetime, limit: int = 10) -> list[Me
     # timestamp보다 작거나 같은 메시지들을 시간순으로 가져오기
     messages = await mc.db["messages"].find(
         {"channel.channel_id": room, "timestamp": {"$lte": timestamp}}
-    ).sort("timestamp", 1).limit(limit).to_list(length=limit)
+    ).sort("timestamp", -1).limit(limit).to_list(length=limit)
+    messages.reverse()
     
     return [Message.model_validate(message) for message in messages]
