@@ -78,11 +78,15 @@ class TeamResponse(BaseModel):
     response: str = Field(description="나란잉여의 응답")
     is_final: bool = Field(description="마지막 답변인지 여부")
 
-common_context = {
-    "current_context": lambda : f"""
-현재 시각: {datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S %A")}
+def get_current_context() -> str:
+    now = datetime.now(ZoneInfo("Asia/Seoul"))
+    return f"""
+현재 시각: {now.strftime("%Y-%m-%d %H:%M:%S %A")}
 현재 위치: "Seoul, South Korea"
 """.strip()
+
+common_context = {
+    "current_context": get_current_context
 }
 
 answer_agent = Agent(
