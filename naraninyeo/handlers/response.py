@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 import random
 import re
@@ -179,5 +180,18 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
     """.strip()
 
     response = await answer_agent.arun(prompt_message)
-    yield TeamResponse(response=response.messages[-1].content, is_final=True).model_dump()
-
+    content = response.messages[-1].content
+    contents = re.split(r'\n{2,}', content)
+    while len(contents) > 0:
+        c = contents.pop(0)
+        # Remove leading list markers and trailing punctuation
+        c = re.sub(r'^\s*([-*•]|\d+\.)\s*|[.,;:]$', '', c).strip()
+        # If the content is empty after cleaning, skip it
+        if not c:
+            continue
+        yield TeamResponse(
+            response=c,
+            is_final=len(contents) == 0
+        )
+        await asyncio.sleep(1)
+        

@@ -28,7 +28,7 @@ async def handle_message(request: Message) -> AsyncIterator[Message]:
                 response_text = event["response"].strip()
                 
                 if not event["is_final"]:
-                    response_text = response_text + " (더 있음)"
+                    response_text = response_text + " (...)"
                 
                 reply_message = Message(
                     message_id=f"{request.message_id}-reply-{i}",
