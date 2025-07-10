@@ -192,6 +192,6 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
         yield TeamResponse(
             response=c,
             is_final=len(contents) == 0
-        )
+        ).model_dump()
         await asyncio.sleep(1)
         
