@@ -1,11 +1,9 @@
 from typing import Annotated, Literal, Union
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from agno.tools import tool
 
 from naraninyeo.handlers.history import get_history
 
-@tool(show_result=True)
 async def get_history_by_timestamp(
     room_id: Annotated[str, "The room id to get the history from"],
     timestamp: Annotated[str, "The timestamp to get the history from. (YYYY-MM-DD HH:MM:SS) KST"],

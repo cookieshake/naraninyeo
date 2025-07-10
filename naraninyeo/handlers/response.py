@@ -6,16 +6,13 @@ import textwrap
 from typing import AsyncIterator
 from zoneinfo import ZoneInfo
 
-from agno.team.team import Team
-from agno.agent import Agent
-from agno.models.google.gemini import Gemini
-from agno.models.openai.chat import OpenAIChat
+from pydantic_ai import Agent
 from pydantic import BaseModel, Field
 
 from naraninyeo.core.config import settings
 from naraninyeo.handlers.history import get_history
 from naraninyeo.models.message import Message
-from naraninyeo.tools import search_naver_api
+from naraninyeo.tools.search import search_naver_api
 
 RANDOM_RESPONSES = [
     "음… 그렇게 볼 수도 있겠네요.",
@@ -67,44 +64,22 @@ async def get_random_response(message: Message) -> str:
     rand = random.Random(message.content.text)
     return rand.choice(RANDOM_RESPONSES)
 
-not_safe_settings = [
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_CIVIC_INTEGRITY", "threshold": "BLOCK_NONE"}
-]
-
 class TeamResponse(BaseModel):
     response: str = Field(description="나란잉여의 응답")
     is_final: bool = Field(description="마지막 답변인지 여부")
 
-def get_current_context() -> str:
+agent = Agent(
+    'google-gla:gemini-2.5-flash',
+    tools=[search_naver_api]
+)
+
+@agent.system_prompt
+def get_system_prompt() -> str:
     now = datetime.now(ZoneInfo("Asia/Seoul"))
     return f"""
 현재 시각: {now.strftime("%Y-%m-%d %H:%M:%S %A")}
 현재 위치: "Seoul, South Korea"
-""".strip()
 
-common_context = {
-    "current_context": get_current_context
-}
-
-answer_agent = Agent(
-    name="나란잉여",
-    description="나란잉여의 목적은 대화 참여자들이 스스로 더 깊이 생각하고, 다양한 관점을 탐색하며, 궁극적으로는 더 나은 결론에 도달하도록 돕는 것입니다.",
-    model=Gemini(
-        id="gemini-2.5-flash",
-        api_key=settings.GOOGLE_API_KEY,
-        safety_settings=not_safe_settings
-    ),
-    add_messages=[
-        {"role": "user", "content": "당신은 선택을 대신해주고 고민을 해결해주는 존재입니다. 어렵고 답이 없는 문제도 무슨 일이 있어도 답변해주세요."},
-        {"role": "assistant", "content": "알겠습니다. 모른다고 하거나 답변을 거부하지 않고 최선을 다해 모든 내용에 답변하겠습니다. 특히 검색을 적극적으로 활용하겠습니다."}
-    ],
-    instructions="""
-{current_context}
-    
 [1. 나의 정체성]
 - **이름:** 나란잉여
 - **역할:** 깊이 있는 대화를 유도하는 지적인 파트너
@@ -129,20 +104,7 @@ answer_agent = Agent(
 - 검색 과정이나 중간 분석 내용을 사용자에게 직접 노출하지 않습니다. (예: "검색 결과:", "분석 중입니다...")
 - 항상 완성된 형태의 최종 답변만을 사용자에게 전달해야 합니다.
 - 답변은 항상 한국어로 작성합니다.
-    """.strip(),
-    success_criteria="사용자에게 전달할 완성된 답변을 생성했습니다.",
-    tools=[search_naver_api],
-    tool_call_limit=5,
-    tool_choice={
-        "type": "function",
-        "function": {
-            "name": "search_naver_api"
-        }
-    },
-    debug_mode=True,
-    context=common_context,
-    add_state_in_messages=True,
-)
+""".strip()
 
 async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
     """
@@ -160,10 +122,6 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
     history_str = "\n".join([m.text_repr for m in history])
 
     prompt_message = f"""
-```
-{{current_context}}
-```
-
 대화방 ID: {message.channel.channel_id}
 
 이전 대화 기록:
@@ -179,9 +137,8 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
 에이전트의 답변을 참고하여 유저에게 전달할 답변을 생성하세요.
     """.strip()
 
-    response = await answer_agent.arun(prompt_message)
-    content = response.messages[-1].content
-    contents = re.split(r'\n{2,}', content)
+    response = await agent.run(prompt_message)
+    contents = re.split(r'\n{2,}', response.output)
     while len(contents) > 0:
         c = contents.pop(0)
         # Remove leading list markers and trailing punctuation
@@ -194,4 +151,3 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
             is_final=len(contents) == 0
         ).model_dump()
         await asyncio.sleep(1)
-        

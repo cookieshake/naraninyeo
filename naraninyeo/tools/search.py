@@ -2,11 +2,9 @@ import html
 import re
 import httpx
 from typing import Annotated, Literal
-from agno.tools import tool
 
 from naraninyeo.core.config import settings
 
-@tool(show_result=True)
 async def search_naver_api(
     query: str,
     limit: int,

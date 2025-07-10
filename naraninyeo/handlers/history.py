@@ -4,12 +4,12 @@ from naraninyeo.core.database import mc
 
 async def get_history(room:str, timestamp: datetime, limit: int = 10) -> list[Message]:
     """
-    주어진 timestamp보다 작거나 같은 메시지를 limit개만큼 가져옵니다.
+    주어진 timestamp보다 작은 메시지를 limit개만큼 가져옵니다.
     """
     
     # timestamp보다 작거나 같은 메시지들을 시간순으로 가져오기
     messages = await mc.db["messages"].find(
-        {"channel.channel_id": room, "timestamp": {"$lte": timestamp}}
+        {"channel.channel_id": room, "timestamp": {"$lt": timestamp}}
     ).sort("timestamp", -1).limit(limit).to_list(length=limit)
     messages.reverse()
     

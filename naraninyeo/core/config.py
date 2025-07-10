@@ -1,3 +1,4 @@
+import dotenv; dotenv.load_dotenv()
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -22,8 +23,5 @@ class Settings(BaseSettings):
 
     # Naraninyeo API settings
     NARANINYEO_API_URL: str = "http://localhost:8000"
-
-    class Config:
-        env_file = ".env"
 
 settings = Settings() 

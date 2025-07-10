@@ -11,8 +11,12 @@ dependencies = [
     "aiokafka[zstd]>=0.12.0",
     "motor>=3.7.1",
     "loguru>=0.7.3",
-    "agno>=1.6.4",
     "google-genai>=1.21.1",
     "openai>=1.91.0",
     "ollama>=0.5.1",
+    "pydantic-ai>=0.3.6",
+    "python-dotenv>=1.1.0",
 ]
+
+[dependency-groups]
+dev = []
