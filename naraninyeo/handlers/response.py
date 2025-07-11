@@ -132,9 +132,7 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
 새로 들어온 메시지:
 {message.text_repr}
 
-위 메시지에 대한 '나란잉여'의 응답을 생성하세요.
-유저에게는 에이전트의 답변이 보이지 않습니다.
-에이전트의 답변을 참고하여 유저에게 전달할 답변을 생성하세요.
+위 메시지에 대한 '나란잉여'의 응답을 최대한 짧게 생성하세요.
     """.strip()
 
     response = await agent.run(prompt_message)
