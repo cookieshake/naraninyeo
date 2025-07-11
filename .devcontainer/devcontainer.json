@@ -10,8 +10,9 @@
         "esbenp.prettier-vscode"
       ]
     }
-},
-"features": {
-	"ghcr.io/devcontainers/features/common-utils:2": {}
-}
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {}
+  },
+  "postCreateCommand": "uv install"
 }
