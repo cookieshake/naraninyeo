@@ -3,7 +3,7 @@
 import asyncio
 from datetime import datetime
 import uuid
-from naraninyeo.services.message import handle_message
+from naraninyeo.services.message_handler import handle_message
 from naraninyeo.models.message import Message, Channel, Author, MessageContent
 from naraninyeo.core.database import mc
 
