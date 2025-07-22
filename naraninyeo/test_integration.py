@@ -14,7 +14,7 @@ from naraninyeo.core.config import settings
 from naraninyeo.core.database import mc
 from naraninyeo.main import parse_message, send_response
 from naraninyeo.models.message import Message, Channel, Author, MessageContent
-from naraninyeo.services.message import handle_message
+from naraninyeo.services.message_handler import handle_message
 
 # Override settings for testing
 TEST_DB_NAME = "naraninyeo-test"
@@ -54,19 +54,19 @@ def mock_kafka_message():
             "id": "test-message-id-1",
             "chat_id": "test-channel",
             "user_id": "test-user",
-            "sender": "테스터",
             "message": "/안녕",
             "type": "1",
             "attachment": "{}",
             "created_at": str(int(datetime.now(timezone.utc).timestamp()))
         },
+        "sender": "테스터",
         "room": "테스트룸"
     }
 
 # --- Tests ---
 
 @pytest.mark.asyncio
-@patch("naraninyeo.services.message.agent.run")
+@patch("naraninyeo.services.llm_agent.agent.run")
 async def test_full_message_flow(mock_agent_run, mock_kafka_message, httpx_mock):
     """
     Tests the full flow from parsing a message to sending a response.
@@ -162,7 +162,7 @@ async def test_image_attachment_parsing(MockAsyncClient, mock_kafka_message):
 
 
 @pytest.mark.asyncio
-@patch("naraninyeo.services.message.agent.run")
+@patch("naraninyeo.services.llm_agent.agent.run")
 async def test_history_is_included_in_prompt(mock_agent_run):
     """
     Tests that previous messages are correctly fetched and included in the LLM prompt.

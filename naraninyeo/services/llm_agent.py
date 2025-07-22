@@ -3,7 +3,6 @@ from datetime import datetime
 import random
 import re
 import textwrap
-import traceback
 from typing import AsyncIterator
 from zoneinfo import ZoneInfo
 
@@ -165,32 +164,3 @@ async def generate_llm_response(message: Message) -> AsyncIterator[dict]:
             is_final=len(contents) == 0
         ).model_dump()
         await asyncio.sleep(1)
-
-async def handle_message(request: Message) -> AsyncIterator[Message]:
-    """
-    Handle incoming messages and save them to MongoDB.
-    Only respond if the message starts with '/'.
-    """
-    try:
-        await request.save()
-        needs_response = await should_respond(request)
-        if needs_response:
-            i = 0
-            async for event in generate_llm_response(request):
-                i += 1
-                response_text = event["response"].strip()
-                
-                if not event["is_final"]:
-                    response_text = response_text + " (...)"
-                
-                reply_message = Message(
-                    message_id=f"{request.message_id}-reply-{i}",
-                    channel=request.channel,
-                    author=bot_author,
-                    content=MessageContent(text=response_text),
-                    timestamp=datetime.now()
-                )
-                await reply_message.save()
-                yield reply_message
-    except Exception as e:
-        traceback.print_exc()
