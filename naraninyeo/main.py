@@ -22,7 +22,7 @@ async def parse_message(message_data: dict) -> Message:
     )
     author = Author(
         author_id=message_data["json"]["user_id"],
-        author_name=message_data["sender"] or "unknown"
+        author_name=message_data["json"]["sender"] or "unknown"
     )
     attachment = json.loads(message_data["json"]["attachment"])
     match message_data["json"]["type"]:

@@ -2,7 +2,7 @@ from typing import Annotated, Literal, Union
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from naraninyeo.handlers.history import get_history
+from naraninyeo.repository.message import get_history
 
 async def get_history_by_timestamp(
     room_id: Annotated[str, "The room id to get the history from"],
