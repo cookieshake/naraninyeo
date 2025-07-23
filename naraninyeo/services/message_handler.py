@@ -6,7 +6,8 @@ from naraninyeo.models.message import Message, MessageContent
 from naraninyeo.services.message_parser import parse_message
 from naraninyeo.services.api_client import send_response
 from naraninyeo.services.llm_agent import generate_llm_response, should_respond, bot_author
-from naraninyeo.services.random_responder import get_random_response, should_get_random_response
+from naraninyeo.services.random_responder import get_random_response
+from naraninyeo.repository.message import save_message
 
 async def handle_message(request: Message) -> AsyncIterator[Message]:
     """
@@ -14,7 +15,7 @@ async def handle_message(request: Message) -> AsyncIterator[Message]:
     Only respond if the message starts with '/'.
     """
     try:
-        await request.save()
+        await save_message(request)
         needs_response = await should_respond(request)
         if needs_response:
             i = 0
@@ -33,7 +34,7 @@ async def handle_message(request: Message) -> AsyncIterator[Message]:
                         content=MessageContent(text=response_text),
                         timestamp=datetime.now()
                     )
-                    await reply_message.save()
+                    await save_message(reply_message)
                     yield reply_message
             except Exception as e:
                 reply_message = Message(
@@ -43,7 +44,7 @@ async def handle_message(request: Message) -> AsyncIterator[Message]:
                     content=MessageContent(text=await get_random_response(request)),
                     timestamp=datetime.now()
                 )
-                await reply_message.save()
+                await save_message(reply_message)
                 yield reply_message
 
     except Exception as e:

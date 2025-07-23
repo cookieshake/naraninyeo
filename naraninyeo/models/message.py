@@ -59,13 +59,6 @@ class Message(BaseModel):
     content: MessageContent
     timestamp: datetime
 
-    async def save(self):
-        await mc.db["messages"].update_one(
-            {"message_id": self.message_id},
-            {"$set": self.model_dump(by_alias=True)},
-            upsert=True
-        )
-
     @property
     def text_repr(self) -> str:
         return f"{self.timestamp.astimezone(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")} {self.author.author_name} : {self.content.text[:200]}"

@@ -24,4 +24,10 @@ class Settings(BaseSettings):
     # Naraninyeo API settings
     NARANINYEO_API_URL: str = "http://localhost:8000"
 
-settings = Settings() 
+    # Ollama API settings
+    OLLAMA_API_URL: str = "http://localhost:11434"
+
+    # Qdrant settings
+    QDRANT_URL: str = "http://localhost:6333"
+
+settings = Settings()
