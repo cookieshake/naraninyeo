@@ -62,11 +62,13 @@ def create_agents() -> tuple[Agent, Agent]:
     """플래너와 응답자 에이전트를 생성합니다."""
     planner_agent = Agent(
         PLANNER_MODEL,
-        output_type=SearchPlan
+        output_type=SearchPlan,
+        instrument=True
     )
     
     responder_agent = Agent(
-        RESPONDER_MODEL
+        RESPONDER_MODEL,
+        instrument=True
     )
     
     return planner_agent, responder_agent

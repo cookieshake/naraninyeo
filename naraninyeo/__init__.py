@@ -10,12 +10,13 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from openinference.instrumentation.pydantic_ai import OpenInferenceSpanProcessor
 
 resource = Resource.create({})
 
 trace.set_tracer_provider(TracerProvider(resource=resource))
-span_processor = BatchSpanProcessor(OTLPSpanExporter())
-trace.get_tracer_provider().add_span_processor(span_processor)
+trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+trace.get_tracer_provider().add_span_processor(OpenInferenceSpanProcessor())
 
 reader = PeriodicExportingMetricReader(
     OTLPMetricExporter()
