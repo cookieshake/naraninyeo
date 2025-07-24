@@ -38,4 +38,4 @@ ENV OTEL_EXPORTER_OTLP_ENDPOINT="http://signoz.vd.ingtra.net:8080"
 ENV OTEL_EXPORTER_OTLP_PROTOCOL="grpc"
 
 # Run the application with OpenTelemetry instrumentation
-CMD ["uv", "run", "opentelemetry-instrument", "python", "-m", "naraninyeo.main"]
+CMD ["uv", "run", "python", "-m", "naraninyeo.main"]
