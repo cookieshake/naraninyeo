@@ -4,7 +4,7 @@ import uuid
 from zoneinfo import ZoneInfo
 import json
 
-from openinference import trace
+from opentelemetry import trace
 
 from naraninyeo.models.message import Message, MessageContent, Author, Channel, Attachment
 
