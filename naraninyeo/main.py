@@ -1,5 +1,4 @@
-import asyncio
-from datetime import datetime
+from opentelemetry import trace
 
 from naraninyeo.core.config import settings
 from naraninyeo.core.database import mc
@@ -12,6 +11,8 @@ import loguru
 
 import anyio
 from aiokafka import AIOKafkaConsumer
+
+tracer = trace.get_tracer(__name__)
 
 async def main():
     await mc.connect_to_database()
@@ -27,13 +28,14 @@ async def main():
     try:
         async for msg in consumer:
             try:
-                value = json.loads(msg.value.decode("utf-8"))
-                loguru.logger.info(f"Received message: {value}")
-                message = await parse_message(value)
-                async for r in handle_message(message):
-                    loguru.logger.info(f"Sending response: {r.content.text}")
-                    await send_response(r)
-                await consumer.commit()
+                with tracer.start_as_current_span("process_message"):
+                    value = json.loads(msg.value.decode("utf-8"))
+                    loguru.logger.info(f"Received message: {value}")
+                    message = await parse_message(value)
+                    async for r in handle_message(message):
+                        loguru.logger.info(f"Sending response: {r.content.text}")
+                        await send_response(r)
+                    await consumer.commit()
             except Exception as e:
                 loguru.logger.error(f"Error processing message: {e}")
     finally:
