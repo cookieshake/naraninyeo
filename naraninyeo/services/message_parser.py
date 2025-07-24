@@ -4,8 +4,13 @@ import uuid
 from zoneinfo import ZoneInfo
 import json
 
+from openinference import trace
+
 from naraninyeo.models.message import Message, MessageContent, Author, Channel, Attachment
 
+tracer = trace.get_tracer(__name__)
+
+@tracer.start_as_current_span("parse_message")
 async def parse_message(message_data: dict) -> Message:
     message_id = message_data["json"]["id"]
     channel = Channel(

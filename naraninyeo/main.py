@@ -28,9 +28,11 @@ async def main():
     try:
         async for msg in consumer:
             try:
-                with tracer.start_as_current_span("process_message"):
-                    value = json.loads(msg.value.decode("utf-8"))
-                    loguru.logger.info(f"Received message: {value}")
+                with tracer.start_as_current_span("process_message") as span:
+                    message_string = msg.value.decode("utf-8")
+                    loguru.logger.info(f"Received message: {message_string}")
+                    span.set_attribute("message", message_string)
+                    value = json.loads(message_string)
                     message = await parse_message(value)
                     async for r in handle_message(message):
                         loguru.logger.info(f"Sending response: {r.content.text}")

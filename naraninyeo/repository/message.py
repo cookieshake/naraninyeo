@@ -2,11 +2,14 @@ from datetime import datetime, timezone
 import hashlib
 
 from qdrant_client import models as qmodels
+from opentelemetry import trace
 
 from naraninyeo.models.message import Message
 from naraninyeo.services.embedding_service import get_embeddings
 from naraninyeo.core.database import mc
 from naraninyeo.core.vectorstore import vc
+
+tracer = trace.get_tracer(__name__)
 
 def str_to_64bit(s: str) -> int:
     """
@@ -14,6 +17,7 @@ def str_to_64bit(s: str) -> int:
     """
     return int(hashlib.sha256(s.encode('utf-8')).hexdigest()[:16], 16)
 
+@tracer.start_as_current_span("get_history")
 async def get_history(room:str, timestamp: datetime, limit: int = 10, before: bool = True) -> list[Message]:
     """
     주어진 timestamp를 기준으로 메시지를 limit개만큼 가져옵니다.
@@ -34,6 +38,7 @@ async def get_history(room:str, timestamp: datetime, limit: int = 10, before: bo
     
     return [Message.model_validate(message) for message in messages]
 
+@tracer.start_as_current_span("save_message")
 async def save_message(message: Message):
     """
     메시지를 데이터베이스에 저장합니다.
@@ -60,6 +65,7 @@ async def save_message(message: Message):
         wait=True
     )
 
+@tracer.start_as_current_span("search_similar_messages")
 async def search_similar_messages(channel_id: str, text: str) -> list[list[Message]]:
     """
     주어진 채널에서 주어진 텍스트와 유사한 메시지를 검색하고,
