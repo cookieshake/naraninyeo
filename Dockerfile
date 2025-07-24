@@ -31,5 +31,11 @@ RUN uv pip install --no-cache -e .
 # Copy project files
 COPY naraninyeo/ naraninyeo/
 
-# Run the application
-CMD ["uv", "run", "python", "-m", "naraninyeo.main"]
+# Set OpenTelemetry environment variables
+# Replace the placeholder values with your actual configuration.
+ENV OTEL_RESOURCE_ATTRIBUTES="service.name=naraninyeo"
+ENV OTEL_EXPORTER_OTLP_ENDPOINT="http://signoz.vd.ingtra.net:8080"
+ENV OTEL_EXPORTER_OTLP_PROTOCOL="grpc"
+
+# Run the application with OpenTelemetry instrumentation
+CMD ["opentelemetry-instrument", "uv", "run", "python", "-m", "naraninyeo.main"]
