@@ -34,7 +34,7 @@ COPY naraninyeo/ naraninyeo/
 # Set OpenTelemetry environment variables
 # Replace the placeholder values with your actual configuration.
 ENV OTEL_RESOURCE_ATTRIBUTES="service.name=naraninyeo"
-ENV OTEL_EXPORTER_OTLP_ENDPOINT="http://signoz.vd.ingtra.net:8080"
+ENV OTEL_EXPORTER_OTLP_ENDPOINT="http://signoz.vd.ingtra.net:4317"
 ENV OTEL_EXPORTER_OTLP_PROTOCOL="grpc"
 
 # Run the application with OpenTelemetry instrumentation
