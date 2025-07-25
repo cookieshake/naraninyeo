@@ -26,7 +26,7 @@ LOCATION = "Seoul, South Korea"
 
 # 모델 설정
 PLANNER_MODEL = 'google-gla:gemini-2.5-flash-lite'
-RESPONDER_MODEL = 'google-gla:gemini-2.5-flash'
+RESPONDER_MODEL = 'google-gla:gemini-2.5-pro'
 
 # 봇 정보
 bot_author = Author(
