@@ -7,8 +7,8 @@ from loguru import logger
 
 from naraninyeo.models.message import Message
 from naraninyeo.core.config import settings
-from naraninyeo.repository.message import get_history
-from naraninyeo.services.message_service import search_similar_messages
+from naraninyeo.repository.message import get_history, search_similar_message_clusters
+from naraninyeo.services.embedding_service import get_embeddings
 from naraninyeo.services.search_service import (
     search_news, search_blog, search_web, 
     search_encyclopedia, search_cafe, search_doc
@@ -23,7 +23,8 @@ async def get_conversation_history(channel_id: str, timestamp: int, exclude_mess
 
 async def get_reference_conversations(channel_id: str, query: str) -> str:
     """참고할만한 예전 대화 기록을 검색합니다."""
-    reference_clusters = await search_similar_messages(channel_id, query)
+    embeddings = await get_embeddings([query])
+    reference_clusters = await search_similar_message_clusters(channel_id, embeddings[0])
     
     if not reference_clusters:
         return "참고할만한 예전 대화 기록이 없습니다."

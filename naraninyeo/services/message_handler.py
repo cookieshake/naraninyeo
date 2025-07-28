@@ -6,7 +6,8 @@ from naraninyeo.models.message import Message, MessageContent
 from naraninyeo.llm import should_respond
 from naraninyeo.llm.agent import bot_author, generate_llm_response
 from naraninyeo.services.random_responder import get_random_response
-from naraninyeo.services.message_service import save_message
+from naraninyeo.services.embedding_service import get_embeddings
+from naraninyeo.repository.message import save_message as save_message_repo
 from naraninyeo.services.conversation_service import prepare_llm_context
 
 async def handle_message(request: Message) -> AsyncIterator[Message]:
@@ -15,7 +16,10 @@ async def handle_message(request: Message) -> AsyncIterator[Message]:
     Only respond if the message starts with '/'.
     """
     try:
-        await save_message(request)
+        # 메시지 저장
+        embeddings = await get_embeddings([request.content.text])
+        await save_message_repo(request, embeddings[0])
+        
         needs_response = await should_respond(request)
         if needs_response:
             i = 0
@@ -43,7 +47,9 @@ async def handle_message(request: Message) -> AsyncIterator[Message]:
                         content=MessageContent(text=response_text),
                         timestamp=datetime.now()
                     )
-                    await save_message(reply_message)
+                    # 응답 메시지 저장
+                    reply_embeddings = await get_embeddings([reply_message.content.text])
+                    await save_message_repo(reply_message, reply_embeddings[0])
                     yield reply_message
             except Exception as e:
                 reply_message = Message(
@@ -53,7 +59,9 @@ async def handle_message(request: Message) -> AsyncIterator[Message]:
                     content=MessageContent(text=await get_random_response(request)),
                     timestamp=datetime.now()
                 )
-                await save_message(reply_message)
+                # 에러 응답 메시지 저장
+                reply_embeddings = await get_embeddings([reply_message.content.text])
+                await save_message_repo(reply_message, reply_embeddings[0])
                 yield reply_message
 
     except Exception as e:
