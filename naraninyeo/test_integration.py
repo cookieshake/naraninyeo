@@ -66,7 +66,7 @@ def mock_kafka_message():
 # --- Tests ---
 
 @pytest.mark.asyncio
-@patch("naraninyeo.services.llm_agent.agent.run")
+@patch("naraninyeo.llm.agent.responder_agent.run")
 async def test_full_message_flow(mock_agent_run, mock_kafka_message, httpx_mock):
     """
     Tests the full flow from parsing a message to sending a response.
@@ -162,7 +162,7 @@ async def test_image_attachment_parsing(MockAsyncClient, mock_kafka_message):
 
 
 @pytest.mark.asyncio
-@patch("naraninyeo.services.llm_agent.agent.run")
+@patch("naraninyeo.llm.agent.responder_agent.run")
 async def test_history_is_included_in_prompt(mock_agent_run):
     """
     Tests that previous messages are correctly fetched and included in the LLM prompt.

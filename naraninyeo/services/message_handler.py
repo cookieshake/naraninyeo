@@ -3,11 +3,11 @@ from typing import AsyncIterator
 from datetime import datetime
 
 from naraninyeo.models.message import Message, MessageContent
-from naraninyeo.services.message_parser import parse_message
-from naraninyeo.services.api_client import send_response
-from naraninyeo.services.llm_agent import generate_llm_response, should_respond, bot_author
+from naraninyeo.llm import should_respond
+from naraninyeo.llm.agent import bot_author, generate_llm_response
 from naraninyeo.services.random_responder import get_random_response
-from naraninyeo.repository.message import save_message
+from naraninyeo.services.message_service import save_message
+from naraninyeo.services.conversation_service import prepare_llm_context
 
 async def handle_message(request: Message) -> AsyncIterator[Message]:
     """
@@ -20,7 +20,16 @@ async def handle_message(request: Message) -> AsyncIterator[Message]:
         if needs_response:
             i = 0
             try:
-                async for event in generate_llm_response(request):
+                # LLM 응답 생성에 필요한 모든 컨텍스트 준비
+                context = await prepare_llm_context(request)
+                
+                # LLM 응답 생성
+                async for event in generate_llm_response(
+                    request, 
+                    context["history"],
+                    context["reference_conversations"],
+                    context["search_results"]
+                ):
                     i += 1
                     response_text = event["response"].strip()
                     

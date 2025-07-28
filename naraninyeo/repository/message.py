@@ -5,7 +5,6 @@ from qdrant_client import models as qmodels
 from opentelemetry import trace
 
 from naraninyeo.models.message import Message
-from naraninyeo.services.embedding_service import get_embeddings
 from naraninyeo.core.database import mc
 from naraninyeo.core.vectorstore import vc
 
@@ -39,22 +38,22 @@ async def get_history(room:str, timestamp: datetime, limit: int = 10, before: bo
     return [Message.model_validate(message) for message in messages]
 
 @tracer.start_as_current_span("save_message")
-async def save_message(message: Message):
+async def save_message(message: Message, embeddings: list[float]):
     """
     메시지를 데이터베이스에 저장합니다.
+    embeddings는 서비스 계층에서 전달받습니다.
     """
     await mc.db["messages"].update_one(
         {"message_id": message.message_id},
         {"$set": message.model_dump(by_alias=True)},
         upsert=True
     )
-    embeddings = await get_embeddings([message.content.text])
     await vc.upsert(
         collection_name="naraninyeo-messages",
         points=[
             qmodels.PointStruct(
                 id=str_to_64bit(message.message_id),
-                vector=embeddings[0],
+                vector=embeddings,
                 payload={
                     "message_id": message.message_id,
                     "channel_id": message.channel.channel_id,
@@ -65,16 +64,15 @@ async def save_message(message: Message):
         wait=True
     )
 
-@tracer.start_as_current_span("search_similar_messages")
-async def search_similar_messages(channel_id: str, text: str) -> list[list[Message]]:
+@tracer.start_as_current_span("search_similar_message_ids")
+async def search_similar_message_ids(channel_id: str, embeddings: list[float]) -> list[str]:
     """
-    주어진 채널에서 주어진 텍스트와 유사한 메시지를 검색하고,
-    관련 대화 클러스터를 만들어 반환합니다.
+    주어진 채널에서 주어진 임베딩과 유사한 메시지 ID들을 검색합니다.
+    embeddings는 서비스 계층에서 전달받습니다.
     """
-    embeddings = await get_embeddings([text])
     search_result = await vc.search(
         collection_name="naraninyeo-messages",
-        query_vector=embeddings[0],
+        query_vector=embeddings,
         query_filter=qmodels.Filter(
             must=[
                 qmodels.FieldCondition(
@@ -86,50 +84,20 @@ async def search_similar_messages(channel_id: str, text: str) -> list[list[Messa
         limit=10
     )
     
-    similar_message_ids = [point.payload["message_id"] for point in search_result]
-    
-    # MongoDB에서 메시지 상세 정보 가져오기
-    similar_messages_cursor = mc.db["messages"].find(
-        {"message_id": {"$in": similar_message_ids}}
+    return [point.payload["message_id"] for point in search_result]
+
+@tracer.start_as_current_span("get_messages_by_ids")
+async def get_messages_by_ids(message_ids: list[str]) -> list[Message]:
+    """
+    메시지 ID 목록으로부터 메시지 객체들을 가져옵니다.
+    """
+    messages_cursor = mc.db["messages"].find(
+        {"message_id": {"$in": message_ids}}
     )
-    similar_messages_list = await similar_messages_cursor.to_list(length=10)
+    messages_list = await messages_cursor.to_list(length=len(message_ids))
     
     # 원래 순서를 유지하기 위해 dict에 저장
-    similar_messages_map = {msg["message_id"]: Message.model_validate(msg) for msg in similar_messages_list}
+    messages_map = {msg["message_id"]: Message.model_validate(msg) for msg in messages_list}
     
     # 원래 검색 결과 순서대로 Message 객체 리스트 생성
-    ordered_similar_messages = [similar_messages_map[msg_id] for msg_id in similar_message_ids if msg_id in similar_messages_map]
-
-    clusters = []
-    for message in ordered_similar_messages:
-        before_messages = await get_history(channel_id, message.timestamp, limit=5, before=True)
-        after_messages = await get_history(channel_id, message.timestamp, limit=5, before=False)
-        
-        cluster = before_messages + [message] + after_messages
-        
-        # 클러스터 병합 로직
-        merged = False
-        for i, existing_cluster in enumerate(clusters):
-            # set으로 변환하여 겹치는 메시지가 있는지 확인
-            if set(m.message_id for m in existing_cluster) & set(m.message_id for m in cluster):
-                # 겹치면 합집합을 구하고, timestamp 순으로 정렬
-                combined_ids = {m.message_id for m in existing_cluster} | {m.message_id for m in cluster}
-                
-                # 두 클러스터의 모든 메시지를 합친 후 중복 제거
-                combined_messages_map = {m.message_id: m for m in existing_cluster}
-                combined_messages_map.update({m.message_id: m for m in cluster})
-                
-                # message_id를 기준으로 정렬된 메시지 리스트 생성
-                sorted_messages = sorted(combined_messages_map.values(), key=lambda m: m.timestamp)
-                
-                clusters[i] = sorted_messages
-                merged = True
-                break
-        
-        if not merged:
-            clusters.append(cluster)
-        
-        if len(clusters) >= 3:
-            break
-            
-    return clusters
+    return [messages_map[msg_id] for msg_id in message_ids if msg_id in messages_map]

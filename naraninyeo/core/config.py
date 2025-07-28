@@ -30,4 +30,19 @@ class Settings(BaseSettings):
     # Qdrant settings
     QDRANT_URL: str = "http://localhost:6333"
 
+    # LLM settings
+    HISTORY_LIMIT: int = 10
+    DEFAULT_SEARCH_LIMIT: int = 3
+    RESPONSE_DELAY: float = 1.0  # seconds
+    TIMEZONE: str = "Asia/Seoul"
+    LOCATION: str = "Seoul, South Korea"
+    
+    # LLM 모델 설정
+    PLANNER_MODEL: str = 'google-gla:gemini-2.5-flash-lite'
+    RESPONDER_MODEL: str = 'google-gla:gemini-2.5-pro'
+    
+    # 봇 정보
+    BOT_AUTHOR_ID: str = "bot-naraninyeo"
+    BOT_AUTHOR_NAME: str = "나란잉여"
+
 settings = Settings()
