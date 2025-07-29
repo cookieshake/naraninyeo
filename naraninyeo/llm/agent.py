@@ -41,7 +41,7 @@ def create_agents() -> tuple[Agent, Agent]:
 
     responder_agent = Agent(
         model=OpenAIModel(
-            model_name="google/gemma-3n-e4b-it",
+            model_name="openai/gpt-4.1-mini",
             provider=OpenRouterProvider(
                 api_key=settings.OPENROUTER_API_KEY,
             )
