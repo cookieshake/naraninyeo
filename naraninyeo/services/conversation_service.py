@@ -9,10 +9,7 @@ from naraninyeo.models.message import Message
 from naraninyeo.core.config import settings
 from naraninyeo.repository.message import get_history, search_similar_message_clusters
 from naraninyeo.services.embedding_service import get_embeddings
-from naraninyeo.services.search_service import (
-    search_news, search_blog, search_web, 
-    search_encyclopedia, search_cafe, search_doc
-)
+from naraninyeo.services.search_service import search_naver_api
 from naraninyeo.llm import create_search_plan
 
 async def get_conversation_history(channel_id: str, timestamp: int, exclude_message_id: str) -> str:
@@ -38,20 +35,20 @@ async def get_reference_conversations(channel_id: str, query: str) -> str:
 
 async def _execute_search_method(method):
     """개별 검색 방법을 실행합니다."""
-    search_functions = {
-        "news": search_news,
-        "blog": search_blog,
-        "web": search_web,
-        "encyclopedia": search_encyclopedia,
-        "cafe": search_cafe,
-        "doc": search_doc
+    api_type_map = {
+        "news": "news",
+        "blog": "blog",
+        "web": "webkr",
+        "encyclopedia": "encyc",
+        "cafe": "cafearticle",
+        "doc": "doc"
     }
     
-    search_func = search_functions.get(method.type)
-    if not search_func:
+    api_name = api_type_map.get(method.type)
+    if not api_name:
         raise ValueError(f"Unknown search type: {method.type}")
     
-    return await search_func(method.query, method.limit, method.sort)
+    return await search_naver_api(method.query, method.limit, method.sort, api_name)
 
 async def perform_search_with_plan(search_plan, message: Message) -> List[Dict[str, Any]]:
     """검색 계획에 따라 검색을 수행합니다."""
@@ -79,7 +76,7 @@ async def perform_search_with_plan(search_plan, message: Message) -> List[Dict[s
         # 검색 계획에 실패하면 기본 검색 수행
         logger.error(f"Search plan execution failed: {e}")
         try:
-            result = await search_web(message.content.text, settings.DEFAULT_SEARCH_LIMIT)
+            result = await search_naver_api(message.content.text, settings.DEFAULT_SEARCH_LIMIT, "sim", "webkr")
             if result.items:
                 search_results.append({
                     "type": "web",

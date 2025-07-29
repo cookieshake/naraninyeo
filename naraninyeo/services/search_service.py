@@ -26,7 +26,7 @@ class SearchResponse(BaseModel):
     items: List[SearchItem] = Field(default_factory=list, description="검색 결과 목록")
 
 @tracer.start_as_current_span("search_naver_api")
-async def _search_naver_api(
+async def search_naver_api(
     query: str,
     limit: int,
     sort: Literal["sim", "date"],
@@ -105,54 +105,4 @@ async def _search_naver_api(
     )
 
 
-async def _search(
-    query: str,
-    limit: int,
-    sort: Literal["sim", "date"],
-    api_name: Literal["news", "blog", "webkr", "encyc", "cafearticle", "doc"],
-) -> SearchResponse:
-    return await _search_naver_api(
-        query=query, limit=limit, sort=sort, api_name=api_name
-    )
 
-
-async def search_news(
-    query: str, limit: int = 5, sort: Literal["sim", "date"] = "sim"
-) -> SearchResponse:
-    """네이버 뉴스 검색을 수행합니다."""
-    return await _search(query, limit, sort, "news")
-
-
-async def search_blog(
-    query: str, limit: int = 5, sort: Literal["sim", "date"] = "sim"
-) -> SearchResponse:
-    """네이버 블로그 검색을 수행합니다."""
-    return await _search(query, limit, sort, "blog")
-
-
-async def search_web(
-    query: str, limit: int = 5, sort: Literal["sim", "date"] = "sim"
-) -> SearchResponse:
-    """웹 페이지 검색을 수행합니다."""
-    return await _search(query, limit, sort, "webkr")
-
-
-async def search_encyclopedia(
-    query: str, limit: int = 5, sort: Literal["sim", "date"] = "sim"
-) -> SearchResponse:
-    """네이버 지식백과 검색을 수행합니다."""
-    return await _search(query, limit, sort, "encyc")
-
-
-async def search_cafe(
-    query: str, limit: int = 5, sort: Literal["sim", "date"] = "sim"
-) -> SearchResponse:
-    """네이버 카페 게시글 검색을 수행합니다."""
-    return await _search(query, limit, sort, "cafearticle")
-
-
-async def search_doc(
-    query: str, limit: int = 5, sort: Literal["sim", "date"] = "sim"
-) -> SearchResponse:
-    """전문 문서 검색을 수행합니다."""
-    return await _search(query, limit, sort, "doc")
