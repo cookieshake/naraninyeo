@@ -27,16 +27,3 @@ class SearchPlan(BaseModel):
             raise ValueError("하나 이상의 검색 방법이 필요합니다.")
         return v
 
-class LLMModels(BaseModel):
-    """LLM 모델 설정"""
-    planner_model: str = Field(default=settings.PLANNER_MODEL)
-    responder_model: str = Field(default=settings.RESPONDER_MODEL)
-
-class LLMConfig(BaseModel):
-    """LLM 관련 설정"""
-    history_limit: int = Field(default=settings.HISTORY_LIMIT)
-    default_search_limit: int = Field(default=settings.DEFAULT_SEARCH_LIMIT)
-    response_delay: float = Field(default=settings.RESPONSE_DELAY)
-    timezone: str = Field(default=settings.TIMEZONE)
-    location: str = Field(default=settings.LOCATION)
-    models: LLMModels = Field(default_factory=LLMModels)

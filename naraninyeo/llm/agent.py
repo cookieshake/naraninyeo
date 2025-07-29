@@ -26,13 +26,13 @@ bot_author = Author(
 def create_agents() -> tuple[Agent, Agent]:
     """플래너와 응답자 에이전트를 생성합니다."""
     planner_agent = Agent(
-        settings.PLANNER_MODEL,
+        "google-gla:gemini-2.5-flash-lite",
         output_type=SearchPlan,
         instrument=True
     )
-    
+
     responder_agent = Agent(
-        settings.RESPONDER_MODEL,
+        "google-gla:gemini-2.5-flash-lite",
         instrument=True
     )
     
