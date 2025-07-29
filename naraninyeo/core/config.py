@@ -41,4 +41,7 @@ class Settings(BaseSettings):
     BOT_AUTHOR_ID: str = "bot-naraninyeo"
     BOT_AUTHOR_NAME: str = "나란잉여"
 
+    # OpenRouter API settings
+    OPENROUTER_API_KEY: str
+
 settings = Settings()

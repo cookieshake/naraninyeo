@@ -6,6 +6,8 @@ from typing import AsyncIterator, List, Dict, Any
 
 from loguru import logger
 from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 from naraninyeo.core.config import settings
 from naraninyeo.models.message import Message, Author
@@ -26,13 +28,24 @@ bot_author = Author(
 def create_agents() -> tuple[Agent, Agent]:
     """플래너와 응답자 에이전트를 생성합니다."""
     planner_agent = Agent(
-        "google-gla:gemini-2.5-flash-lite",
+        model=OpenAIModel(
+            model_name="google/gemini-2.5-flash-lite",
+            provider=OpenRouterProvider(
+                api_key=settings.OPENROUTER_API_KEY,
+                
+            )
+        ),
         output_type=SearchPlan,
         instrument=True
     )
 
     responder_agent = Agent(
-        "google-gla:gemini-2.5-flash-lite",
+        model=OpenAIModel(
+            model_name="google/gemma-3n-e4b-it",
+            provider=OpenRouterProvider(
+                api_key=settings.OPENROUTER_API_KEY,
+            )
+        ),
         instrument=True
     )
     
