@@ -6,7 +6,7 @@ from typing import AsyncIterator, List, Dict, Any
 
 from loguru import logger
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 from naraninyeo.core.config import settings
@@ -31,12 +31,14 @@ def create_agents() -> tuple[Agent, Agent]:
         model=OpenAIModel(
             model_name="google/gemini-2.5-flash-lite",
             provider=OpenRouterProvider(
-                api_key=settings.OPENROUTER_API_KEY,
-                
+                api_key=settings.OPENROUTER_API_KEY
             )
         ),
         output_type=SearchPlan,
-        instrument=True
+        instrument=True,
+        model_settings=OpenAIModelSettings(
+            timeout=30
+        )
     )
 
     responder_agent = Agent(
@@ -46,7 +48,10 @@ def create_agents() -> tuple[Agent, Agent]:
                 api_key=settings.OPENROUTER_API_KEY,
             )
         ),
-        instrument=True
+        instrument=True,
+        model_settings=OpenAIModelSettings(
+            timeout=30
+        )
     )
     
     # 시스템 프롬프트 설정
