@@ -1,8 +1,8 @@
-"""첨부파일 관련 서비스"""
+"""첨부파일 관련 클라이언트"""
 
 import httpx
 from naraninyeo.models.message import Attachment
-from naraninyeo.core.database import mc
+from naraninyeo.adapters.database import database_adapter
 
 async def create_attachment_with_content_url(
     attachment_id: str,
@@ -23,7 +23,7 @@ async def create_attachment_with_content_url(
 
 async def save_attachment_content(attachment_id: str, content: bytes):
     """첨부파일 내용을 저장합니다."""
-    await mc.db["attachment_content"].update_one(
+    await database_adapter.db["attachment_content"].update_one(
         {"attachment_id": attachment_id},
         {"$set": {"content": content}},
         upsert=True
@@ -31,5 +31,5 @@ async def save_attachment_content(attachment_id: str, content: bytes):
 
 async def get_attachment_content(attachment_id: str) -> bytes:
     """첨부파일 내용을 가져옵니다."""
-    result = await mc.db["attachment_content"].find_one({"attachment_id": attachment_id})
+    result = await database_adapter.db["attachment_content"].find_one({"attachment_id": attachment_id})
     return result["content"] if result else None
