@@ -70,8 +70,8 @@ class MessageRepository(MessageRepositoryInterface):
                 "author": message.author.author_name,
             }
         )
-        await vector_store_adapter.upsert(collection_name="messages", points=[point])
-    
+        await vector_store_adapter.upsert(collection_name="naraninyeo-messages", points=[point])
+
     @tracer.start_as_current_span("get_history")
     async def get_history(self, room: str, timestamp: datetime, limit: int = 10, before: bool = True) -> List[Message]:
         if before:
@@ -88,7 +88,7 @@ class MessageRepository(MessageRepositoryInterface):
     @tracer.start_as_current_span("search_similar")
     async def search_similar(self, embedding: List[float], room: str, limit: int = 5) -> List[Message]:
         search_result = await vector_store_adapter.search(
-            collection_name="messages",
+            collection_name="naraninyeo-messages",
             query_vector=embedding,
             query_filter=qmodels.Filter(
                 must=[qmodels.FieldCondition(key="room", match=qmodels.MatchValue(value=room))]
