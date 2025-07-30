@@ -29,7 +29,7 @@ def create_agents() -> tuple[Agent, Agent]:
     """플래너와 응답자 에이전트를 생성합니다."""
     planner_agent = Agent(
         model=OpenAIModel(
-            model_name="google/gemini-2.5-flash-lite",
+            model_name="openai/gpt-4.1-mini",
             provider=OpenRouterProvider(
                 api_key=settings.OPENROUTER_API_KEY
             )
@@ -43,7 +43,7 @@ def create_agents() -> tuple[Agent, Agent]:
 
     responder_agent = Agent(
         model=OpenAIModel(
-            model_name="openai/gpt-4.1-mini",
+            model_name="openai/gpt-4.1",
             provider=OpenRouterProvider(
                 api_key=settings.OPENROUTER_API_KEY,
             )
