@@ -9,8 +9,7 @@ import anyio
 from aiokafka import AIOKafkaConsumer
 
 from naraninyeo.core.config import settings
-from naraninyeo.adapters.database import database_adapter
-from naraninyeo.container import setup_dependencies, container
+from naraninyeo.di import container
 from naraninyeo.services.message_service import MessageService
 from naraninyeo.adapters.clients import APIClient
 from naraninyeo.services.message_parser import parse_message
@@ -18,9 +17,8 @@ from naraninyeo.services.message_parser import parse_message
 tracer = trace.get_tracer(__name__)
 
 async def main():
-    # 의존성 초기화
-    await database_adapter.connect()
-    setup_dependencies()
+    # 의존성 초기화 - Dishka 컨테이너 설정 (APP 스코프 진입)
+    await container.__aenter__()
     
     # 서비스 가져오기
     message_service = container.get(MessageService)
@@ -78,8 +76,9 @@ async def shutdown(consumer):
     loguru.logger.info("Stopping consumer")
     await consumer.stop()
     loguru.logger.info("Consumer stopped")
-    loguru.logger.info("Closing database connection")
-    await database_adapter.disconnect()
+    # Dishka 컨테이너 종료 (자동으로 데이터베이스 연결 등 리소스 정리)
+    await container.__aexit__(None, None, None)
+    loguru.logger.info("Resources cleaned up")
 
 if __name__ == "__main__":
     anyio.run(main)

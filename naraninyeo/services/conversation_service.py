@@ -1,21 +1,31 @@
 """대화 관련 오케스트레이션 서비스 - 완전 구현"""
 
 import asyncio
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from loguru import logger
 
 from naraninyeo.models.message import Message
 from naraninyeo.core.config import settings
+from naraninyeo.adapters.repositories import MessageRepository
+from naraninyeo.adapters.clients import EmbeddingClient, LLMClient
+from naraninyeo.llm.schemas import SearchPlan
+from naraninyeo.adapters.search_client import SearchClient
 
 class ConversationService:
     """대화 관련 서비스 - DI 적용"""
     
-    def __init__(self, message_repo, embedding_client, llm_client, search_client=None):
+    def __init__(
+        self, 
+        message_repo: MessageRepository, 
+        embedding_client: EmbeddingClient, 
+        llm_client: LLMClient, 
+        search_client: SearchClient
+    ):
         self.message_repo = message_repo
         self.embedding_client = embedding_client
         self.llm_client = llm_client
-        self.search_client = search_client  # 선택사항
+        self.search_client = search_client
     
     async def get_conversation_history(self, channel_id: str, timestamp, exclude_message_id: str) -> str:
         """대화 기록을 가져와 문자열로 변환합니다."""
@@ -56,7 +66,7 @@ class ConversationService:
             logger.error(f"Failed to get reference conversations: {e}")
             return "참고할만한 예전 대화 기록을 가져오는 중 오류가 발생했습니다."
     
-    async def perform_search_with_plan(self, search_plan, message: Message) -> List[Dict[str, Any]]:
+    async def perform_search_with_plan(self, search_plan: SearchPlan, message: Message) -> List[Dict[str, Any]]:
         """검색 계획에 따라 검색을 수행합니다."""
         search_results = []
         
@@ -90,9 +100,10 @@ class ConversationService:
             logger.error(f"Search plan execution failed: {e}")
             # 기본 검색으로 폴백
             try:
-                if hasattr(self.search_client, 'search_web'):
-                    result = await self.search_client.search_web(
+                if self.search_client:
+                    result = await self.search_client.search(
                         message.content.text, 
+                        "web",
                         settings.DEFAULT_SEARCH_LIMIT
                     )
                     if result and result.items:
@@ -106,27 +117,13 @@ class ConversationService:
         
         return search_results
     
-    async def _execute_search_method(self, method):
+    async def _execute_search_method(self, method) -> Any:
         """개별 검색 방법을 실행합니다."""
         if not self.search_client:
             raise RuntimeError("Search client not available")
-            
-        # 검색 타입별로 적절한 메서드 호출
-        search_method_map = {
-            "news": "search_news",
-            "blog": "search_blog", 
-            "web": "search_web",
-            "encyclopedia": "search_encyclopedia",
-            "cafe": "search_cafe",
-            "doc": "search_doc"
-        }
         
-        method_name = search_method_map.get(method.type)
-        if not method_name or not hasattr(self.search_client, method_name):
-            raise ValueError(f"Unsupported search type: {method.type}")
-        
-        search_func = getattr(self.search_client, method_name)
-        return await search_func(method.query, method.limit, method.sort)
+        # 통합 search 메서드 사용
+        return await self.search_client.search(method.query, method.type, method.limit, method.sort)
     
     async def prepare_llm_context(self, message: Message) -> Dict[str, Any]:
         """LLM 응답 생성에 필요한 모든 컨텍스트를 준비합니다."""

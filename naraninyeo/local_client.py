@@ -6,7 +6,7 @@ import uuid
 
 # 새로운 리팩토링된 구조 사용
 from naraninyeo.adapters.database import database_adapter
-from naraninyeo.container import setup_dependencies, container
+from naraninyeo.di import container
 from naraninyeo.services.message_service import MessageService
 from naraninyeo.models.message import Message, Channel, Author, MessageContent
 
@@ -19,17 +19,9 @@ class LocalClient:
     async def initialize(self):
         """클라이언트 초기화"""
         print("🚀 나란잉여 로컬 클라이언트 시작!")
-        
-        # 데이터베이스 연결
-        await database_adapter.connect()
-        print("✅ 데이터베이스 연결 완료")
-        
-        # 의존성 주입 설정
-        setup_dependencies()
-        print("✅ 의존성 주입 설정 완료")
-        
+                
         # 서비스 가져오기
-        self.message_service = container.get(MessageService)
+        self.message_service = await container.get(MessageService)
         print("✅ 메시지 서비스 준비 완료")
         
         # 테스트 채널 메시지 기록 삭제 (선택사항)
@@ -107,8 +99,9 @@ class LocalClient:
         """정리 작업"""
         print("\n🧹 정리 작업 중...")
         try:
-            await database_adapter.disconnect()
-            print("✅ 데이터베이스 연결 해제 완료")
+            # 컨테이너 종료 (데이터베이스 연결 해제 포함)
+            await container.close()
+            print("✅ Dishka 컨테이너 종료 완료")
         except Exception as e:
             print(f"⚠️ 정리 중 오류 (무시됨): {e}")
 

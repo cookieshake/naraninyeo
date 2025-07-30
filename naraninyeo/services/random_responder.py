@@ -1,15 +1,16 @@
 """랜덤 응답 서비스"""
 
 import random
-from typing import AsyncIterator
-from datetime import datetime
-
-from naraninyeo.models.message import Message, MessageContent, Author
+from typing import List
 
 class RandomResponderService:
-    """랜덤 응답 생성 서비스"""
+    """랜덤 응답 생성 서비스
     
-    RANDOM_RESPONSES = [
+    단순히 미리 정의된 응답 목록에서 랜덤하게 하나를 선택하여 제공합니다.
+    """
+    
+    # 클래스 변수로 응답 목록 정의
+    RANDOM_RESPONSES: List[str] = [
         "음… 그렇게 볼 수도 있겠네요.",
         "사람마다 다를 수 있죠, 뭐.",
         "그럴 만도 하네요, 듣고 보니.",
@@ -42,45 +43,17 @@ class RandomResponderService:
         "상황에 따라 달라질 수 있는 문제 같아요."
     ]
     
-    def __init__(self, bot_author: Author = None):
-        self.bot_author = bot_author
+    def __init__(self):
+        """초기화 - 빈 생성자로 변경"""
+        pass
     
-    def get_random_response(self) -> str:
-        """랜덤 응답 텍스트 반환"""
-        return random.choice(self.RANDOM_RESPONSES)
-    
-    async def generate_random_response(self, original_message: Message) -> AsyncIterator[Message]:
-        """랜덤 응답 메시지 생성"""
-        response_text = self.get_random_response()
+    @classmethod
+    def get_random_response(cls) -> str:
+        """랜덤 응답 텍스트 반환
         
-        response_message = Message(
-            message_id=f"{original_message.message_id}-random-reply",
-            channel=original_message.channel,
-            author=self.bot_author or self._get_default_bot_author(),
-            content=MessageContent(text=response_text),
-            timestamp=datetime.now()
-        )
+        단순히 미리 정의된 응답 목록에서 랜덤하게 하나를 선택하여 반환합니다.
         
-        yield response_message
-    
-    def _get_default_bot_author(self) -> Author:
-        """기본 봇 작성자 정보"""
-        from naraninyeo.core.config import settings
-        return Author(
-            author_id=settings.BOT_AUTHOR_ID,
-            author_name=settings.BOT_AUTHOR_NAME
-        )
-
-
-# 하위 호환성을 위한 기존 함수들 (deprecated)
-RANDOM_RESPONSES = RandomResponderService.RANDOM_RESPONSES
-
-def get_random_response() -> str:
-    """Deprecated: RandomResponderService 사용 권장"""
-    return random.choice(RANDOM_RESPONSES)
-
-async def get_random_response_message(request: Message) -> Message:
-    """Deprecated: RandomResponderService 사용 권장"""
-    service = RandomResponderService()
-    async for response in service.generate_random_response(request):
-        return response
+        Returns:
+            str: 랜덤하게 선택된 응답 문자열
+        """
+        return random.choice(cls.RANDOM_RESPONSES)

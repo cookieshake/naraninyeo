@@ -1,21 +1,23 @@
 """
 핵심 비즈니스 로직만 담당하는 서비스
 Infrastructure 의존성은 생성자로 주입받음
+Dishka 스타일로 리팩토링
 """
 from typing import AsyncIterator, List
 from datetime import datetime
 
 from naraninyeo.models.message import Message, MessageContent, Author
-from naraninyeo.adapters.repositories import MessageRepositoryInterface
+from naraninyeo.adapters.repositories import MessageRepository
+from naraninyeo.adapters.clients import LLMClient, EmbeddingClient
 
 class MessageService:
     """메시지 처리 핵심 비즈니스 로직"""
     
     def __init__(
         self, 
-        message_repo: MessageRepositoryInterface,
-        llm_client,  # LLMClient 타입
-        embedding_client  # EmbeddingClient 타입
+        message_repo: MessageRepository,
+        llm_client: LLMClient, 
+        embedding_client: EmbeddingClient
     ):
         self.message_repo = message_repo
         self.llm_client = llm_client

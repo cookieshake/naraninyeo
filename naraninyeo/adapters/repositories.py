@@ -16,22 +16,7 @@ from naraninyeo.adapters.vectorstore import vector_store_adapter
 
 tracer = trace.get_tracer(__name__)
 
-# ==================== 인터페이스 ====================
-class MessageRepositoryInterface(ABC):
-    @abstractmethod
-    async def save(self, message: Message, embedding: List[float]) -> None:
-        pass
-    
-    @abstractmethod
-    async def get_history(self, room: str, timestamp: datetime, limit: int = 10, before: bool = True) -> List[Message]:
-        pass
-    
-    @abstractmethod
-    async def search_similar(self, embedding: List[float], room: str, limit: int = 5) -> List[Message]:
-        pass
-
-# ==================== 구현체 ====================
-class MessageRepository(MessageRepositoryInterface):
+class MessageRepository:
     """MongoDB + Qdrant를 사용한 메시지 저장소"""
     
     def str_to_64bit(self, s: str) -> int:
