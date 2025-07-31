@@ -182,7 +182,7 @@ class Responder:
         buffer = StringIO()
         async with self.agent.run_stream(responder_prompt) as stream:
             # 스트리밍 응답 처리
-            async for chunk in stream.stream_text():
+            async for chunk in stream.stream_text(delta=True):
                 buffer.write(chunk)
                 if "\n\n" in chunk:
                     # 버퍼에 쌓인 내용을 처리
@@ -202,4 +202,3 @@ class Responder:
                         response=response,
                         is_final=True
                     ).model_dump()
-    
