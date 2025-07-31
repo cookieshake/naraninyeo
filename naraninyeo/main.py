@@ -72,11 +72,9 @@ async def process_message(msg, message_service: MessageService, api_client: APIC
 
 async def shutdown(consumer):
     """정리 작업"""
-    loguru.logger.info("Stopping consumer")
-    await consumer.stop()
     loguru.logger.info("Consumer stopped")
     # Dishka 컨테이너 종료 (자동으로 데이터베이스 연결 등 리소스 정리)
-    await container.__aexit__(None, None, None)
+    await container.close()
     loguru.logger.info("Resources cleaned up")
 
 if __name__ == "__main__":
