@@ -17,9 +17,6 @@ from naraninyeo.services.message_parser import parse_message
 tracer = trace.get_tracer(__name__)
 
 async def main():
-    # 의존성 초기화 - Dishka 컨테이너 설정 (APP 스코프 진입)
-    await container.__aenter__()
-
     settings = await container.get(Settings)
 
     # 서비스 가져오기
