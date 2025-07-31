@@ -1,8 +1,9 @@
 """응답 생성을 담당하는 리스폰더 에이전트"""
 
 import asyncio
+from io import StringIO
 import re
-from typing import AsyncIterator, List, Dict, Any
+from typing import AsyncIterator, List, Dict, Any, Optional
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -104,18 +105,21 @@ class Responder:
 
 중요: 반드시 메시지 내용만 작성하세요. "시간 이름: 내용" 형식이나 "나란잉여:" 같은 접두사를 절대 사용하지 마세요. 바로 답변 내용으로 시작하세요."""
 
-    def _extract_response_text(self, response) -> str:
-        """AI 응답에서 텍스트를 추출합니다."""
-        if isinstance(response, str):
-            return response
-        
-        # 응답 객체에서 텍스트 추출
-        return getattr(response, "output", "") or getattr(response, "text", "") or str(response)
-
     def _clean_paragraph(self, paragraph: str) -> str:
-        """단락을 정리합니다."""
-        # Remove leading list markers and trailing punctuation
-        cleaned = re.sub(r'^\s*([-*•]|\d+\.)\s*|[.,;:]$', '', paragraph).strip()
+        """단락의 마크다운 형식을 제거하고 일반 텍스트로 변환합니다."""
+        
+        cleaned = re.sub(r'^\s*([-*•]|\d+\.)\s*', '', paragraph) # 목록 마커 제거 (- * •, 숫자.)
+        cleaned = re.sub(r'\*\*(.*?)\*\*', r'\1', cleaned) # 굵은 글씨 (**텍스트**) 처리
+        cleaned = re.sub(r'\*([^*]+)\*', r'\1', cleaned) # 이탤릭체 (*텍스트*) 처리
+        cleaned = re.sub(r'`([^`]+)`', r'\1', cleaned) # 인라인 코드 (`텍스트`) 처리
+        cleaned = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', cleaned) # 링크 텍스트 ([텍스트](URL)) 처리
+        cleaned = re.sub(r'!\[([^\]]+)\]\([^)]+\)', r'\1', cleaned) # 이미지 링크 (![텍스트](URL)) 처리
+        cleaned = re.sub(r'^#+\s+', '', cleaned) # 헤더(#, ##, ### 등) 제거
+        cleaned = re.sub(r'^\s*>\s*', '', cleaned) # 인용문(>) 제거
+        cleaned = re.sub(r'[.,;:]$', '', cleaned) # 문장 끝의 구두점 제거
+        
+        cleaned = cleaned.strip() # 양쪽 공백 제거
+        
         return cleaned
 
     def _format_search_results(self, search_results: List[Dict[str, Any]]) -> str:
@@ -136,6 +140,14 @@ class Responder:
                 search_context_parts.append(item_text)
         
         return "\n\n".join(search_context_parts)
+
+    async def _flush_buffer(self, buffer: StringIO) -> Optional[str]:
+        """버퍼에 쌓인 내용을 정리하여 반환합니다."""
+        text = buffer.getvalue()
+        cleaned_paragraph = self._clean_paragraph(text)
+        buffer.truncate(0)
+        buffer.seek(0)
+        return cleaned_paragraph if cleaned_paragraph else None
 
     async def generate_response(
         self,
@@ -165,30 +177,29 @@ class Responder:
         # 응답 생성
         responder_prompt = self._create_prompt(message, conversation_history, reference_conversations, search_context)
 
-        logger.info("Running responder agent")
-        response = await self.agent.run(responder_prompt)
-        response_text = self._extract_response_text(response)
-        
-        # 응답을 단락별로 분리하여 스트리밍
-        contents = re.split(r'\n{2,}', response_text)
-        logger.info(f"Split response into {len(contents)} paragraphs")
-        
+        logger.info("Running responder agent")        
         paragraph_count = 0
-        while contents:
-            paragraph = contents.pop(0)
-            cleaned_paragraph = self._clean_paragraph(paragraph)
-            
-            # 빈 내용은 건너뛰기
-            if not cleaned_paragraph:
-                continue
-            
-            paragraph_count += 1
-            is_final = len(contents) == 0
-            logger.debug(f"Yielding paragraph {paragraph_count}, is_final={is_final}")
-            
-            yield TeamResponse(
-                response=cleaned_paragraph,
-                is_final=is_final
-            ).model_dump()
-            
-            await asyncio.sleep(self.settings.RESPONSE_DELAY)
+        buffer = StringIO()
+        async with self.agent.run_stream(responder_prompt) as stream:
+            # 스트리밍 응답 처리
+            async for chunk in stream.stream_text():
+                buffer.write(chunk)
+                if "\n\n" in chunk:
+                    # 버퍼에 쌓인 내용을 처리
+                    response = await self._flush_buffer(buffer)
+                    if response:
+                        logger.debug(f"Yielding paragraph {paragraph_count + 1}, is_final=False")
+                        yield TeamResponse(
+                            response=response,
+                            is_final=False
+                        ).model_dump()
+                        paragraph_count += 1
+            if len(buffer.getvalue()) > 0:
+                response = await self._flush_buffer(buffer)
+                if response:
+                    logger.debug(f"Yielding paragraph {paragraph_count + 1}, is_final=True")
+                    yield TeamResponse(
+                        response=response,
+                        is_final=True
+                    ).model_dump()
+    
