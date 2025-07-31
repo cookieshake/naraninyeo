@@ -9,12 +9,12 @@ import hashlib
 
 from qdrant_client import models as qmodels
 from opentelemetry import trace
+import httpx
 
 from naraninyeo.adapters.database import DatabaseAdapter
 from naraninyeo.models.message import Message, Attachment
 from naraninyeo.adapters.vectorstore import VectorStoreAdapter
 
-tracer = trace.get_tracer(__name__)
 
 class MessageRepository:
     """MongoDB + Qdrant를 사용한 메시지 저장소"""
@@ -26,7 +26,7 @@ class MessageRepository:
     def str_to_64bit(self, s: str) -> int:
         return int(hashlib.sha256(s.encode('utf-8')).hexdigest()[:16], 16)
     
-    @tracer.start_as_current_span("save_message")
+    @trace.get_tracer(__name__).start_as_current_span("save_message")
     async def save(self, message: Message, embedding: List[float]) -> None:
         # MongoDB에 메시지 저장
         message_dict = {
@@ -61,7 +61,7 @@ class MessageRepository:
         )
         await self.vector_store_adapter.upsert(collection_name="naraninyeo-messages", points=[point])
 
-    @tracer.start_as_current_span("get_history")
+    @trace.get_tracer(__name__).start_as_current_span("get_history")
     async def get_history(self, room: str, timestamp: datetime, limit: int = 10, before: bool = True) -> List[Message]:
         if before:
             messages = await self.database_adapter.db["messages"].find(
@@ -74,7 +74,7 @@ class MessageRepository:
         
         return [self._dict_to_message(msg) for msg in messages]
     
-    @tracer.start_as_current_span("search_similar")
+    @trace.get_tracer(__name__).start_as_current_span("search_similar")
     async def search_similar(self, embedding: List[float], room: str, limit: int = 5) -> List[Message]:
         search_result = await self.vector_store_adapter.search(
             collection_name="naraninyeo-messages",
@@ -121,7 +121,6 @@ class AttachmentRepository:
         content_url: str
     ) -> Attachment:
         """URL에서 첨부파일을 생성합니다."""
-        import httpx
         async with httpx.AsyncClient() as client:
             response = await client.get(content_url)
             attachment = Attachment(

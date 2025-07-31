@@ -4,19 +4,14 @@ Database 연결 관리 - Infrastructure Adapter
 """
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.database import Database
-from naraninyeo.core.config import settings
+from naraninyeo.core.config import Settings
 
 class DatabaseAdapter:
     """MongoDB 연결 관리"""
     
-    def __init__(self):
-        self.client: AsyncIOMotorClient = None
-        self._db: Database = None
-    
-    async def connect(self):
-        """데이터베이스 연결 설정"""
-        self.client = AsyncIOMotorClient(settings.MONGODB_URL)
-        self._db = self.client[settings.MONGODB_DB_NAME]
+    def __init__(self, settings: Settings):
+        self.client: AsyncIOMotorClient = AsyncIOMotorClient(settings.MONGODB_URL)
+        self._db: Database = self.client[settings.MONGODB_DB_NAME]
 
     async def disconnect(self):
         """데이터베이스 연결 해제"""

@@ -43,5 +43,3 @@ class Settings(BaseSettings):
 
     # OpenRouter API settings
     OPENROUTER_API_KEY: str
-
-settings = Settings()

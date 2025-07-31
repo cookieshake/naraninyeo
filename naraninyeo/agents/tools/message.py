@@ -2,7 +2,9 @@ from typing import Annotated, Literal, Union
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from naraninyeo.repository.message import get_history
+from naraninyeo.adapters.repositories import MessageRepository
+from naraninyeo.models.message import Message
+from naraninyeo.di import container
 
 async def get_history_by_timestamp(
     room_id: Annotated[str, "기록을 가져올 방의 ID"],
@@ -17,9 +19,10 @@ async def get_history_by_timestamp(
     
     # Convert KST timestamp string to datetime with KST timezone
     dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo("Asia/Seoul"))
-    
-    history_before = await get_history(room_id, dt, limit=10, before=True)
-    history_after = await get_history(room_id, dt, limit=10, before=False)
+    message_repo = await container.get(MessageRepository)
+
+    history_before = await message_repo.get_history(room_id, dt, limit=10, before=True)
+    history_after = await message_repo.get_history(room_id, dt, limit=10, before=False)
     history = history_before + history_after
 
     result = []

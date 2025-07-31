@@ -8,7 +8,7 @@ from datetime import datetime
 
 from opentelemetry import trace
 from pydantic import BaseModel, Field
-from naraninyeo.core.config import settings
+from naraninyeo.core.config import Settings
 
 tracer = trace.get_tracer(__name__)
 
@@ -30,6 +30,10 @@ class SearchResponse(BaseModel):
 
 class SearchClient:
     """검색 클라이언트 - 네이버 검색 API 사용"""
+
+    def __init__(self, settings: Settings):
+        self.client_id = settings.NAVER_CLIENT_ID
+        self.client_secret = settings.NAVER_CLIENT_SECRET
     
     @tracer.start_as_current_span("search")
     async def search(self, query: str, search_type: str, limit: int = 5, sort: str = "sim") -> SearchResponse:
@@ -62,8 +66,8 @@ class SearchClient:
         
         url = f"https://openapi.naver.com/v1/search/{api_name}.json"
         headers = {
-            "X-Naver-Client-Id": settings.NAVER_CLIENT_ID,
-            "X-Naver-Client-Secret": settings.NAVER_CLIENT_SECRET
+            "X-Naver-Client-Id": self.client_id,
+            "X-Naver-Client-Secret": self.client_secret
         }
         params = {"query": query, "display": limit, "sort": sort}
         

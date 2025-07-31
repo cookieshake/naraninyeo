@@ -3,12 +3,12 @@ Vector Store 연결 관리 - Infrastructure Adapter
 기존 core/vectorstore.py를 이동하고 약간 개선
 """
 from qdrant_client import AsyncQdrantClient
-from naraninyeo.core.config import settings
+from naraninyeo.core.config import Settings
 
 class VectorStoreAdapter:
     """Qdrant 벡터 저장소 연결 관리"""
-    
-    def __init__(self):
+
+    def __init__(self, settings: Settings):
         self.client = AsyncQdrantClient(url=settings.QDRANT_URL)
     
     async def upsert(self, collection_name: str, points):

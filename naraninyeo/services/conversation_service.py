@@ -6,10 +6,10 @@ from typing import List, Dict, Any, Optional
 from loguru import logger
 
 from naraninyeo.models.message import Message
-from naraninyeo.core.config import settings
+from naraninyeo.core.config import Settings
 from naraninyeo.adapters.repositories import MessageRepository
 from naraninyeo.adapters.clients import EmbeddingClient, LLMClient
-from naraninyeo.llm.schemas import SearchPlan
+from naraninyeo.agents.planner import SearchMethod, SearchPlan
 from naraninyeo.adapters.search_client import SearchClient
 
 class ConversationService:
@@ -17,11 +17,13 @@ class ConversationService:
     
     def __init__(
         self, 
+        settings: Settings,
         message_repo: MessageRepository, 
         embedding_client: EmbeddingClient, 
         llm_client: LLMClient, 
         search_client: SearchClient
     ):
+        self.settings = settings
         self.message_repo = message_repo
         self.embedding_client = embedding_client
         self.llm_client = llm_client
@@ -35,7 +37,7 @@ class ConversationService:
         else:
             dt_timestamp = timestamp
         
-        history = await self.message_repo.get_history(channel_id, dt_timestamp, settings.HISTORY_LIMIT)
+        history = await self.message_repo.get_history(channel_id, dt_timestamp, self.settings.HISTORY_LIMIT)
         history = [msg for msg in history if msg.message_id != exclude_message_id]
         return "\n".join([m.text_repr for m in history])
     
@@ -104,7 +106,7 @@ class ConversationService:
                     result = await self.search_client.search(
                         message.content.text, 
                         "web",
-                        settings.DEFAULT_SEARCH_LIMIT
+                        self.settings.DEFAULT_SEARCH_LIMIT
                     )
                     if result and result.items:
                         search_results.append({
@@ -116,8 +118,8 @@ class ConversationService:
                 logger.error(f"Fallback search failed: {e2}")
         
         return search_results
-    
-    async def _execute_search_method(self, method) -> Any:
+
+    async def _execute_search_method(self, method: SearchMethod) -> Any:
         """개별 검색 방법을 실행합니다."""
         if not self.search_client:
             raise RuntimeError("Search client not available")
