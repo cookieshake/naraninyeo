@@ -160,35 +160,3 @@ class ConversationService:
             "reference_conversations": reference_conversations_str,
             "search_results": search_results
         }
-
-
-# 하위 호환성을 위한 기존 함수들 (deprecated)
-_message_repo = None
-_embedding_client = None
-
-async def get_conversation_history(channel_id: str, timestamp, exclude_message_id: str) -> str:
-    """Deprecated: ConversationService 사용 권장"""
-    logger.warning("get_conversation_history is deprecated, use ConversationService instead")
-    global _message_repo
-    if not _message_repo:
-        from naraninyeo.adapters.repositories import MessageRepository
-        _message_repo = MessageRepository()
-    
-    service = ConversationService(_message_repo, None, None)
-    return await service.get_conversation_history(channel_id, timestamp, exclude_message_id)
-
-async def prepare_llm_context(message: Message) -> Dict[str, Any]:
-    """Deprecated: ConversationService 사용 권장"""
-    logger.warning("prepare_llm_context is deprecated, use ConversationService instead")
-    # 간단한 버전만 제공
-    history_str = await get_conversation_history(
-        message.channel.channel_id, 
-        message.timestamp, 
-        message.message_id
-    )
-    
-    return {
-        "history": history_str,
-        "reference_conversations": "참고할만한 예전 대화 기록이 없습니다.",
-        "search_results": []
-    }

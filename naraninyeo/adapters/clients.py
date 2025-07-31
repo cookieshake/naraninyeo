@@ -9,8 +9,6 @@ from opentelemetry import trace
 from naraninyeo.core.config import settings
 from naraninyeo.models.message import Message
 
-tracer = trace.get_tracer(__name__)
-
 class EmbeddingClient:
     """임베딩 생성 클라이언트 - Ollama API 사용"""
     
@@ -18,7 +16,7 @@ class EmbeddingClient:
         self.api_url = settings.OLLAMA_API_URL
         self.model = "hf.co/Qwen/Qwen3-Embedding-0.6B-GGUF:Q8_0"
     
-    @tracer.start_as_current_span("get_embeddings")
+    @trace.get_tracer(__name__).start_as_current_span("get_embeddings")
     async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """텍스트 목록을 임베딩으로 변환"""
         async with httpx.AsyncClient() as client:
@@ -68,7 +66,7 @@ class LLMClient:
 class APIClient:
     """외부 API 통신 클라이언트"""
     
-    @tracer.start_as_current_span("send_response")
+    @trace.get_tracer(__name__).start_as_current_span("send_response")
     async def send_response(self, message: Message):
         """응답 메시지 전송"""
         async with httpx.AsyncClient() as client:

@@ -5,7 +5,7 @@ from datetime import datetime
 import uuid
 
 # 새로운 리팩토링된 구조 사용
-from naraninyeo.adapters.database import database_adapter
+from naraninyeo.adapters.database import DatabaseAdapter
 from naraninyeo.di import container
 from naraninyeo.services.message_service import MessageService
 from naraninyeo.models.message import Message, Channel, Author, MessageContent
@@ -15,18 +15,20 @@ class LocalClient:
     
     def __init__(self):
         self.message_service = None
+        self.database_adapter = None
     
     async def initialize(self):
         """클라이언트 초기화"""
         print("🚀 나란잉여 로컬 클라이언트 시작!")
                 
-        # 서비스 가져오기
+        # 서비스 및 어댑터 가져오기
         self.message_service = await container.get(MessageService)
+        self.database_adapter = await container.get(DatabaseAdapter)
         print("✅ 메시지 서비스 준비 완료")
         
         # 테스트 채널 메시지 기록 삭제 (선택사항)
         try:
-            await database_adapter.db.messages.delete_many({"channel.channel_id": "local-test"})
+            await self.database_adapter.db.messages.delete_many({"channel.channel_id": "local-test"})
             print("🧹 이전 테스트 메시지 기록 삭제 완료")
         except Exception as e:
             print(f"⚠️ 이전 기록 삭제 실패 (무시됨): {e}")

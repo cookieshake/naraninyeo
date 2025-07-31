@@ -23,9 +23,3 @@ class VectorStoreAdapter:
             query_filter=query_filter,
             limit=limit
         )
-
-# 전역 인스턴스 (기존 코드 호환성을 위해)
-vector_store_adapter = VectorStoreAdapter()
-
-# 기존 코드와의 호환성을 위한 별칭
-vc = vector_store_adapter
