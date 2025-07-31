@@ -8,7 +8,7 @@ import loguru
 import anyio
 from aiokafka import AIOKafkaConsumer
 
-from naraninyeo.core.config import settings
+from naraninyeo.core.config import Settings
 from naraninyeo.di import container
 from naraninyeo.services.message_service import MessageService
 from naraninyeo.adapters.clients import APIClient
@@ -19,11 +19,13 @@ tracer = trace.get_tracer(__name__)
 async def main():
     # 의존성 초기화 - Dishka 컨테이너 설정 (APP 스코프 진입)
     await container.__aenter__()
-    
+
+    settings = await container.get(Settings)
+
     # 서비스 가져오기
-    message_service = container.get(MessageService)
-    api_client = container.get(APIClient)
-    
+    message_service = await container.get(MessageService)
+    api_client = await container.get(APIClient)
+
     # Kafka 컨슈머 설정
     consumer = AIOKafkaConsumer(
         settings.KAFKA_TOPIC,
