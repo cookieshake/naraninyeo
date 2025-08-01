@@ -1,7 +1,6 @@
 """응답 생성을 담당하는 리스폰더 에이전트"""
 
 import asyncio
-from io import StringIO
 import re
 from typing import AsyncIterator, List, Dict, Any, Optional
 from datetime import datetime
@@ -141,13 +140,23 @@ class Responder:
         
         return "\n\n".join(search_context_parts)
 
-    async def _flush_buffer(self, buffer: StringIO) -> Optional[str]:
+    async def _flush_buffer(self, buffer: List[str]) -> Optional[str]:
         """버퍼에 쌓인 내용을 정리하여 반환합니다."""
-        text = buffer.getvalue()
-        cleaned_paragraph = self._clean_paragraph(text)
-        buffer.truncate(0)
-        buffer.seek(0)
-        return cleaned_paragraph if cleaned_paragraph else None
+        text = ''.join(buffer)
+        
+        # \n\n이 있으면 그 앞까지만 추출하고 나머지는 버퍼에 남김
+        if '\n\n' in text:
+            split_pos = text.find('\n\n')
+            paragraph = text[:split_pos]
+            remaining = text[split_pos + 2:]  # \n\n 이후 부분
+            
+            # 버퍼를 비우고 남은 내용으로 채움
+            buffer.clear()
+            if remaining:
+                buffer.append(remaining)
+            
+            cleaned_paragraph = self._clean_paragraph(paragraph)
+            return cleaned_paragraph if cleaned_paragraph else None
 
     async def generate_response(
         self,
@@ -179,26 +188,17 @@ class Responder:
 
         logger.info("Running responder agent")        
         paragraph_count = 0
-        buffer = StringIO()
+        buffer = []
+        
         async with self.agent.run_stream(responder_prompt) as stream:
-            # 스트리밍 응답 처리
             async for chunk in stream.stream_text(delta=True):
-                buffer.write(chunk)
-                if "\n\n" in chunk:
-                    # 버퍼에 쌓인 내용을 처리
-                    response = await self._flush_buffer(buffer)
+                buffer.append(chunk)
+                # 단락 완성시 즉시 처리
+                if response := await self._flush_buffer(buffer):
+                    response = self._clean_paragraph(response)
                     if response:
-                        logger.debug(f"Yielding paragraph {paragraph_count + 1}, is_final=False")
-                        yield TeamResponse(
-                            response=response,
-                            is_final=False
-                        ).model_dump()
                         paragraph_count += 1
-            if len(buffer.getvalue()) > 0:
-                response = await self._flush_buffer(buffer)
-                if response:
-                    logger.debug(f"Yielding paragraph {paragraph_count + 1}, is_final=True")
-                    yield TeamResponse(
-                        response=response,
-                        is_final=True
-                    ).model_dump()
+                        yield TeamResponse(response=response, is_final=False).model_dump()
+
+            if response := ''.join(buffer).strip():
+                yield TeamResponse(response=response, is_final=True).model_dump()
