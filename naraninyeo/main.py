@@ -10,8 +10,8 @@ from aiokafka import AIOKafkaConsumer
 
 from naraninyeo.core.config import Settings
 from naraninyeo.di import container
-from naraninyeo.services.message_service import MessageService
 from naraninyeo.adapters.clients import APIClient
+from naraninyeo.services.conversation_service import ConversationService
 from naraninyeo.services.message_parser import parse_message
 
 tracer = trace.get_tracer(__name__)
@@ -20,7 +20,7 @@ async def main():
     settings = await container.get(Settings)
 
     # 서비스 가져오기
-    message_service = await container.get(MessageService)
+    conversation_service = await container.get(ConversationService)
     api_client = await container.get(APIClient)
 
     # Kafka 컨슈머 설정
@@ -37,12 +37,12 @@ async def main():
     
     try:
         async for msg in consumer:
-            await process_message(msg, message_service, api_client)
+            await process_message(msg, conversation_service, api_client)
             await consumer.commit()
     finally:
         await shutdown(consumer)
 
-async def process_message(msg, message_service: MessageService, api_client: APIClient):
+async def process_message(msg, conversation_service: ConversationService, api_client: APIClient):
     """단일 메시지 처리 - 에러 처리 분리"""
     try:
         with tracer.start_as_current_span("process_message") as span:
@@ -54,15 +54,10 @@ async def process_message(msg, message_service: MessageService, api_client: APIC
             value = json.loads(message_string)
             message = await parse_message(value)
             
-            # 2. 메시지 저장
-            await message_service.save_message(message)
-            
-            # 3. 응답 필요한지 확인
-            if await message_service.should_respond_to(message):
-                # 4. 응답 생성 및 전송
-                async for response in message_service.generate_response(message):
-                    loguru.logger.info(f"Sending response: {response.content.text}")
-                    await api_client.send_response(response)
+            # 2. 메시지 처리 (저장 + 응답 생성) - 서비스에 위임
+            async for response in conversation_service.process_message(message):
+                loguru.logger.info(f"Sending response: {response.content.text}")
+                await api_client.send_response(response)
                     
     except json.JSONDecodeError as e:
         loguru.logger.error(f"Invalid JSON message: {e}")

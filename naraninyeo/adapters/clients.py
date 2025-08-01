@@ -38,21 +38,15 @@ class LLMClient:
         self.planner = planner_agent
         self.responder = responder
     
-    async def should_respond(self, message: Message) -> bool:
-        """메시지가 응답이 필요한지 확인"""
-        # TODO: Implement message response determination logic
-        return True  # 기본적으로 모든 메시지에 응답
-    
-    async def generate_response(self, message: Message, history: str, similar_messages):
+    async def generate_response(self, message: Message, history: str, reference_conversations: str, search_results: List):
         """LLM 응답 생성"""
         
         # LLM 응답 생성
-        # 일단 빈 검색 결과로 호출 (나중에 search_results 통합)
         async for response_data in self.responder.generate_response(
             message, 
             history or "",  # conversation_history
-            "참고할만한 예전 대화 기록이 없습니다.",  # reference_conversations
-            []  # search_results - 임시로 빈 리스트
+            reference_conversations or "참고할만한 예전 대화 기록이 없습니다.",  # reference_conversations
+            search_results or []  # search_results
         ):
             # TeamResponse에서 텍스트만 추출
             yield response_data.get("response", "")

@@ -7,14 +7,14 @@ import uuid
 # 새로운 리팩토링된 구조 사용
 from naraninyeo.adapters.database import DatabaseAdapter
 from naraninyeo.di import container
-from naraninyeo.services.message_service import MessageService
+from naraninyeo.services.conversation_service import ConversationService
 from naraninyeo.models.message import Message, Channel, Author, MessageContent
 
 class LocalClient:
     """로컬 테스트 클라이언트"""
     
     def __init__(self):
-        self.message_service = None
+        self.conversation_service = None
         self.database_adapter = None
     
     async def initialize(self):
@@ -22,9 +22,9 @@ class LocalClient:
         print("🚀 나란잉여 로컬 클라이언트 시작!")
                 
         # 서비스 및 어댑터 가져오기
-        self.message_service = await container.get(MessageService)
+        self.conversation_service = await container.get(ConversationService)
         self.database_adapter = await container.get(DatabaseAdapter)
-        print("✅ 메시지 서비스 준비 완료")
+        print("✅ 대화 서비스 준비 완료")
         
         # 테스트 채널 메시지 기록 삭제 (선택사항)
         try:
@@ -68,28 +68,15 @@ class LocalClient:
                     timestamp=datetime.now()
                 )
                 
-                # 메시지 저장
-                await self.message_service.save_message(message)
-                print("✅ 메시지 저장됨")
+                # 메시지 처리 (저장 + 응답 생성) - 통합 서비스 사용
+                print("💾 메시지 처리 중...")
+                response_count = 0
+                async for reply in self.conversation_service.process_message(message):
+                    response_count += 1
+                    if reply:
+                        print(f"🤖 나란잉여: {reply.content.text}")
                 
-                # 응답이 필요한지 확인
-                should_respond = await self.message_service.should_respond_to(message)
-                
-                if should_respond:
-                    print("🤖 나란잉여가 응답을 생성 중...")
-                    
-                    # 응답 생성 및 출력
-                    response_count = 0
-                    async for reply in self.message_service.generate_response(message):
-                        response_count += 1
-                        if reply:
-                            print(f"🤖 나란잉여: {reply.content.text}")
-                            # 응답도 저장
-                            await self.message_service.save_message(reply)
-                    
-                    if response_count == 0:
-                        print("🤖 나란잉여: (응답을 생성하지 못했습니다)")
-                else:
+                if response_count == 0:
                     print("💭 (봇이 응답하지 않습니다. '/'로 시작하는 메시지를 보내보세요)")
         
         except Exception as e:

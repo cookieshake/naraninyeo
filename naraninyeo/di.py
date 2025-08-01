@@ -12,7 +12,6 @@ from naraninyeo.adapters.repositories import MessageRepository, AttachmentReposi
 from naraninyeo.adapters.clients import LLMClient, EmbeddingClient, APIClient
 from naraninyeo.adapters.search_client import SearchClient
 from naraninyeo.core.config import Settings
-from naraninyeo.services.message_service import MessageService
 from naraninyeo.services.conversation_service import ConversationService
 from naraninyeo.services.random_responder import RandomResponderService
 from naraninyeo.adapters.database import DatabaseAdapter
@@ -61,13 +60,8 @@ class ServiceProvider(Provider):
     """서비스 의존성을 제공하는 프로바이더"""
     # 기본 스코프 설정
     scope = Scope.APP
-    
-    # 단순한 서비스는 직접 속성으로 제공
+
     random_responder = provide(RandomResponderService)
-    
-    # 복잡한 서비스도 recursive=True를 사용하면 자동으로 의존성 해결 가능
-    # 생성자의 타입 힌트를 통해 자동으로 의존성 주입
-    message_service = provide(MessageService)
     conversation_service = provide(ConversationService)
 
 
