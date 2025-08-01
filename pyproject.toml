@@ -24,6 +24,9 @@ dependencies = [
     "dishka>=1.6.0",
 ]
 
+[project.scripts]
+naraninyeo = "naraninyeo.entrypoints.__main__:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3.2",

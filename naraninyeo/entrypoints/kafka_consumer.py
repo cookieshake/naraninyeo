@@ -17,6 +17,7 @@ from naraninyeo.services.message_parser import parse_message
 tracer = trace.get_tracer(__name__)
 
 async def main():
+    """Kafka 컨슈머 메인 함수"""
     settings = await container.get(Settings)
 
     # 서비스 가져오기
@@ -72,5 +73,6 @@ async def shutdown(consumer):
     await container.close()
     loguru.logger.info("Resources cleaned up")
 
-if __name__ == "__main__":
+def run():
+    """진입점 함수"""
     anyio.run(main)

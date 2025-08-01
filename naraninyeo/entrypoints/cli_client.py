@@ -1,10 +1,12 @@
-# 나란잉여를 CLI로 실행하고 메시지를 주고받는 테스트 클라이언트
+"""
+나란잉여를 CLI로 실행하고 메시지를 주고받는 테스트 클라이언트
+"""
 
 import asyncio
 from datetime import datetime
 import uuid
+import traceback
 
-# 새로운 리팩토링된 구조 사용
 from naraninyeo.adapters.database import DatabaseAdapter
 from naraninyeo.di import container
 from naraninyeo.services.conversation_service import ConversationService
@@ -81,7 +83,6 @@ class LocalClient:
         
         except Exception as e:
             print(f"❌ 대화 중 오류 발생: {e}")
-            import traceback
             traceback.print_exc()
     
     async def cleanup(self):
@@ -107,22 +108,12 @@ async def main():
         
     except Exception as e:
         print(f"❌ 로컬 클라이언트 실행 중 오류: {e}")
-        import traceback
         traceback.print_exc()
     
     finally:
         # 정리
         await client.cleanup()
 
-if __name__ == "__main__":
-    # 모듈로 실행할 때를 위한 경로 설정
-    import sys
-    import os
-    
-    # 프로젝트 루트 디렉토리를 Python 경로에 추가
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(current_dir)
-    if project_root not in sys.path:
-        sys.path.insert(0, project_root)
-    
+def run():
+    """진입점 함수"""
     asyncio.run(main())
