@@ -37,5 +37,5 @@ ENV OTEL_RESOURCE_ATTRIBUTES="service.name=naraninyeo"
 ENV OTEL_EXPORTER_OTLP_ENDPOINT="http://signoz.vd.ingtra.net:4317"
 ENV OTEL_EXPORTER_OTLP_PROTOCOL="grpc"
 
-# Run the application with OpenTelemetry instrumentation
-CMD ["uv", "run", "python", "-m", "naraninyeo.main"]
+# Run the application with OpenTelemetry instrumentation - using kafka consumer mode
+CMD ["uv", "run", "python", "-m", "naraninyeo.entrypoints", "kafka"]
