@@ -75,12 +75,12 @@ class MessageRepository:
         return [self._dict_to_message(msg) for msg in messages]
     
     @trace.get_tracer(__name__).start_as_current_span("search_similar")
-    async def search_similar(self, embedding: List[float], room: str, limit: int = 5) -> List[Message]:
+    async def search_similar(self, embedding: List[float], channel_id: str, limit: int = 5) -> List[Message]:
         search_result = await self.vector_store_adapter.search(
             collection_name="naraninyeo-messages",
             query_vector=embedding,
             query_filter=qmodels.Filter(
-                must=[qmodels.FieldCondition(key="room", match=qmodels.MatchValue(value=room))]
+                must=[qmodels.FieldCondition(key="channel_id", match=qmodels.MatchValue(value=channel_id))]
             ),
             limit=limit,
         )
