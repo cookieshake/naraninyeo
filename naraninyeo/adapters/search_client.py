@@ -71,6 +71,7 @@ class SearchClient:
         }
         params = {"query": query, "display": limit, "sort": sort}
         
+        span.set_attribute("query", query)
         span.set_attribute("search_type", search_type)
         span.set_attribute("api_name", api_name)
         span.set_attribute("params", params)
