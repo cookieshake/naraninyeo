@@ -15,21 +15,21 @@ class EmbeddingClient:
     """임베딩 생성 클라이언트 - Ollama API 사용"""
     
     def __init__(self, settings: Settings):
-        self.api_url = settings.OLLAMA_API_URL
-        self.model = "hf.co/Qwen/Qwen3-Embedding-0.6B-GGUF:Q8_0"
+        self.api_url = settings.LOCALAI_API_URL
+        self.model = "qwen3-embedding-0.6b"
     
     @trace.get_tracer(__name__).start_as_current_span("get_embeddings")
     async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """텍스트 목록을 임베딩으로 변환"""
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{self.api_url}/api/embed",
+                f"{self.api_url}/embeddings",
                 json={"model": self.model, "input": texts},
-                timeout=20
+                timeout=60
             )
             response.raise_for_status()
-            data = response.json()
-            return data.get("embeddings", [])
+            data = response.json().get("data", [])
+            return [item.get("embedding", []) for item in data]
 
 class LLMClient:
     """LLM 클라이언트 - agent.py 로직 통합"""
