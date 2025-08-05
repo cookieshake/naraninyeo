@@ -30,7 +30,7 @@ class Responder:
         # 리스폰더 에이전트 생성
         self.agent = Agent(
             model=OpenAIModel(
-                model_name="mistralai/mistral-medium-3",
+                model_name="openai/o4-mini-high",
                 provider=OpenRouterProvider(
                     api_key=settings.OPENROUTER_API_KEY
                 )
