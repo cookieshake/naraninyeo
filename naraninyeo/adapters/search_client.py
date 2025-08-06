@@ -74,14 +74,14 @@ class SearchClient:
         span.set_attribute("query", query)
         span.set_attribute("search_type", search_type)
         span.set_attribute("api_name", api_name)
-        span.set_attribute("params", params)
+        span.set_attribute("params", str(params))
         
         async with httpx.AsyncClient() as client:
             response = await client.get(url, headers=headers, params=params)
             data = response.json()
             span.set_attribute("response_status", response.status_code)
-            span.set_attribute("response_data", data)
-    
+            span.set_attribute("response_data", str(data))
+
         # API 응답 타입에 따른 소스 타입 매핑
         source_type_map = {
             "news": "뉴스",
