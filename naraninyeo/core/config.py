@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     # Ollama API settings
     OLLAMA_API_URL: str = "http://localhost:11434"
     LOCALAI_API_URL: str = "http://localhost:8080"
+    LLAMA_CPP_MODELS_URL: str = "http://localhost:11435"
 
     # Qdrant settings
     QDRANT_URL: str = "http://localhost:6333"
