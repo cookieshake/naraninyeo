@@ -11,6 +11,8 @@ from dishka import Provider, Scope, make_async_container, provide, AnyOf
 from naraninyeo.adapters.repositories import MessageRepository, AttachmentRepository
 from naraninyeo.adapters.clients import LLMClient, EmbeddingClient, APIClient
 from naraninyeo.adapters.search_client import SearchClient
+from naraninyeo.adapters.crawler import Crawler
+from naraninyeo.agents.extractor import Extractor
 from naraninyeo.core.config import Settings
 from naraninyeo.services.conversation_service import ConversationService
 from naraninyeo.services.random_responder import RandomResponderService
@@ -26,7 +28,7 @@ class InfrastructureProvider(Provider):
     scope = Scope.APP
     
     @provide
-    async def provide_settings(self) -> Settings:
+    async def settings(self) -> Settings:
         return Settings()
     
     # DatabaseAdapter를 의존성 주입 시스템에 추가
@@ -37,16 +39,27 @@ class InfrastructureProvider(Provider):
         yield adapter
         # 컨테이너가 종료될 때 데이터베이스 연결도 종료
         await adapter.disconnect()
+
+    @provide
+    async def crawler(self, embedding_client: EmbeddingClient) -> AsyncIterator[Crawler]:
+        crawler = Crawler(embedding_client=embedding_client)
+        await crawler.start()
+        yield crawler
+        await crawler.stop()
     
     # 에이전트 제공
     @provide
     async def planner_agent(self, settings: Settings) -> Planner:
         return Planner(settings)
-        
+
     @provide
     async def responder_agent(self, settings: Settings) -> Responder:
         return Responder(settings)
     
+    @provide
+    async def extractor_agent(self, settings: Settings) -> Extractor:
+        return Extractor(settings)
+
     vector_store_adapter = provide(VectorStoreAdapter)
     message_repository = provide(MessageRepository)
     attachment_repository = provide(AttachmentRepository)

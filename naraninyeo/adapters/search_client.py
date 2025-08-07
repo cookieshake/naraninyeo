@@ -3,11 +3,13 @@
 import html
 import re
 import httpx
-from typing import List, Literal, Optional, Dict, Any
-from datetime import datetime
-
+import asyncio
+from typing import List, Optional
+from loguru import logger
 from opentelemetry import trace
 from pydantic import BaseModel, Field
+from naraninyeo.adapters.crawler import Crawler
+from naraninyeo.agents.extractor import Extractor
 from naraninyeo.core.config import Settings
 
 tracer = trace.get_tracer(__name__)
@@ -31,9 +33,39 @@ class SearchResponse(BaseModel):
 class SearchClient:
     """검색 클라이언트 - 네이버 검색 API 사용"""
 
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, crawler: Crawler, extractor: Extractor):
         self.client_id = settings.NAVER_CLIENT_ID
         self.client_secret = settings.NAVER_CLIENT_SECRET
+        self.crawler = crawler
+        self.extractor = extractor
+
+    async def enhance_search_items(self, query: str, items: SearchItem) -> SearchItem:
+        """검색 아이템에 추가 정보를 보강
+        
+        Args:
+            query (str): 검색어
+            items (SearchItem): 검색 아이템
+            
+        Returns:
+            SearchItem: 보강된 검색 아이템
+        """
+        urls = [item.link for item in items]
+        if not urls:
+            return items
+        
+        try:
+            markdowns = await self.crawler.get_markdowns_from_urls(urls)
+            results = await asyncio.gather(
+                *[self.extractor.run(markdown, query) for markdown in markdowns]
+            )
+            for item, result in zip(items, results):
+                logger.debug(f"Enhancing item: {item.description} with markdown: {result}")
+                item.description = result
+        except Exception as e:
+            logger.error(f"Error enhancing search items: {e}")
+
+        return items
+
     
     @tracer.start_as_current_span("search")
     async def search(self, query: str, search_type: str, limit: int = 5, sort: str = "sim") -> SearchResponse:
@@ -114,7 +146,14 @@ class SearchClient:
                     source_type=source_type
                 )
             )
-        
+        # 검색 아이템 보강
+        if items:
+            items = await self.enhance_search_items(query, items)
+
+        logger.debug(f"Search results for query '{query}' ({search_type}, limit: {limit}, sort: {sort}): {len(items)} items found")
+        for item in items:
+            logger.debug(f" - {item.title}: {item.description} ({item.link})")
+
         return SearchResponse(
             query=query,
             items=items
