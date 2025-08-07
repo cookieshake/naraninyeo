@@ -6,8 +6,8 @@ import httpx
 from typing import List
 from opentelemetry import trace
 
-from naraninyeo.agents.planner import Planner
-from naraninyeo.agents.responder import Responder
+from naraninyeo.adapters.agents.planner import Planner
+from naraninyeo.adapters.agents.responder import Responder
 from naraninyeo.core.config import Settings
 from naraninyeo.models.message import Message
 

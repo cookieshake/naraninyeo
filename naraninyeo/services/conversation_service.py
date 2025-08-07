@@ -10,7 +10,7 @@ from naraninyeo.models.message import Message, MessageContent, Author
 from naraninyeo.core.config import Settings
 from naraninyeo.adapters.repositories import MessageRepository
 from naraninyeo.adapters.clients import EmbeddingClient, LLMClient
-from naraninyeo.agents.planner import SearchMethod, SearchPlan
+from naraninyeo.adapters.agents.planner import SearchMethod, SearchPlan
 from naraninyeo.adapters.search_client import SearchClient
 
 class ConversationService:
