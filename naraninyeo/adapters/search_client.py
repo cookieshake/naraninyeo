@@ -9,7 +9,7 @@ from loguru import logger
 from opentelemetry import trace
 from pydantic import BaseModel, Field
 from naraninyeo.adapters.crawler import Crawler
-from naraninyeo.agents.extractor import Extractor
+from naraninyeo.adapters.agents.extractor import Extractor
 from naraninyeo.core.config import Settings
 
 tracer = trace.get_tracer(__name__)
