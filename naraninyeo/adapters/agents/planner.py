@@ -41,7 +41,7 @@ class Planner:
         # 플래너 에이전트 생성
         self.agent = Agent(
             model=OpenAIModel(
-                model_name="openai/gpt-4.1",
+                model_name="openai/gpt-5-mini",
                 provider=OpenRouterProvider(
                     api_key=settings.OPENROUTER_API_KEY
                 )
@@ -49,7 +49,12 @@ class Planner:
             output_type=SearchPlan,
             instrument=True,
             model_settings=OpenAIModelSettings(
-                timeout=30
+                timeout=30,
+                extra_body={
+                    "reasoning": {
+                        "effort": "minimal"
+                    }
+                }
             )
         )
         

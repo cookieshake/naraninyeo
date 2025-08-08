@@ -19,14 +19,19 @@ class Extractor:
         # 추출 에이전트 생성
         self.agent = Agent(
             model=OpenAIModel(
-                model_name="x-ai/grok-3-mini",
+                model_name="openai/gpt-5-nano",
                 provider=OpenRouterProvider(
                     api_key=settings.OPENROUTER_API_KEY,
                 )
             ),
             instrument=True,
             model_settings=OpenAIModelSettings(
-                timeout=20
+                timeout=20,
+                extra_body={
+                    "reasoning": {
+                        "effort": "minimal"
+                    }
+                }
             )
         )
         

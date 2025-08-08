@@ -37,7 +37,12 @@ class Responder:
             ),
             instrument=True,
             model_settings=OpenAIModelSettings(
-                timeout=30
+                timeout=30,
+                extra_body={
+                    "reasoning": {
+                        "effort": "minimal"
+                    }
+                }
             )
         )
         
