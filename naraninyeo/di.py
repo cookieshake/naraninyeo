@@ -12,6 +12,7 @@ from naraninyeo.adapters.repositories import MessageRepository, AttachmentReposi
 from naraninyeo.adapters.clients import LLMClient, EmbeddingClient, APIClient
 from naraninyeo.adapters.search_client import SearchClient
 from naraninyeo.adapters.crawler import Crawler
+from naraninyeo.adapters.vectorstore import VectorStoreAdapter
 from naraninyeo.core.config import Settings
 from naraninyeo.services.conversation_service import ConversationService
 from naraninyeo.services.random_responder import RandomResponderService
