@@ -61,7 +61,7 @@ class Crawler:
         Returns:
             The most relevant part of the pages as a string.
         """
-        filter = PruningContentFilter(threshold=1.0)
+        filter = PruningContentFilter(threshold=1.0, threshold_type="dynamic")
         md_generator = DefaultMarkdownGenerator(content_filter=filter)
         config = CrawlerRunConfig(
             markdown_generator=md_generator,
