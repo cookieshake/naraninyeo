@@ -8,9 +8,10 @@ import uuid
 import traceback
 
 from naraninyeo.adapters.database import DatabaseAdapter
-from naraninyeo.di import container
 from naraninyeo.services.conversation_service import ConversationService
 from naraninyeo.models.message import Message, Channel, Author, MessageContent
+
+from tests.conftest import container
 
 class LocalClient:
     """로컬 테스트 클라이언트"""

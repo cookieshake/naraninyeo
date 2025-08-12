@@ -23,7 +23,7 @@ class EmbeddingClient:
         """텍스트 목록을 임베딩으로 변환"""
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{self.api_url}/{self.model}/v1/embeddings",
+                f"{self.api_url}/v1/embeddings",
                 json={"model": self.model, "input": texts},
                 timeout=60
             )

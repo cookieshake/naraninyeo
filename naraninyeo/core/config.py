@@ -7,14 +7,8 @@ class Settings(BaseSettings):
     MONGODB_DB_NAME: str = "naraninyeo"
 
     # Naver API settings
-    NAVER_CLIENT_ID: str
-    NAVER_CLIENT_SECRET: str
-
-    # Gemini API settings
-    GOOGLE_API_KEY: str
-
-    # OpenAI API settings
-    OPENAI_API_KEY: str
+    NAVER_CLIENT_ID: str = ""
+    NAVER_CLIENT_SECRET: str = ""
 
     # Kafka settings
     KAFKA_TOPIC: str = "naraninyeo-topic"
@@ -24,9 +18,7 @@ class Settings(BaseSettings):
     # Naraninyeo API settings
     NARANINYEO_API_URL: str = "http://localhost:8000"
 
-    # Ollama API settings
-    OLLAMA_API_URL: str = "http://localhost:11434"
-    LOCALAI_API_URL: str = "http://localhost:8080"
+    # LLM API settings
     LLAMA_CPP_MODELS_URL: str = "http://localhost:11435"
 
     # Qdrant settings
@@ -35,7 +27,6 @@ class Settings(BaseSettings):
     # LLM settings
     HISTORY_LIMIT: int = 10
     DEFAULT_SEARCH_LIMIT: int = 3
-    RESPONSE_DELAY: float = 1.0  # seconds
     TIMEZONE: str = "Asia/Seoul"
     LOCATION: str = "Seoul, South Korea"
     
@@ -44,4 +35,4 @@ class Settings(BaseSettings):
     BOT_AUTHOR_NAME: str = "나란잉여"
 
     # OpenRouter API settings
-    OPENROUTER_API_KEY: str
+    OPENROUTER_API_KEY: str = ""
