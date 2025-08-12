@@ -32,7 +32,8 @@ RUN uv run crawl4ai-setup && \
     uv run crawl4ai-doctor
 
 # Copy project files
-COPY . .
+COPY naraninyeo/ naraninyeo/
+COPY tests/ tests/
 
 # Set OpenTelemetry environment variables
 # Replace the placeholder values with your actual configuration.
