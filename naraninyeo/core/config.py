@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     NARANINYEO_API_URL: str = "http://localhost:8000"
 
     # LLM API settings
-    LLAMA_CPP_MODELS_URL: str = "http://localhost:11435"
+    LLAMA_CPP_EMBEDDINGS_URL: str = "http://localhost:11435/model"
 
     # Qdrant settings
     QDRANT_URL: str = "http://localhost:6333"

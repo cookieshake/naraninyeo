@@ -24,3 +24,4 @@ async def test_conversation_service_responds(test_container: Container):
 
     async for reply in conversation_service.process_message(message):
         replies.append(reply)
+    assert len(replies) > 0, "응답이 생성되지 않았습니다."

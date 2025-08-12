@@ -15,8 +15,8 @@ class EmbeddingClient:
     """임베딩 생성 클라이언트 - Ollama API 사용"""
     
     def __init__(self, settings: Settings):
-        self.api_url = settings.LLAMA_CPP_MODELS_URL
-        self.model = "qwen3-embedding-0-6b"
+        self.api_url = settings.LLAMA_CPP_EMBEDDINGS_URL
+        self.model = "qwen3-embedding-0.6b"
     
     @trace.get_tracer(__name__).start_as_current_span("get_embeddings")
     async def get_embeddings(self, texts: List[str]) -> List[List[float]]:

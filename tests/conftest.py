@@ -57,7 +57,7 @@ class TestContainerProvider(Provider):
     @provide
     def qdrant_container(self) -> Iterator[QdrantContainer]:
         """Qdrant 테스트 컨테이너를 제공하는 fixture"""
-        qdrant = QdrantContainer()
+        qdrant = QdrantContainer(image="qdrant/qdrant:v1.15.1")
         qdrant.start()
         yield qdrant
         qdrant.stop()
@@ -67,12 +67,15 @@ class TestContainerProvider(Provider):
         """LlamaCpp 테스트 컨테이너를 제공하는 fixture"""
         llamacpp = LlamaCppContainer()
         llamacpp.start()
-        for _ in range(100):
+        for _ in range(50):
             with httpx.Client() as client:
-                time.sleep(1)
-                response = client.get(f"{llamacpp.get_connection_url()}/health")
-                if response.status_code == 200:
-                    break
+                try:
+                    response = client.get(f"{llamacpp.get_connection_url()}/health")
+                    if response.status_code == 200:
+                        break
+                except httpx.RequestError:
+                    pass
+                time.sleep(2)
         yield llamacpp
         llamacpp.stop()
 
