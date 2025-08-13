@@ -30,7 +30,7 @@ class Responder:
         # 리스폰더 에이전트 생성
         self.agent = Agent(
             model=OpenAIModel(
-                model_name="openai/gpt-5-chat",
+                model_name="x-ai/grok-3-mini",
                 provider=OpenRouterProvider(
                     api_key=settings.OPENROUTER_API_KEY
                 )
