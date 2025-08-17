@@ -1,11 +1,24 @@
 from datetime import datetime
-from typing import AsyncIterator, override
+from typing import AsyncIterable, AsyncIterator, Union, override
 from textwrap import dedent
 from zoneinfo import ZoneInfo
 
-from pydantic_ai import Agent
+import logfire
+from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
 from pydantic_ai.providers.openrouter import OpenRouterProvider
+from pydantic_ai.messages import (
+    AgentStreamEvent,
+    FinalResultEvent,
+    FunctionToolCallEvent,
+    FunctionToolResultEvent,
+    HandleResponseEvent,
+    PartDeltaEvent,
+    PartStartEvent,
+    TextPartDelta,
+    ThinkingPartDelta,
+    ToolCallPartDelta,
+)
 
 from naraninyeo.domain.gateway.reply import ReplyGenerator
 from naraninyeo.domain.model.message import Author, Message, MessageContent
@@ -52,13 +65,12 @@ class ReplyGeneratorAgent(ReplyGenerator):
         )
 
         async with self.agent.run_stream(query) as stream:
-            sent = 0
             last_text = ""
-            async for message in stream.stream_text():
-                last_text = message[sent:]
-                if "\n\n" in last_text:
-                    yield self._create_new_message(context, last_text)
-                    sent += len(last_text)
+            async for message in stream.stream_text(delta=True):
+                last_text += message
+                while "\n\n" in last_text:
+                    text_to_send, last_text = last_text.split("\n\n", 1)
+                    yield self._create_new_message(context, text_to_send)
             if last_text:
                 yield self._create_new_message(context, last_text)
 
@@ -66,12 +78,13 @@ class ReplyGeneratorAgent(ReplyGenerator):
         self.settings = settings
         self.agent = Agent(
             model=OpenAIModel(
-                model_name="x-ai/grok-3-mini",
+                model_name="google/gemini-2.5-pro",
                 provider=OpenRouterProvider(
                     api_key=settings.OPENROUTER_API_KEY
                 )
             ),
             instrument=True,
+            output_type=str,
             model_settings=OpenAIModelSettings(
                 timeout=20,
                 extra_body={

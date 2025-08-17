@@ -1,5 +1,7 @@
 import asyncio
 
+import logfire
+
 from naraninyeo.domain.model.message import Message
 from naraninyeo.domain.model.reply import ReplyContext
 from naraninyeo.domain.variable import Variables
@@ -22,8 +24,15 @@ class RetrievalUseCase:
     async def execute_retrieval(self, plans: list[RetrievalPlan], context: ReplyContext) -> list[RetrievalResult]:
         results = []
 
-        async with asyncio.timeout(Variables.RETRIEVAL_EXECUTION_TIMEOUT):
-            async for plan in self.executor.execute(plans, context): # type: ignore
-                results.append(plan)
+        try:
+            async with asyncio.timeout(Variables.RETRIEVAL_EXECUTION_TIMEOUT):
+                async for plan in self.executor.execute(plans, context): # type: ignore
+                    results.append(plan)
+        except asyncio.TimeoutError:
+            logfire.warning(
+                "Retrieval execution timed out. Executed {executed_plans} plans out of {all_plans}",
+                executed_plans=len(results),
+                all_plans=len(plans)
+            )
 
         return results

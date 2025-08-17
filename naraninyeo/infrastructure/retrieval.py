@@ -7,6 +7,9 @@ import asyncio
 
 import httpx
 import dateparser
+import logfire
+import json
+
 from pydantic import BaseModel, computed_field
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
@@ -67,7 +70,10 @@ class RetrievalPlannerAgent(RetrievalPlanner):
         """).strip()
 
         result = await self.agent.run(message)
-        return list(result.output)
+        plans = result.output
+
+        logfire.debug(f"Retrieval plans generated: {plans}")
+        return list(plans)
 
 
     def __init__(self, settings: Settings):
