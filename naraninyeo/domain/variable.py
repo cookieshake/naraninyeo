@@ -1,0 +1,3 @@
+
+class Variables:
+    RETRIEVAL_EXECUTION_TIMEOUT = 10

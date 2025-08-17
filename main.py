@@ -1,17 +1,27 @@
-#!/usr/bin/env python
-"""
-나란잉여 애플리케이션의 메인 진입점
-"""
-
+import asyncio
 import sys
-import os
 
-# 프로젝트 루트 디렉토리를 Python 경로에 추가
-current_dir = os.path.dirname(os.path.abspath(__file__))
-if current_dir not in sys.path:
-    sys.path.insert(0, current_dir)
-
-from naraninyeo.entrypoints.__main__ import main
+import logfire
 
 if __name__ == "__main__":
-    main()
+    logfire.configure(
+        send_to_logfire=False,
+        console=logfire.ConsoleOptions(
+            verbose=True,
+            min_log_level="trace"
+        )
+    )
+    logfire.instrument_httpx()
+    logfire.instrument_pydantic_ai()
+    logfire.instrument_pymongo()
+    logfire.install_auto_tracing(modules=["naraninyeo"], min_duration=0.01)
+
+    arg = sys.argv[1] if len(sys.argv) > 1 else None
+    match arg:
+        case "cli":
+            from naraninyeo.entrypoints.cli import main
+            asyncio.run(main())
+        case "kafka":
+            pass
+        case _:
+            raise ValueError(f"Unknown entrypoint: {arg}. Use 'cli' or 'kafka'.")

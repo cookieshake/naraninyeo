@@ -7,34 +7,24 @@ from datetime import datetime
 import uuid
 import traceback
 
-from naraninyeo.adapters.database import DatabaseAdapter
-from naraninyeo.services.conversation_service import ConversationService
-from naraninyeo.models.message import Message, Channel, Author, MessageContent
+from naraninyeo.domain.application.new_message_handler import NewMessageHandler
 
-from tests.conftest import container
+from naraninyeo.di import container
+from naraninyeo.domain.model.message import Author, Channel, Message, MessageContent
 
 class LocalClient:
     """로컬 테스트 클라이언트"""
     
     def __init__(self):
-        self.conversation_service = None
-        self.database_adapter = None
-    
+        pass
+
     async def initialize(self):
         """클라이언트 초기화"""
         print("🚀 나란잉여 로컬 클라이언트 시작!")
                 
         # 서비스 및 어댑터 가져오기
-        self.conversation_service = await container.get(ConversationService)
-        self.database_adapter = await container.get(DatabaseAdapter)
+        self.new_message_handler = await container.get(NewMessageHandler)
         print("✅ 대화 서비스 준비 완료")
-        
-        # 테스트 채널 메시지 기록 삭제 (선택사항)
-        try:
-            await self.database_adapter.db.messages.delete_many({"channel.channel_id": "local-test"})
-            print("🧹 이전 테스트 메시지 기록 삭제 완료")
-        except Exception as e:
-            print(f"⚠️ 이전 기록 삭제 실패 (무시됨): {e}")
     
     async def run_chat_loop(self):
         """대화 루프 실행"""
@@ -67,14 +57,14 @@ class LocalClient:
                     message_id=str(uuid.uuid4()),
                     channel=Channel(channel_id="local-test", channel_name="로컬 테스트"),
                     author=Author(author_id="local-user", author_name="유저"),
-                    content=MessageContent(text=text),
+                    content=MessageContent(text=text, attachments=[]),
                     timestamp=datetime.now()
                 )
                 
                 # 메시지 처리 (저장 + 응답 생성) - 통합 서비스 사용
                 print("💾 메시지 처리 중...")
                 response_count = 0
-                async for reply in self.conversation_service.process_message(message):
+                async for reply in self.new_message_handler.handle(message):
                     response_count += 1
                     if reply:
                         print(f"🤖 나란잉여: {reply.content.text}")
@@ -114,7 +104,3 @@ async def main():
     finally:
         # 정리
         await client.cleanup()
-
-def run():
-    """진입점 함수"""
-    asyncio.run(main())

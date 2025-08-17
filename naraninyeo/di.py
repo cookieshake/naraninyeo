@@ -4,22 +4,25 @@ Dishka 기반 의존성 주입 컨테이너 설정
 """
 from typing import Optional, Iterable
 from collections.abc import AsyncIterator
-import asyncio
 
 from dishka import Provider, Scope, make_async_container, provide, AnyOf
+from motor.motor_asyncio import AsyncIOMotorDatabase, AsyncIOMotorClient
+from qdrant_client import AsyncQdrantClient
 
-from naraninyeo.adapters.repositories import MessageRepository, AttachmentRepository
-from naraninyeo.adapters.clients import LLMClient, EmbeddingClient, APIClient
-from naraninyeo.adapters.search_client import SearchClient
-from naraninyeo.adapters.crawler import Crawler
-from naraninyeo.adapters.vectorstore import VectorStoreAdapter
-from naraninyeo.core.config import Settings
-from naraninyeo.services.conversation_service import ConversationService
-from naraninyeo.services.random_responder import RandomResponderService
-from naraninyeo.adapters.database import DatabaseAdapter
-from naraninyeo.adapters.agents.extractor import Extractor
-from naraninyeo.adapters.agents.planner import Planner
-from naraninyeo.adapters.agents.responder import Responder
+from naraninyeo.domain.gateway.message import MessageRepository
+from naraninyeo.domain.gateway.reply import ReplyGenerator
+from naraninyeo.domain.gateway.retrieval import RetrievalPlanner, RetrievalPlanExecutor
+from naraninyeo.domain.usecase.message import MessageUseCase
+from naraninyeo.domain.usecase.reply import ReplyUseCase
+from naraninyeo.domain.usecase.retrieval import RetrievalUseCase
+from naraninyeo.domain.application.new_message_handler import NewMessageHandler
+
+from naraninyeo.infrastructure.settings import Settings
+from naraninyeo.infrastructure.embedding import TextEmbedder, Qwen306TextEmbedder
+from naraninyeo.infrastructure.message import MongoQdrantMessageRepository
+from naraninyeo.infrastructure.reply import ReplyGeneratorAgent
+from naraninyeo.infrastructure.retrieval import NaverSearchClient, RetrievalPlannerAgent, DefaultRetrievalPlanExecutor
+
 
 
 class InfrastructureProvider(Provider):
@@ -31,57 +34,32 @@ class InfrastructureProvider(Provider):
     async def settings(self) -> Settings:
         return Settings()
     
-    # DatabaseAdapter를 의존성 주입 시스템에 추가
     @provide
-    async def database_adapter(self, settings: Settings) -> AsyncIterator[DatabaseAdapter]:
-        # 데이터베이스 어댑터 인스턴스 생성
-        adapter = DatabaseAdapter(settings)
-        yield adapter
-        # 컨테이너가 종료될 때 데이터베이스 연결도 종료
-        await adapter.disconnect()
+    async def mongo_database(self, settings: Settings) -> AsyncIterator[AsyncIOMotorDatabase]:
+        client = AsyncIOMotorClient(settings.MONGODB_URL)
+        db = client.get_database(settings.MONGODB_DB_NAME)
+        yield db
+        client.close()
 
     @provide
-    async def crawler(self, embedding_client: EmbeddingClient) -> AsyncIterator[Crawler]:
-        crawler = Crawler(embedding_client=embedding_client)
-        await crawler.start()
-        yield crawler
-        await crawler.stop()
-    
-    # 에이전트 제공
-    @provide
-    async def planner_agent(self, settings: Settings) -> Planner:
-        return Planner(settings)
+    async def qdrant_client(self, settings: Settings) -> AsyncIterator[AsyncQdrantClient]:
+        client = AsyncQdrantClient(url=settings.QDRANT_URL)
+        yield client
+        await client.close()
 
-    @provide
-    async def responder_agent(self, settings: Settings) -> Responder:
-        return Responder(settings)
-    
-    @provide
-    async def extractor_agent(self, settings: Settings) -> Extractor:
-        return Extractor(settings)
+    text_embedder = provide(source=Qwen306TextEmbedder, provides=TextEmbedder)
+    naver_search_client = provide(source=NaverSearchClient, provides=NaverSearchClient)
+    message_repository = provide(source=MongoQdrantMessageRepository, provides=MessageRepository)
+    reply_generator = provide(source=ReplyGeneratorAgent, provides=ReplyGenerator)
+    retrieval_planner = provide(source=RetrievalPlannerAgent, provides=RetrievalPlanner)
+    retrieval_executor = provide(source=DefaultRetrievalPlanExecutor, provides=RetrievalPlanExecutor)
 
-    vector_store_adapter = provide(VectorStoreAdapter)
-    message_repository = provide(MessageRepository)
-    attachment_repository = provide(AttachmentRepository)
-    llm_client = provide(LLMClient)
-    embedding_client = provide(EmbeddingClient)
-    api_client = provide(APIClient)
-    search_client = provide(SearchClient)
+    message_use_case = provide(source=MessageUseCase, provides=MessageUseCase)
+    reply_use_case = provide(source=ReplyUseCase, provides=ReplyUseCase)
+    retrieval_use_case = provide(source=RetrievalUseCase, provides=RetrievalUseCase)
 
+    new_message_handler = provide(source=NewMessageHandler, provides=NewMessageHandler)
 
-class ServiceProvider(Provider):
-    """서비스 의존성을 제공하는 프로바이더"""
-    # 기본 스코프 설정
-    scope = Scope.APP
-
-    random_responder = provide(RandomResponderService)
-    conversation_service = provide(ConversationService)
-
-
-# 글로벌 컨테이너 - main.py에서 사용
-# 다른 파일에서는 이 컨테이너를 직접 import하여 사용
-# 예: from naraninyeo.di import container
 container = make_async_container(
     InfrastructureProvider(),
-    ServiceProvider()
 )
