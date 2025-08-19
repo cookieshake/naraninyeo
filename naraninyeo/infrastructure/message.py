@@ -101,7 +101,7 @@ class MongoQdrantMessageRepository(MessageRepository):
 
     @override
     async def search_similar_messages(self, channel_id: str, keyword: str, limit: int) -> list[Message]:
-        results = await self._qdrant_client.search(
+        result = await self._qdrant_client.query_points(
             collection_name=self._qdrant_collection,
             query_vector=(await self._text_embedder.embed([keyword]))[0],
             query_filter=qmodels.Filter(
@@ -111,7 +111,7 @@ class MongoQdrantMessageRepository(MessageRepository):
             ),
             limit=limit
         )
-        message_ids = [hit.payload["message_id"] for hit in results if hit.payload is not None]
+        message_ids = [point.payload["message_id"] for point in result.points if point.payload is not None]
         loaded_messages = await asyncio.gather(*[self.load(message_id) for message_id in message_ids])
         return [msg for msg in loaded_messages if msg is not None]
     

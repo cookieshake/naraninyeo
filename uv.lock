@@ -1340,6 +1340,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "naraninyeo" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-httpx" },
@@ -1370,6 +1371,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "naraninyeo", virtual = "." },
     { name = "pytest", specifier = ">=8.3.2" },
     { name = "pytest-asyncio", specifier = ">=0.23.7" },
     { name = "pytest-httpx", specifier = ">=0.30.0" },

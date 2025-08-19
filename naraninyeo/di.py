@@ -2,12 +2,19 @@
 Dishka 기반 의존성 주입 컨테이너 설정
 - 간소화된 Provide 사용 방식 적용
 """
-from typing import Optional, Iterable
+import time
+from typing import Iterator, Optional, Iterable
 from collections.abc import AsyncIterator
 
 from dishka import Provider, Scope, make_async_container, provide, AnyOf
+import httpx
 from motor.motor_asyncio import AsyncIOMotorDatabase, AsyncIOMotorClient
 from qdrant_client import AsyncQdrantClient
+from qdrant_client.http.models import VectorParams, Distance
+
+from testcontainers.core.container import DockerContainer
+from testcontainers.mongodb import MongoDbContainer
+from testcontainers.qdrant import QdrantContainer
 
 from naraninyeo.domain.gateway.message import MessageRepository
 from naraninyeo.domain.gateway.reply import ReplyGenerator
@@ -25,9 +32,7 @@ from naraninyeo.infrastructure.retrieval import NaverSearchClient, RetrievalPlan
 
 
 
-class InfrastructureProvider(Provider):
-    """인프라 의존성을 제공하는 프로바이더"""
-    # 기본 스코프 설정 - 모든 프로바이더에 적용
+class MainProvider(Provider):
     scope = Scope.APP
     
     @provide
@@ -60,6 +65,85 @@ class InfrastructureProvider(Provider):
 
     new_message_handler = provide(source=NewMessageHandler, provides=NewMessageHandler)
 
+class LlamaCppContainer(DockerContainer):
+    """LlamaCpp 테스트 컨테이너를 위한 클래스"""
+    def __init__(self):
+        super().__init__(
+            image="ghcr.io/ggml-org/llama.cpp:server",
+            env={
+                "LLAMA_CACHE": "/tmp/llamacpp/cache"
+            },
+            command=" ".join([
+                "--host 0.0.0.0",
+                "--port 8080",
+                "--parallel 5",
+                "--hf-repo Qwen/Qwen3-Embedding-0.6B-GGUF:Q8_0",
+                "--embedding",
+                "--pooling last",
+                "--ubatch-size 8192",
+                "--verbose-prompt"
+            ])
+        )
+        self.with_exposed_ports(8080)
+        self.with_volume_mapping("/tmp/llamacpp/cache", "/tmp/llamacpp/cache", mode="rw")
+
+    def get_connection_url(self) -> str:
+        return f"http://{self.get_container_host_ip()}:{self.get_exposed_port(8080)}"
+
+class TestProvider(Provider):
+    scope = Scope.APP
+
+    @provide
+    def mongodb_container(self) -> Iterator[MongoDbContainer]:
+        """MongoDB 테스트 컨테이너를 제공하는 fixture"""
+        mongo = MongoDbContainer()
+        mongo.start()
+        yield mongo
+        mongo.stop()
+
+    @provide
+    def qdrant_container(self) -> Iterator[QdrantContainer]:
+        """Qdrant 테스트 컨테이너를 제공하는 fixture"""
+        qdrant = QdrantContainer(image="qdrant/qdrant:v1.15.1")
+        qdrant.start()
+        client = qdrant.get_client()
+        client.create_collection("naraninyeo-messages", vectors_config=VectorParams(size=1024, distance=Distance.COSINE))
+        yield qdrant
+        qdrant.stop()
+
+    @provide
+    def llamacpp_container(self) -> Iterator[LlamaCppContainer]:
+        """LlamaCpp 테스트 컨테이너를 제공하는 fixture"""
+        llamacpp = LlamaCppContainer()
+        llamacpp.start()
+        for _ in range(50):
+            with httpx.Client() as client:
+                try:
+                    response = client.get(f"{llamacpp.get_connection_url()}/health")
+                    if response.status_code == 200:
+                        break
+                except httpx.RequestError:
+                    pass
+                time.sleep(2)
+        yield llamacpp
+        llamacpp.stop()
+
+    @provide(override=True)
+    async def settings(
+        self,
+        mongodb_container: MongoDbContainer,
+        llamacpp_container: LlamaCppContainer,
+        qdrant_container: QdrantContainer
+    ) -> Settings:
+        settings = Settings()
+        settings = settings.model_copy(update={
+            "MONGODB_URL": mongodb_container.get_connection_url(),
+            "LLAMA_CPP_EMBEDDINGS_URL": llamacpp_container.get_connection_url(),
+            "QDRANT_URL": f"http://{qdrant_container.rest_host_address}"
+        })
+
+        return settings
+
 container = make_async_container(
-    InfrastructureProvider(),
+    MainProvider()
 )

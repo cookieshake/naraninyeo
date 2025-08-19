@@ -2,7 +2,7 @@ from zoneinfo import ZoneInfo
 from typing import Literal, Optional
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class Author(BaseModel):
     author_id: str
@@ -16,7 +16,7 @@ class Attachment(BaseModel):
 
 class MessageContent(BaseModel):
     text: str
-    attachments: list[Attachment]
+    attachments: list[Attachment] = Field(default_factory=list)
 
 class Channel(BaseModel):
     channel_id: str
