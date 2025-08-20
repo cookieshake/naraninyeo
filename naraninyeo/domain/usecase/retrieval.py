@@ -6,7 +6,7 @@ from naraninyeo.domain.model.message import Message
 from naraninyeo.domain.model.reply import ReplyContext
 from naraninyeo.domain.variable import Variables
 from naraninyeo.domain.gateway.retrieval import RetrievalPlanExecutor, RetrievalPlanner
-from naraninyeo.domain.model.retrieval import RetrievalPlan, RetrievalResult
+from naraninyeo.domain.model.retrieval import RetrievalPlan, RetrievalResult, RetrievalStatus
 
 class RetrievalUseCase:
     def __init__(
@@ -31,8 +31,8 @@ class RetrievalUseCase:
         except asyncio.TimeoutError:
             logfire.warning(
                 "Retrieval execution timed out. Executed {executed_plans} plans out of {all_plans}",
-                executed_plans=len(results),
-                all_plans=len(plans)
+                executed_plans=len([r for r in results if r.status == RetrievalStatus.SUCCESS]),
+                all_plans=len(results)
             )
 
         return results

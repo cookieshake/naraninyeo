@@ -7,23 +7,24 @@ from datetime import datetime
 import uuid
 import traceback
 
-from naraninyeo.domain.application.new_message_handler import NewMessageHandler
+from dishka import AsyncContainer, make_async_container
 
-from naraninyeo.di import container
+from naraninyeo.di import MainProvider, TestProvider
+from naraninyeo.domain.application.new_message_handler import NewMessageHandler
 from naraninyeo.domain.model.message import Author, Channel, Message, MessageContent
 
 class LocalClient:
     """로컬 테스트 클라이언트"""
     
-    def __init__(self):
-        pass
+    def __init__(self, container: AsyncContainer):
+        self.container = container
 
     async def initialize(self):
         """클라이언트 초기화"""
         print("🚀 나란잉여 로컬 클라이언트 시작!")
                 
         # 서비스 및 어댑터 가져오기
-        self.new_message_handler = await container.get(NewMessageHandler)
+        self.new_message_handler = await self.container.get(NewMessageHandler)
         print("✅ 대화 서비스 준비 완료")
     
     async def run_chat_loop(self):
@@ -81,15 +82,19 @@ class LocalClient:
         print("\n🧹 정리 작업 중...")
         try:
             # 컨테이너 종료 (데이터베이스 연결 해제 포함)
-            await container.close()
+            await self.container.close()
             print("✅ Dishka 컨테이너 종료 완료")
         except Exception as e:
             print(f"⚠️ 정리 중 오류 (무시됨): {e}")
 
 async def main():
     """메인 함수"""
-    client = LocalClient()
-    
+    container = make_async_container(
+        MainProvider(),
+        TestProvider()
+    )
+    client = LocalClient(container)
+
     try:
         # 초기화
         await client.initialize()

@@ -5,6 +5,7 @@ from typing import AsyncIterator, List, Optional, override, Literal
 from textwrap import dedent
 import asyncio
 
+from crawl4ai import AsyncLoggerBase, AsyncWebCrawler, CrawlerRunConfig, DefaultMarkdownGenerator, PruningContentFilter, SemaphoreDispatcher
 import httpx
 import dateparser
 import logfire
@@ -20,6 +21,7 @@ from naraninyeo.domain.model.retrieval import RetrievalPlan, RetrievalResult, Re
 from naraninyeo.domain.gateway.retrieval import RetrievalPlanExecutor, RetrievalPlanner
 
 from naraninyeo.domain.model.reply import KnowledgeReference, ReplyContext
+from naraninyeo.infrastructure.embedding import TextEmbedder
 from naraninyeo.infrastructure.settings import Settings
 
 class AgentBasedRetrievalPlan(RetrievalPlan, BaseModel):
@@ -43,6 +45,7 @@ class WebRetrievalResult(RetrievalResult, BaseModel):
     source_url: str
     summary_from_search_engine: str
     summary_from_language_model: Optional[str] = None
+    query: str
 
 
 class HistoryRetrievalResult(RetrievalResult, BaseModel):
@@ -120,12 +123,129 @@ class RetrievalPlannerAgent(RetrievalPlanner):
             )
         )
 
+    
+class LoggerWrapper(AsyncLoggerBase):
+    def debug(self, message: str, tag: str = "DEBUG", **kwargs):
+        logfire.debug(f"{tag}: {message}", **kwargs)
+
+    def info(self, message: str, tag: str = "INFO", **kwargs):
+        logfire.debug(f"{tag}: {message}", **kwargs)
+
+    def success(self, message: str, tag: str = "SUCCESS", **kwargs):
+        logfire.debug(f"{tag}: {message}", **kwargs)
+
+    def warning(self, message: str, tag: str = "WARNING", **kwargs):
+        logfire.debug(f"{tag}: {message}", **kwargs)
+
+    def error(self, message: str, tag: str = "ERROR", **kwargs):
+        logfire.debug(f"{tag}: {message}", **kwargs)
+
+    def url_status(self, url: str, success: bool, timing: float, tag: str = "FETCH", url_length: int = 100):
+        logfire.debug(f"{tag}: {url} - {'SUCCESS' if success else 'FAILURE'} ({timing:.2f}s, {url_length} chars)")
+
+    def error_status(self, url: str, error: str, tag: str = "ERROR", url_length: int = 100):
+        logfire.debug(f"{tag}: {url} - {error} ({url_length} chars)")
+
+class Crawler:
+    def __init__(self, text_embedder: TextEmbedder):
+        self.crawler = AsyncWebCrawler(logger=LoggerWrapper())
+        self.text_embedder = text_embedder
+
+    async def start(self):
+        await self.crawler.start()
+
+    async def stop(self):
+        await self.crawler.close()
+
+    async def get_markdowns_from_urls(self, urls: list[str]) -> list[str]:
+        filter = PruningContentFilter(threshold=1.5, threshold_type="dynamic")
+        md_generator = DefaultMarkdownGenerator(content_filter=filter)
+        config = CrawlerRunConfig(
+            markdown_generator=md_generator,
+            only_text=True,
+            excluded_tags=["a"],
+            page_timeout=3000
+        )
+        dispatcher = SemaphoreDispatcher(
+            max_session_permit=50
+        )
+
+        results = await self.crawler.arun_many(
+            urls=urls,
+            config=config,
+            dispatcher=dispatcher
+        )
+        output = []
+        for r in results: # pyright: ignore[reportGeneralTypeIssues]
+            if r.success:
+                output.append(r.markdown.fit_markdown)
+            else:
+                logfire.warn(f"Failed to crawl {r.url}: {r.error_message}")
+                output.append("")
+        return output
+    
+class WebRetrievalResultEnhancer:
+    def __init__(self, settings: Settings, crawler: Crawler) -> None:
+        self.settings = settings
+        self.crawler = crawler
+        self.agent = Agent(
+            model=OpenAIModel(
+                model_name="openai/gpt-5-nano",
+                provider=OpenRouterProvider(
+                    api_key=settings.OPENROUTER_API_KEY,
+                )
+            ),
+            model_settings=OpenAIModelSettings(
+                timeout=5,
+                extra_body={
+                    "reasoning": {
+                        "effort": "minimal"
+                    }
+                }
+            ),
+            system_prompt=dedent(
+            """
+            당신은 주어진 웹 검색 결과 마크다운 텍스트에서 쿼리와 관련된 핵심 정보를 정확하게 추출하는 AI입니다.
+
+            - 반드시 마크다운 텍스트에 있는 내용만을 기반으로 추출해야 합니다.
+            - 관련된 내용을 1~2문장으로 짧고 간결하게 요약하세요.
+            - 텍스트는 독립적이고 완전한 의미를 담고 있어야 합니다.
+            - 불필요한 설명이나 서론을 추가하지 말고, 추출된 텍스트만 제공하세요.
+            - 추출된 내용만 간결하게 반환하고, 어떤 부가적인 설명도 덧붙이지 마세요.
+            """).strip()
+        )
+    
+    async def enhance(self, url: str, query: str) -> str:
+        markdown = await self.crawler.get_markdowns_from_urls([url])
+        markdown = markdown[0]
+        if not markdown:
+            logfire.warn(f"Failed to retrieve markdown for {url}")
+            return ""
+        try:
+            enhancement_result = await self.agent.run(dedent(
+            f"""
+            [마크다운 텍스트]
+            ---
+            {markdown}
+            ---
+
+            [쿼리]
+            {query}
+
+            위 마크다운 텍스트에서 위 쿼리와 관련된 내용만 아주 짧게 추출해주세요.
+            """
+            ))
+            return enhancement_result.output
+        except Exception as e:
+            logfire.warn(f"Failed to enhance retrieval result: {e}")
+            return ""
 
 class NaverSearchClient:
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, web_retrieval_result_enhancer: WebRetrievalResultEnhancer):
         self.client_id = settings.NAVER_CLIENT_ID
         self.client_secret = settings.NAVER_CLIENT_SECRET
-    
+        self.web_retrieval_result_enhancer = web_retrieval_result_enhancer
+
     async def search(self, query: str, api: Literal["news", "blog", "webkr", "doc"], limit: int = 5, sort: Literal["sim", "date"] = "sim") -> List[WebRetrievalResult]:
         url = f"https://openapi.naver.com/v1/search/{api}.json"
         headers = {
@@ -150,6 +270,11 @@ class NaverSearchClient:
                 source_date = dateparser.parse(source_date)
             except (ValueError, TypeError):
                 source_date = None
+            
+            enhanced_content = await self.web_retrieval_result_enhancer.enhance(
+                url=item.get("link", ""),
+                query=query
+            )
 
             items.append(
                 WebRetrievalResult(
@@ -157,13 +282,15 @@ class NaverSearchClient:
                     status_reason=RetrievalStatusReason.SUCCESS,
                     source_name=title,
                     source_timestamp=source_date,
-                    content=title + "\n" + description,
+                    content=enhanced_content if enhanced_content else title + "\n" + description,
                     summary_from_search_engine=title + "\n" + description,
-                    source_url=item.get("link", "")
+                    summary_from_language_model=enhanced_content,
+                    source_url=item.get("link", ""),
+                    query=query
                 )
             )
-
         return items
+
 
 class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
     @override
@@ -192,7 +319,11 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
                 if not task.done():
                     task.cancel()
 
-    def __init__(self, naver_search_client: NaverSearchClient, message_repository: MessageRepository):
+    def __init__(
+        self,
+        naver_search_client: NaverSearchClient,
+        message_repository: MessageRepository
+    ):
         self.naver_search_client = naver_search_client
         self.message_repository = message_repository
 
@@ -208,14 +339,10 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
             self.naver_search_client.search(query=plan.query, api=api, limit=7, sort="date"),
             self.naver_search_client.search(query=plan.query, api=api, limit=7, sort="sim")
         ])
-
         for task in results:
-            try:
-                result = await task
-                for item in result:
-                    await result_queue.put(item)
-            except Exception as e:
-                pass
+            result = await task
+            for item in result:
+                await result_queue.put(item)
         await result_queue.put(None)
 
     async def _search_chat_history(self, plan: AgentBasedRetrievalPlan, context: ReplyContext, result_queue: asyncio.Queue[RetrievalResult | None]):

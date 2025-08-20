@@ -63,6 +63,7 @@ class ReplyGeneratorAgent(ReplyGenerator):
             짧고 간결하게, 핵심만 요약해서 전달하세요. 불필요한 미사여구나 설명은 생략하세요.
             """
         )
+        logfire.debug("Reply generation query: {query}", query=query)
 
         async with self.agent.run_stream(query) as stream:
             last_text = ""

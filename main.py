@@ -8,7 +8,8 @@ if __name__ == "__main__":
         send_to_logfire=False,
         console=logfire.ConsoleOptions(
             verbose=True,
-            min_log_level="trace"
+            min_log_level="trace",
+            show_project_link=False
         )
     )
     logfire.instrument_httpx()
