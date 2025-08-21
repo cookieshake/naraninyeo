@@ -235,7 +235,7 @@ class NaverSearchClient:
         self.client_secret = settings.NAVER_CLIENT_SECRET
         self.web_retrieval_result_enhancer = web_retrieval_result_enhancer
 
-    async def search(self, query: str, api: Literal["news", "blog", "webkr", "doc"], limit: int = 5, sort: Literal["sim", "date"] = "sim") -> List[WebRetrievalResult]:
+    async def search(self, query: str, api: Literal["news", "blog", "webkr", "doc"], limit: int = 5, sort: Literal["sim", "date"] = "sim") -> List[ImplRetrievalResult]:
         url = f"https://openapi.naver.com/v1/search/{api}.json"
         headers = {
             "X-Naver-Client-Id": self.client_id,
