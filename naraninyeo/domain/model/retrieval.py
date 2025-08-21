@@ -22,3 +22,4 @@ class RetrievalResult(BaseModel):
     content: str
     source_name: str
     source_timestamp: Optional[datetime]
+    ref: str

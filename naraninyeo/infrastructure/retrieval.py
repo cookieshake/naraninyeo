@@ -1,10 +1,11 @@
+import asyncio
 from datetime import datetime
 import html
 import re
 from typing import AsyncIterator, List, Optional, override, Literal
 from textwrap import dedent
-import asyncio
-
+from urllib.parse import urlparse
+import uuid
 from crawl4ai import AsyncLoggerBase, AsyncWebCrawler, CrawlerRunConfig, DefaultMarkdownGenerator, PruningContentFilter, SemaphoreDispatcher
 import httpx
 import dateparser
@@ -34,26 +35,17 @@ class AgentBasedRetrievalPlan(RetrievalPlan, BaseModel):
         "chat_history"
     ]
 
-class WebRetrievalResult(RetrievalResult, BaseModel):
+class ImplRetrievalResult(RetrievalResult, BaseModel):
     status: RetrievalStatus
     status_reason: RetrievalStatusReason
     content: str
     source_name: str
     source_timestamp: Optional[datetime]
+    ref: str
 
     # additional fields
-    source_url: str
-    summary_from_search_engine: str
-    summary_from_language_model: Optional[str] = None
+    key: str
     query: str
-
-
-class HistoryRetrievalResult(RetrievalResult, BaseModel):
-    status: RetrievalStatus
-    status_reason: RetrievalStatusReason
-    content: str
-    source_name: str
-    source_timestamp: Optional[datetime]
 
 
 class RetrievalPlannerAgent(RetrievalPlanner):
@@ -221,24 +213,21 @@ class WebRetrievalResultEnhancer:
         if not markdown:
             logfire.warn(f"Failed to retrieve markdown for {url}")
             return ""
-        try:
-            enhancement_result = await self.agent.run(dedent(
-            f"""
-            [마크다운 텍스트]
-            ---
-            {markdown}
-            ---
+        enhancement_result = await self.agent.run(dedent(
+        f"""
+        [마크다운 텍스트]
+        ---
+        {markdown}
+        ---
 
-            [쿼리]
-            {query}
+        [쿼리]
+        {query}
 
-            위 마크다운 텍스트에서 위 쿼리와 관련된 내용만 아주 짧게 추출해주세요.
-            """
-            ))
-            return enhancement_result.output
-        except Exception as e:
-            logfire.warn(f"Failed to enhance retrieval result: {e}")
-            return ""
+        위 마크다운 텍스트에서 위 쿼리와 관련된 내용만 아주 짧게 추출해주세요.
+        """
+        ))
+        return enhancement_result.output
+
 
 class NaverSearchClient:
     def __init__(self, settings: Settings, web_retrieval_result_enhancer: WebRetrievalResultEnhancer):
@@ -270,23 +259,20 @@ class NaverSearchClient:
                 source_date = dateparser.parse(source_date)
             except (ValueError, TypeError):
                 source_date = None
-            
-            enhanced_content = await self.web_retrieval_result_enhancer.enhance(
-                url=item.get("link", ""),
-                query=query
-            )
+
+            link = item.get("link", "")
+            domain = urlparse(link).netloc
 
             items.append(
-                WebRetrievalResult(
+                ImplRetrievalResult(
                     status=RetrievalStatus.SUCCESS,
                     status_reason=RetrievalStatusReason.SUCCESS,
-                    source_name=title,
+                    source_name=domain,
                     source_timestamp=source_date,
-                    content=enhanced_content if enhanced_content else title + "\n" + description,
-                    summary_from_search_engine=title + "\n" + description,
-                    summary_from_language_model=enhanced_content,
-                    source_url=item.get("link", ""),
-                    query=query
+                    content=title + "\n" + description,
+                    query=query,
+                    key=link if link else str(uuid.uuid4()),
+                    ref=link
                 )
             )
         return items
@@ -294,40 +280,36 @@ class NaverSearchClient:
 
 class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
     @override
-    async def execute(self, plans: list[RetrievalPlan], context: ReplyContext) -> AsyncIterator[RetrievalResult]:
-        result_queue = asyncio.Queue[RetrievalResult | None]()
-
-        tasks: List[asyncio.Task] = []
-        for plan in plans:
-            if isinstance(plan, AgentBasedRetrievalPlan):
-                if plan.search_type.startswith("naver_"):
-                    tasks.append(asyncio.create_task(self._search_naver(plan, result_queue)))
-                elif plan.search_type == "chat_history":
-                    tasks.append(asyncio.create_task(self._search_chat_history(plan, context, result_queue)))
+    async def execute(self, plans: list[RetrievalPlan], context: ReplyContext) -> List[RetrievalResult]:
+        result_queue = asyncio.Queue[RetrievalResult]()
 
         try:
-            finished_tasks = 0
-            while finished_tasks < len(tasks):
-                result = await result_queue.get()
-                match result:
-                    case None:
-                        finished_tasks += 1
-                    case _:
-                        yield result
-        finally:
-            for task in tasks:
-                if not task.done():
-                    task.cancel()
+            async with asyncio.TaskGroup() as tg:
+                for plan in plans:
+                    if isinstance(plan, AgentBasedRetrievalPlan):
+                        if plan.search_type.startswith("naver_"):
+                            tg.create_task(self._search_naver(plan, result_queue))
+                        elif plan.search_type == "chat_history":
+                            tg.create_task(self._search_chat_history(plan, context, result_queue))
+        except asyncio.CancelledError:
+            pass
+
+        result = []
+        while not result_queue.empty():
+            result.append(result_queue.get_nowait())
+        return result
 
     def __init__(
         self,
         naver_search_client: NaverSearchClient,
-        message_repository: MessageRepository
+        message_repository: MessageRepository,
+        web_retrieval_result_enhancer: WebRetrievalResultEnhancer
     ):
         self.naver_search_client = naver_search_client
         self.message_repository = message_repository
+        self.web_retrieval_result_enhancer = web_retrieval_result_enhancer
 
-    async def _search_naver(self, plan: AgentBasedRetrievalPlan, result_queue: asyncio.Queue[RetrievalResult | None]):
+    async def _search_naver(self, plan: AgentBasedRetrievalPlan, result_queue: asyncio.Queue[RetrievalResult]):
         api_map: dict[str, Literal["news", "blog", "webkr", "doc"]] = {
             "naver_news": "news",
             "naver_blog": "blog",
@@ -339,13 +321,19 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
             self.naver_search_client.search(query=plan.query, api=api, limit=7, sort="date"),
             self.naver_search_client.search(query=plan.query, api=api, limit=7, sort="sim")
         ])
+        async def enrich(item: ImplRetrievalResult):
+            new_content = await self.web_retrieval_result_enhancer.enhance(item.ref, plan.query)
+            new_item = item.copy(update={
+                "content": new_content
+            })
+            await result_queue.put(new_item)
+
         for task in results:
             result = await task
             for item in result:
                 await result_queue.put(item)
-        await result_queue.put(None)
 
-    async def _search_chat_history(self, plan: AgentBasedRetrievalPlan, context: ReplyContext, result_queue: asyncio.Queue[RetrievalResult | None]):
+    async def _search_chat_history(self, plan: AgentBasedRetrievalPlan, context: ReplyContext, result_queue: asyncio.Queue[RetrievalResult]):
         messages = await self.message_repository.search_similar_messages(
             channel_id=context.last_message.channel.channel_id,
             keyword=plan.query,
@@ -360,12 +348,14 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
             chunk = await task
             chunk_str = "\n".join(msg.text_repr for msg in chunk)
             await result_queue.put(
-                HistoryRetrievalResult(
+                ImplRetrievalResult(
                     status=RetrievalStatus.SUCCESS,
                     status_reason=RetrievalStatusReason.SUCCESS,
                     content=chunk_str,
                     source_name=chunk[-1].channel.channel_id,
-                    source_timestamp=chunk[-1].timestamp
+                    source_timestamp=chunk[-1].timestamp,
+                    key=chunk[-1].message_id,
+                    query=plan.query,
+                    ref= f"chat_history:{chunk[-1].timestamp_str}"
                 )
             )
-        await result_queue.put(None)

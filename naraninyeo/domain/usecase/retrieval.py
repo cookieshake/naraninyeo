@@ -22,13 +22,14 @@ class RetrievalUseCase:
         return plans
 
     async def execute_retrieval(self, plans: list[RetrievalPlan], context: ReplyContext) -> list[RetrievalResult]:
-        results = []
-
+        task = asyncio.create_task(self.executor.execute(plans, context))
+        timed_out = False
         try:
-            async with asyncio.timeout(Variables.RETRIEVAL_EXECUTION_TIMEOUT):
-                async for plan in self.executor.execute(plans, context): # type: ignore
-                    results.append(plan)
+            await asyncio.wait_for(task, timeout=Variables.RETRIEVAL_EXECUTION_TIMEOUT)
         except asyncio.TimeoutError:
+            timed_out = True
+        results = await task
+        if timed_out:
             logfire.warning(
                 "Retrieval execution timed out. Executed {executed_plans} plans out of {all_plans}",
                 executed_plans=len([r for r in results if r.status == RetrievalStatus.SUCCESS]),
