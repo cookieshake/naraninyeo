@@ -67,7 +67,7 @@ class RetrievalPlannerAgent(RetrievalPlanner):
         result = await self.agent.run(message)
         plans = result.output
 
-        logfire.debug(f"Retrieval plans generated: {plans}")
+        logfire.debug(f"Retrieval plans generated: {[p.model_dump() for p in plans]}")
         return list(plans)
 
 
@@ -281,7 +281,7 @@ class NaverSearchClient:
 class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
     @override
     async def execute(self, plans: list[RetrievalPlan], context: ReplyContext) -> List[RetrievalResult]:
-        result_queue = asyncio.Queue[RetrievalResult]()
+        result_queue = asyncio.Queue[ImplRetrievalResult]()
 
         try:
             async with asyncio.TaskGroup() as tg:
@@ -294,10 +294,17 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
         except asyncio.CancelledError:
             pass
 
-        result = []
+        result: dict[str, ImplRetrievalResult] = {}
         while not result_queue.empty():
-            result.append(result_queue.get_nowait())
-        return result
+            item = await result_queue.get()
+            result[item.key] = item
+        results = list(result.values())
+        logfire.debug(
+            "Retrieval execution completed with {retrieval_count} results",
+            retrieval_count=len(results),
+            result=[item.model_dump() for item in results]
+        )
+        return list(results)
 
     def __init__(
         self,
@@ -309,7 +316,7 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
         self.message_repository = message_repository
         self.web_retrieval_result_enhancer = web_retrieval_result_enhancer
 
-    async def _search_naver(self, plan: AgentBasedRetrievalPlan, result_queue: asyncio.Queue[RetrievalResult]):
+    async def _search_naver(self, plan: AgentBasedRetrievalPlan, result_queue: asyncio.Queue[ImplRetrievalResult]):
         api_map: dict[str, Literal["news", "blog", "webkr", "doc"]] = {
             "naver_news": "news",
             "naver_blog": "blog",
@@ -323,7 +330,7 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
         ])
         async def enrich(item: ImplRetrievalResult):
             new_content = await self.web_retrieval_result_enhancer.enhance(item.ref, plan.query)
-            new_item = item.copy(update={
+            new_item = item.model_copy(update={
                 "content": new_content
             })
             await result_queue.put(new_item)
@@ -331,9 +338,10 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
         for task in results:
             result = await task
             for item in result:
+                await enrich(item)
                 await result_queue.put(item)
 
-    async def _search_chat_history(self, plan: AgentBasedRetrievalPlan, context: ReplyContext, result_queue: asyncio.Queue[RetrievalResult]):
+    async def _search_chat_history(self, plan: AgentBasedRetrievalPlan, context: ReplyContext, result_queue: asyncio.Queue[ImplRetrievalResult]):
         messages = await self.message_repository.search_similar_messages(
             channel_id=context.last_message.channel.channel_id,
             keyword=plan.query,

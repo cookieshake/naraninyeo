@@ -36,6 +36,9 @@ dev = [
     "testcontainers>=4.12.0",
 ]
 
+[tool.uv]
+package = true
+
 [tool.uv.sources]
 naraninyeo = { workspace = true }
 
