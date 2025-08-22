@@ -28,8 +28,8 @@ RUN uv sync
 # Install dependencies using uv
 RUN uv pip install --no-cache -e .
 
-RUN uv run crawl4ai-setup && \
-    uv run crawl4ai-doctor
+# RUN uv run crawl4ai-setup && \
+#     uv run crawl4ai-doctor
 
 # Copy project files
 COPY naraninyeo/ naraninyeo/

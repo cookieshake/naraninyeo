@@ -62,8 +62,8 @@ class MainProvider(Provider):
     retrieval_planner = provide(source=RetrievalPlannerAgent, provides=RetrievalPlanner)
     retrieval_executor = provide(source=DefaultRetrievalPlanExecutor, provides=RetrievalPlanExecutor)
     @provide
-    async def crawler(self, text_embedder: TextEmbedder) -> AsyncIterator[Crawler]:
-        crawler = Crawler(text_embedder=text_embedder)
+    async def crawler(self) -> AsyncIterator[Crawler]:
+        crawler = Crawler()
         await crawler.start()
         yield crawler
         await crawler.stop()
