@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABC
-from typing import AsyncIterator
+from typing import AsyncIterator, List
 
 from naraninyeo.domain.model.reply import ReplyContext
 from naraninyeo.domain.model.retrieval import RetrievalPlan, RetrievalResult
@@ -12,5 +12,5 @@ class RetrievalPlanner(ABC):
 
 class RetrievalPlanExecutor(ABC):
     @abstractmethod
-    async def execute(self, plans: list[RetrievalPlan], context: ReplyContext) -> AsyncIterator[RetrievalResult]:
+    async def execute(self, plans: list[RetrievalPlan], context: ReplyContext) -> List[RetrievalResult]:
         ...

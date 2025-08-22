@@ -30,5 +30,9 @@ class Message(BaseModel):
     timestamp: datetime
 
     @property
+    def timestamp_str(self) -> str:
+        return self.timestamp.astimezone(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
+
+    @property
     def text_repr(self) -> str:
-        return f"{self.timestamp.astimezone(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")} {self.author.author_name} : {self.content.text[:200]}"
+        return f"{self.timestamp_str} {self.author.author_name} : {self.content.text[:200]}"

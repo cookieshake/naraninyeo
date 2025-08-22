@@ -103,7 +103,7 @@ class MongoQdrantMessageRepository(MessageRepository):
     async def search_similar_messages(self, channel_id: str, keyword: str, limit: int) -> list[Message]:
         result = await self._qdrant_client.query_points(
             collection_name=self._qdrant_collection,
-            query_vector=(await self._text_embedder.embed([keyword]))[0],
+            query=(await self._text_embedder.embed([keyword]))[0],
             query_filter=qmodels.Filter(
                 must=[
                     qmodels.FieldCondition(key="channel_id", match=qmodels.MatchValue(value=channel_id))

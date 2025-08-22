@@ -7,18 +7,6 @@ import logfire
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
 from pydantic_ai.providers.openrouter import OpenRouterProvider
-from pydantic_ai.messages import (
-    AgentStreamEvent,
-    FinalResultEvent,
-    FunctionToolCallEvent,
-    FunctionToolResultEvent,
-    HandleResponseEvent,
-    PartDeltaEvent,
-    PartStartEvent,
-    TextPartDelta,
-    ThinkingPartDelta,
-    ToolCallPartDelta,
-)
 
 from naraninyeo.domain.gateway.reply import ReplyGenerator
 from naraninyeo.domain.model.message import Author, Message, MessageContent
@@ -63,6 +51,7 @@ class ReplyGeneratorAgent(ReplyGenerator):
             짧고 간결하게, 핵심만 요약해서 전달하세요. 불필요한 미사여구나 설명은 생략하세요.
             """
         )
+        logfire.debug("Reply generation query: {query}", query=query)
 
         async with self.agent.run_stream(query) as stream:
             last_text = ""
@@ -78,7 +67,7 @@ class ReplyGeneratorAgent(ReplyGenerator):
         self.settings = settings
         self.agent = Agent(
             model=OpenAIModel(
-                model_name="google/gemini-2.5-pro",
+                model_name="deepseek/deepseek-r1-0528",
                 provider=OpenRouterProvider(
                     api_key=settings.OPENROUTER_API_KEY
                 )
@@ -103,7 +92,6 @@ class ReplyGeneratorAgent(ReplyGenerator):
                 [답변 규칙]
                 - 간결하고 핵심만 말함
                 - 한쪽에 치우치지 않고 다양한 관점 제시
-                - 단정하지 말고 생각할 수 있는 질문 던지기
                 - 무조건 한국어 반말 사용
                 - "검색 결과에 따르면" 같은 표현 절대 사용 금지
                 - "시간 이름: 메시지" 형식 사용 금지

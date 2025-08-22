@@ -33,7 +33,7 @@ RUN uv run crawl4ai-setup && \
 
 # Copy project files
 COPY naraninyeo/ naraninyeo/
-COPY tests/ tests/
+COPY main.py main.py
 
 # Set OpenTelemetry environment variables
 # Replace the placeholder values with your actual configuration.
@@ -42,4 +42,4 @@ ENV OTEL_EXPORTER_OTLP_ENDPOINT="http://signoz.vd.ingtra.net:4317"
 ENV OTEL_EXPORTER_OTLP_PROTOCOL="grpc"
 
 # Run the application with OpenTelemetry instrumentation - using kafka consumer mode
-CMD ["uv", "run", "python", "-m", "naraninyeo.entrypoints", "kafka"]
+CMD ["uv", "run", "python", "main.py", "kafka"]

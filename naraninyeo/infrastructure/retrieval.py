@@ -1,17 +1,19 @@
+import asyncio
 from datetime import datetime
 import html
 import re
-from typing import AsyncIterator, List, Optional, override, Literal
+from typing import List, Optional, override, Literal
 from textwrap import dedent
-import asyncio
-
+from urllib.parse import urlparse
+import uuid
+from crawl4ai import AsyncLoggerBase, AsyncWebCrawler, BrowserConfig, CrawlResult, CrawlerRunConfig, DefaultMarkdownGenerator, PruningContentFilter, SemaphoreDispatcher
 import httpx
 import dateparser
 import logfire
-import json
 
+from markdownify import markdownify as md
 from pydantic import BaseModel, computed_field
-from pydantic_ai import Agent
+from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
@@ -20,6 +22,7 @@ from naraninyeo.domain.model.retrieval import RetrievalPlan, RetrievalResult, Re
 from naraninyeo.domain.gateway.retrieval import RetrievalPlanExecutor, RetrievalPlanner
 
 from naraninyeo.domain.model.reply import KnowledgeReference, ReplyContext
+from naraninyeo.infrastructure.embedding import TextEmbedder
 from naraninyeo.infrastructure.settings import Settings
 
 class AgentBasedRetrievalPlan(RetrievalPlan, BaseModel):
@@ -32,26 +35,20 @@ class AgentBasedRetrievalPlan(RetrievalPlan, BaseModel):
         "chat_history"
     ]
 
-class WebRetrievalResult(RetrievalResult, BaseModel):
+class ImplRetrievalResult(RetrievalResult, BaseModel):
     status: RetrievalStatus
     status_reason: RetrievalStatusReason
     content: str
     source_name: str
     source_timestamp: Optional[datetime]
+    ref: str
 
     # additional fields
-    source_url: str
-    summary_from_search_engine: str
-    summary_from_language_model: Optional[str] = None
-
-
-class HistoryRetrievalResult(RetrievalResult, BaseModel):
-    status: RetrievalStatus
-    status_reason: RetrievalStatusReason
-    content: str
-    source_name: str
-    source_timestamp: Optional[datetime]
-
+    key: str
+    query: str
+    # whether this retrieval result is relevant to the original query
+    is_relevant: Optional[bool]
+    
 
 class RetrievalPlannerAgent(RetrievalPlanner):
     @override
@@ -72,7 +69,7 @@ class RetrievalPlannerAgent(RetrievalPlanner):
         result = await self.agent.run(message)
         plans = result.output
 
-        logfire.debug(f"Retrieval plans generated: {plans}")
+        logfire.debug(f"Retrieval plans generated: {[p.model_dump() for p in plans]}")
         return list(plans)
 
 
@@ -85,7 +82,7 @@ class RetrievalPlannerAgent(RetrievalPlanner):
                     api_key=settings.OPENROUTER_API_KEY
                 )
             ),
-            output_type=List[AgentBasedRetrievalPlan],
+            output_type=NativeOutput(List[AgentBasedRetrievalPlan]),
             instrument=True,
             model_settings=OpenAIModelSettings(
                 timeout=20,
@@ -120,13 +117,143 @@ class RetrievalPlannerAgent(RetrievalPlanner):
             )
         )
 
+    
+class LoggerWrapper(AsyncLoggerBase):
+    def debug(self, message: str, tag: str = "DEBUG", **kwargs):
+        logfire.debug(f"{tag}: {message}", **kwargs)
+
+    def info(self, message: str, tag: str = "INFO", **kwargs):
+        logfire.debug(f"{tag}: {message}", **kwargs)
+
+    def success(self, message: str, tag: str = "SUCCESS", **kwargs):
+        logfire.debug(f"{tag}: {message}", **kwargs)
+
+    def warning(self, message: str, tag: str = "WARNING", **kwargs):
+        logfire.debug(f"{tag}: {message}", **kwargs)
+
+    def error(self, message: str, tag: str = "ERROR", **kwargs):
+        logfire.debug(f"{tag}: {message}", **kwargs)
+
+    def url_status(self, url: str, success: bool, timing: float, tag: str = "FETCH", url_length: int = 100):
+        logfire.debug(f"{tag}: {url} - {'SUCCESS' if success else 'FAILURE'} ({timing:.2f}s, {url_length} chars)")
+
+    def error_status(self, url: str, error: str, tag: str = "ERROR", url_length: int = 100):
+        logfire.debug(f"{tag}: {url} - {error} ({url_length} chars)")
+
+class Crawler:
+    def __init__(self):
+        # self.crawler = AsyncWebCrawler(
+        #     logger=LoggerWrapper(),
+        #     config=BrowserConfig()
+        # )
+        # self.text_embedder = text_embedder
+        pass
+
+    async def start(self):
+        # await self.crawler.start()
+        pass
+
+    async def stop(self):
+        # await self.crawler.close()
+        pass
+
+    async def get_markdown_from_url(self, url: str) -> str:
+        # filter = PruningContentFilter(threshold=1.5, threshold_type="dynamic")
+        # md_generator = DefaultMarkdownGenerator(content_filter=filter)
+        # config = CrawlerRunConfig(
+        #     markdown_generator=md_generator,
+        #     only_text=True,
+        #     excluded_tags=["a"],
+        #     page_timeout=3000
+        # )
+        # result: CrawlResult = await self.crawler.arun(
+        #     url=url,
+        #     config=config
+        # ) # pyright: ignore[reportAssignmentType]
+        # return result.markdown.fit_markdown # pyright: ignore[reportOptionalMemberAccess]
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            html = response.text
+            return md(html)
+
+
+class ExtractionResult(BaseModel):
+    content: str
+    is_relevant: Optional[bool]
+
+class Extractor:
+    def __init__(self, settings: Settings, crawler: Crawler) -> None:
+        self.settings = settings
+        self.crawler = crawler
+        self.agent = Agent(
+            model=OpenAIModel(
+                model_name="openai/gpt-5-nano",
+                provider=OpenRouterProvider(
+                    api_key=settings.OPENROUTER_API_KEY,
+                )
+            ),
+            # Structured output so we can know when content is irrelevant
+            output_type=NativeOutput(ExtractionResult),
+            model_settings=OpenAIModelSettings(
+                timeout=5,
+                extra_body={
+                    "reasoning": {
+                        "effort": "minimal"
+                    }
+                }
+            ),
+            system_prompt=dedent(
+            """
+            당신은 주어진 웹 검색 결과 마크다운 텍스트에서 쿼리와 관련된 핵심 정보를 정확하게 추출하는 AI입니다.
+
+            - 반드시 마크다운 텍스트에 있는 내용만을 기반으로 추출해야 합니다.
+            - 관련된 내용을 1~2문장으로 짧고 간결하게 요약하세요.
+            - 텍스트는 독립적이고 완전한 의미를 담고 있어야 합니다.
+            - 불필요한 설명이나 서론을 추가하지 말고, 추출된 텍스트만 제공하세요.
+            - 추출된 내용만 간결하게 반환하고, 어떤 부가적인 설명도 덧붙이지 마세요.
+            - 만약 관련된 내용이 전혀 없다면 content는 빈 문자열로 두고 is_relevant를 false로 설정하세요.
+            """).strip()
+        )
+    
+    async def extract(self, url: str, query: str) -> ExtractionResult:
+        markdown = await self.crawler.get_markdown_from_url(url)
+        if not markdown:
+            logfire.warn(f"Failed to retrieve markdown for {url}")
+            return ExtractionResult(content="", is_relevant=False)
+        enhancement_result = await self.agent.run(dedent(
+            f"""
+            [마크다운 텍스트]
+            ---
+            {markdown}
+            ---
+
+            [쿼리]
+            {query}
+
+            위 마크다운 텍스트에서 위 쿼리와 직접적으로 관련된 핵심 정보만 1~2문장으로 요약하여 ExtractionResult 형태로 반환하세요.
+            - 관련성이 낮거나 추론이 필요한 정보는 제외하세요.
+            - 관련된 내용이 없다면 content는 빈 문자열로 두고 is_relevant는 false로 설정하세요.
+            - 관련된 내용이 있다면 content에 그 요약을 넣고 is_relevant는 true로 설정하세요.
+            """
+        ))
+        # enhancement_result.output 는 ExtractionResult 타입
+        extraction: ExtractionResult = enhancement_result.output
+        # 안전장치: 모델이 is_relevant를 누락했을 경우 content 유무로 결정
+        if extraction.is_relevant is None:
+            extraction.is_relevant = bool(extraction.content.strip())
+        if not extraction.content.strip():
+            extraction.is_relevant = False
+        return extraction
+
+
 
 class NaverSearchClient:
     def __init__(self, settings: Settings):
         self.client_id = settings.NAVER_CLIENT_ID
         self.client_secret = settings.NAVER_CLIENT_SECRET
-    
-    async def search(self, query: str, api: Literal["news", "blog", "webkr", "doc"], limit: int = 5, sort: Literal["sim", "date"] = "sim") -> List[WebRetrievalResult]:
+
+    async def search(self, query: str, api: Literal["news", "blog", "webkr", "doc"], limit: int = 5, sort: Literal["sim", "date"] = "sim") -> List[ImplRetrievalResult]:
         url = f"https://openapi.naver.com/v1/search/{api}.json"
         headers = {
             "X-Naver-Client-Id": self.client_id,
@@ -151,52 +278,70 @@ class NaverSearchClient:
             except (ValueError, TypeError):
                 source_date = None
 
+            link = item.get("link", "")
+            domain = urlparse(link).netloc
+
+            content_text = (title + "\n" + description).strip()
             items.append(
-                WebRetrievalResult(
+                ImplRetrievalResult(
                     status=RetrievalStatus.SUCCESS,
                     status_reason=RetrievalStatusReason.SUCCESS,
-                    source_name=title,
+                    source_name=domain,
                     source_timestamp=source_date,
-                    content=title + "\n" + description,
-                    summary_from_search_engine=title + "\n" + description,
-                    source_url=item.get("link", "")
+                    content=content_text,
+                    query=query,
+                    key=link if link else str(uuid.uuid4()),
+                    ref=link,
+                    is_relevant=False if not content_text else None
                 )
             )
-
         return items
+
 
 class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
     @override
-    async def execute(self, plans: list[RetrievalPlan], context: ReplyContext) -> AsyncIterator[RetrievalResult]:
-        result_queue = asyncio.Queue[RetrievalResult | None]()
-
-        tasks: List[asyncio.Task] = []
-        for plan in plans:
-            if isinstance(plan, AgentBasedRetrievalPlan):
-                if plan.search_type.startswith("naver_"):
-                    tasks.append(asyncio.create_task(self._search_naver(plan, result_queue)))
-                elif plan.search_type == "chat_history":
-                    tasks.append(asyncio.create_task(self._search_chat_history(plan, context, result_queue)))
+    async def execute(self, plans: list[RetrievalPlan], context: ReplyContext) -> List[RetrievalResult]:
+        result_queue = asyncio.Queue[ImplRetrievalResult]()
 
         try:
-            finished_tasks = 0
-            while finished_tasks < len(tasks):
-                result = await result_queue.get()
-                match result:
-                    case None:
-                        finished_tasks += 1
-                    case _:
-                        yield result
-        finally:
-            for task in tasks:
-                if not task.done():
-                    task.cancel()
+            async with asyncio.TaskGroup() as tg:
+                for plan in plans:
+                    if isinstance(plan, AgentBasedRetrievalPlan):
+                        if plan.search_type.startswith("naver_"):
+                            tg.create_task(self._search_naver(plan, result_queue))
+                        elif plan.search_type == "chat_history":
+                            tg.create_task(self._search_chat_history(plan, context, result_queue))
+        except asyncio.CancelledError:
+            logfire.warn("Retrieval tasks were cancelled, so some results may be missing.")
 
-    def __init__(self, naver_search_client: NaverSearchClient, message_repository: MessageRepository):
+        result: dict[str, ImplRetrievalResult] = {}
+        while not result_queue.empty():
+            item = await result_queue.get()
+            result[item.key] = item
+        results = list([r for r in result.values() if r.is_relevant is not False])
+        logfire.debug(
+            "Retrieval execution completed with {retrieval_count} results",
+            retrieval_count=len(results),
+            result=[item.model_dump() for item in results]
+        )
+        return list(results)
+
+    def __init__(
+        self,
+        settings: Settings,
+        naver_search_client: NaverSearchClient,
+        message_repository: MessageRepository,
+        text_embedder: TextEmbedder,
+        crawler: Crawler,
+        extractor: Extractor
+    ):
         self.naver_search_client = naver_search_client
         self.message_repository = message_repository
+        self.text_embedder = text_embedder
+        self.crawler = crawler
+        self.extractor = extractor
 
-    async def _search_naver(self, plan: AgentBasedRetrievalPlan, result_queue: asyncio.Queue[RetrievalResult | None]):
+    async def _search_naver(self, plan: AgentBasedRetrievalPlan, result_queue: asyncio.Queue[ImplRetrievalResult]):
         api_map: dict[str, Literal["news", "blog", "webkr", "doc"]] = {
             "naver_news": "news",
             "naver_blog": "blog",
@@ -208,17 +353,28 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
             self.naver_search_client.search(query=plan.query, api=api, limit=7, sort="date"),
             self.naver_search_client.search(query=plan.query, api=api, limit=7, sort="sim")
         ])
-
-        for task in results:
+        async def enrich(item: ImplRetrievalResult):
             try:
+                extraction = await self.extractor.extract(item.ref, plan.query)
+                new_item = item.model_copy(update={
+                    "content": extraction.content,
+                    "is_relevant": extraction.is_relevant if extraction.content else False
+                })
+                await result_queue.put(new_item)
+            except Exception as e:
+                logfire.warn(
+                    f"Error enriching retrieval result for ref={item.ref}: {type(e).__name__}: {e}",
+                    exc_info=e
+                )
+
+        async with asyncio.TaskGroup() as tg:
+            for task in results:
                 result = await task
                 for item in result:
                     await result_queue.put(item)
-            except Exception as e:
-                pass
-        await result_queue.put(None)
+                    tg.create_task(enrich(item))
 
-    async def _search_chat_history(self, plan: AgentBasedRetrievalPlan, context: ReplyContext, result_queue: asyncio.Queue[RetrievalResult | None]):
+    async def _search_chat_history(self, plan: AgentBasedRetrievalPlan, context: ReplyContext, result_queue: asyncio.Queue[ImplRetrievalResult]):
         messages = await self.message_repository.search_similar_messages(
             channel_id=context.last_message.channel.channel_id,
             keyword=plan.query,
@@ -233,12 +389,15 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
             chunk = await task
             chunk_str = "\n".join(msg.text_repr for msg in chunk)
             await result_queue.put(
-                HistoryRetrievalResult(
+                ImplRetrievalResult(
                     status=RetrievalStatus.SUCCESS,
                     status_reason=RetrievalStatusReason.SUCCESS,
                     content=chunk_str,
                     source_name=chunk[-1].channel.channel_id,
-                    source_timestamp=chunk[-1].timestamp
+                    source_timestamp=chunk[-1].timestamp,
+                    key=chunk[-1].message_id,
+                    query=plan.query,
+                    ref= f"chat_history:{chunk[-1].timestamp_str}",
+                    is_relevant=True
                 )
             )
-        await result_queue.put(None)
