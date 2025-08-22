@@ -44,7 +44,7 @@ class MainProvider(Provider):
     
     @provide
     async def mongo_database(self, settings: Settings) -> AsyncIterator[AsyncIOMotorDatabase]:
-        client = AsyncIOMotorClient(settings.MONGODB_URL)
+        client = AsyncIOMotorClient(settings.MONGODB_URL, tz_aware=True)
         db = client.get_database(settings.MONGODB_DB_NAME)
         yield db
         client.close()
