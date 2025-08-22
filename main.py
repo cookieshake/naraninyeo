@@ -15,7 +15,7 @@ if __name__ == "__main__":
     logfire.instrument_httpx()
     logfire.instrument_pydantic_ai()
     logfire.instrument_pymongo()
-    logfire.install_auto_tracing(modules=["naraninyeo"], min_duration=0.01)
+    # logfire.install_auto_tracing(modules=["naraninyeo"], min_duration=0.01)
 
     arg = sys.argv[1] if len(sys.argv) > 1 else None
     match arg:
@@ -23,6 +23,7 @@ if __name__ == "__main__":
             from naraninyeo.entrypoints.cli import main
             asyncio.run(main())
         case "kafka":
-            pass
+            from naraninyeo.entrypoints.kafka import main
+            asyncio.run(main())
         case _:
             raise ValueError(f"Unknown entrypoint: {arg}. Use 'cli' or 'kafka'.")
