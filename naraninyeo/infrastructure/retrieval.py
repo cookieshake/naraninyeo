@@ -10,10 +10,10 @@ from crawl4ai import AsyncLoggerBase, AsyncWebCrawler, BrowserConfig, CrawlResul
 import httpx
 import dateparser
 import logfire
-import json
 
+from markdownify import markdownify as md
 from pydantic import BaseModel, computed_field
-from pydantic_ai import Agent
+from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
@@ -77,12 +77,12 @@ class RetrievalPlannerAgent(RetrievalPlanner):
         self.settings = settings
         self.agent = Agent(
             model=OpenAIModel(
-                model_name="google/gemini-2.5-flash",
+                model_name="openai/gpt-5-mini",
                 provider=OpenRouterProvider(
                     api_key=settings.OPENROUTER_API_KEY
                 )
             ),
-            output_type=List[AgentBasedRetrievalPlan],
+            output_type=NativeOutput(List[AgentBasedRetrievalPlan]),
             instrument=True,
             model_settings=OpenAIModelSettings(
                 timeout=20,
@@ -142,38 +142,40 @@ class LoggerWrapper(AsyncLoggerBase):
 
 class Crawler:
     def __init__(self, text_embedder: TextEmbedder):
-        self.crawler = AsyncWebCrawler(
-            logger=LoggerWrapper(),
-            config=BrowserConfig(
-                browser_mode="builtin",
-                use_managed_browser=True,  # Use default browser management
-                extra_args=[
-                    "--no-sandbox", "--disable-gpu"
-                ]
-            )
-        )
-        self.text_embedder = text_embedder
+        # self.crawler = AsyncWebCrawler(
+        #     logger=LoggerWrapper(),
+        #     config=BrowserConfig()
+        # )
+        # self.text_embedder = text_embedder
+        pass
 
     async def start(self):
-        await self.crawler.start()
+        # await self.crawler.start()
+        pass
 
     async def stop(self):
-        await self.crawler.close()
+        # await self.crawler.close()
+        pass
 
     async def get_markdown_from_url(self, url: str) -> str:
-        filter = PruningContentFilter(threshold=1.5, threshold_type="dynamic")
-        md_generator = DefaultMarkdownGenerator(content_filter=filter)
-        config = CrawlerRunConfig(
-            markdown_generator=md_generator,
-            only_text=True,
-            excluded_tags=["a"],
-            page_timeout=3000
-        )
-        result: CrawlResult = await self.crawler.arun(
-            url=url,
-            config=config
-        ) # pyright: ignore[reportAssignmentType]
-        return result.markdown.fit_markdown # pyright: ignore[reportOptionalMemberAccess]
+        # filter = PruningContentFilter(threshold=1.5, threshold_type="dynamic")
+        # md_generator = DefaultMarkdownGenerator(content_filter=filter)
+        # config = CrawlerRunConfig(
+        #     markdown_generator=md_generator,
+        #     only_text=True,
+        #     excluded_tags=["a"],
+        #     page_timeout=3000
+        # )
+        # result: CrawlResult = await self.crawler.arun(
+        #     url=url,
+        #     config=config
+        # ) # pyright: ignore[reportAssignmentType]
+        # return result.markdown.fit_markdown # pyright: ignore[reportOptionalMemberAccess]
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            html = response.text
+            return md(html)
 
 
 class ExtractionResult(BaseModel):
@@ -186,13 +188,13 @@ class Extractor:
         self.crawler = crawler
         self.agent = Agent(
             model=OpenAIModel(
-                model_name="qwen/qwen3-30b-a3b",
+                model_name="openai/gpt-5-nano",
                 provider=OpenRouterProvider(
                     api_key=settings.OPENROUTER_API_KEY,
                 )
             ),
             # Structured output so we can know when content is irrelevant
-            output_type=ExtractionResult,
+            output_type=NativeOutput(ExtractionResult),
             model_settings=OpenAIModelSettings(
                 timeout=5,
                 extra_body={
@@ -299,8 +301,6 @@ class NaverSearchClient:
 class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
     @override
     async def execute(self, plans: list[RetrievalPlan], context: ReplyContext) -> List[RetrievalResult]:
-        if not self.crawler.crawler.ready:
-            await self.crawler.start()
         result_queue = asyncio.Queue[ImplRetrievalResult]()
 
         try:
@@ -331,13 +331,15 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
         settings: Settings,
         naver_search_client: NaverSearchClient,
         message_repository: MessageRepository,
-        text_embedder: TextEmbedder
+        text_embedder: TextEmbedder,
+        crawler: Crawler,
+        extractor: Extractor
     ):
         self.naver_search_client = naver_search_client
         self.message_repository = message_repository
         self.text_embedder = text_embedder
-        self.crawler = Crawler(text_embedder=text_embedder)
-        self.extractor = Extractor(settings=settings, crawler=self.crawler)
+        self.crawler = crawler
+        self.extractor = extractor
 
     async def _search_naver(self, plan: AgentBasedRetrievalPlan, result_queue: asyncio.Queue[ImplRetrievalResult]):
         api_map: dict[str, Literal["news", "blog", "webkr", "doc"]] = {
@@ -352,19 +354,22 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
             self.naver_search_client.search(query=plan.query, api=api, limit=7, sort="sim")
         ])
         async def enrich(item: ImplRetrievalResult):
-            extraction = await self.extractor.extract(item.ref, plan.query)
-            new_item = item.model_copy(update={
-                "content": extraction.content,
-                "is_relevant": extraction.is_relevant if extraction.content else False
-            })
-            await result_queue.put(new_item)
+            try:
+                extraction = await self.extractor.extract(item.ref, plan.query)
+                new_item = item.model_copy(update={
+                    "content": extraction.content,
+                    "is_relevant": extraction.is_relevant if extraction.content else False
+                })
+                await result_queue.put(new_item)
+            except Exception as e:
+                logfire.warn("Error enriching retrieval result", exc_info=e)
 
         async with asyncio.TaskGroup() as tg:
             for task in results:
                 result = await task
                 for item in result:
+                    await result_queue.put(item)
                     tg.create_task(enrich(item))
-                    tg.create_task(result_queue.put(item))
 
     async def _search_chat_history(self, plan: AgentBasedRetrievalPlan, context: ReplyContext, result_queue: asyncio.Queue[ImplRetrievalResult]):
         messages = await self.message_repository.search_similar_messages(

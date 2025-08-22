@@ -22,6 +22,7 @@ dependencies = [
     "nest-asyncio>=1.6.0",
     "dateparser>=1.2.2",
     "logfire[httpx,pymongo]>=4.3.3",
+    "markdownify>=1.2.0",
 ]
 
 [project.scripts]
