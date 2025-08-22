@@ -38,8 +38,8 @@ COPY main.py main.py
 # Set OpenTelemetry environment variables
 # Replace the placeholder values with your actual configuration.
 ENV OTEL_RESOURCE_ATTRIBUTES="service.name=naraninyeo"
-ENV OTEL_EXPORTER_OTLP_ENDPOINT="http://signoz.vd.ingtra.net:4317"
-ENV OTEL_EXPORTER_OTLP_PROTOCOL="grpc"
+ENV OTEL_EXPORTER_OTLP_ENDPOINT="http://signoz.vd.ingtra.net:4318"
+ENV OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
 
 # Run the application with OpenTelemetry instrumentation - using kafka consumer mode
 CMD ["uv", "run", "python", "main.py", "kafka"]
