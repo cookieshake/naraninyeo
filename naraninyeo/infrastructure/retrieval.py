@@ -141,7 +141,7 @@ class LoggerWrapper(AsyncLoggerBase):
         logfire.debug(f"{tag}: {url} - {error} ({url_length} chars)")
 
 class Crawler:
-    def __init__(self, text_embedder: TextEmbedder):
+    def __init__(self):
         # self.crawler = AsyncWebCrawler(
         #     logger=LoggerWrapper(),
         #     config=BrowserConfig()
