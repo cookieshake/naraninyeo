@@ -77,8 +77,7 @@ class KafkaConsumer:
         except json.JSONDecodeError as e:
             logfire.error(f"Invalid JSON message: {e}")
         except Exception as e:
-            logfire.error(f"Error processing message: {e}")
-
+            logfire.error("Error processing message: {error}, {traceback}", error=e, traceback=e.__traceback__)
 
     async def parse_message(self, message_data: dict) -> Message:
         message_id = message_data["json"]["id"]

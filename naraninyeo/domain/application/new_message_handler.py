@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 from typing import AsyncIterator
+from zoneinfo import ZoneInfo
 
 from naraninyeo.domain.model.message import Message
 from naraninyeo.domain.model.reply import EnvironmentalContext, KnowledgeReference, ReplyContext
@@ -30,7 +31,7 @@ class NewMessageHandler:
 
         reply_context = ReplyContext(
             environment=EnvironmentalContext(
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=ZoneInfo("Asia/Seoul")),
                 location="Seoul, Korea"
             ),
             last_message=message,
