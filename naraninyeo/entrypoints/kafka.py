@@ -58,6 +58,7 @@ class KafkaConsumer:
         await self.consumer.start()
         async for msg in self.consumer:
             await self.process_message(msg)
+            await self.consumer.commit()
 
     async def stop(self):
         await self.consumer.stop()
