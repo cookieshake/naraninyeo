@@ -29,8 +29,7 @@ from naraninyeo.infrastructure.embedding import TextEmbedder, Qwen306TextEmbedde
 from naraninyeo.infrastructure.message import MongoQdrantMessageRepository
 from naraninyeo.infrastructure.reply import ReplyGeneratorAgent
 from naraninyeo.infrastructure.retrieval import (
-    Crawler, NaverSearchClient, RetrievalPlannerAgent, DefaultRetrievalPlanExecutor,
-    WebRetrievalResultEnhancer
+    NaverSearchClient, RetrievalPlannerAgent, DefaultRetrievalPlanExecutor,
 )
 
 
@@ -61,8 +60,6 @@ class MainProvider(Provider):
     reply_generator = provide(source=ReplyGeneratorAgent, provides=ReplyGenerator)
     retrieval_planner = provide(source=RetrievalPlannerAgent, provides=RetrievalPlanner)
     retrieval_executor = provide(source=DefaultRetrievalPlanExecutor, provides=RetrievalPlanExecutor)
-    crawler = provide(Crawler)
-    web_retrieval_result_enhancer = provide(WebRetrievalResultEnhancer)
 
     message_use_case = provide(source=MessageUseCase, provides=MessageUseCase)
     reply_use_case = provide(source=ReplyUseCase, provides=ReplyUseCase)
