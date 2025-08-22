@@ -362,7 +362,10 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
                 })
                 await result_queue.put(new_item)
             except Exception as e:
-                logfire.warn("Error enriching retrieval result", exc_info=e)
+                logfire.warn(
+                    f"Error enriching retrieval result for ref={item.ref}: {type(e).__name__}: {e}",
+                    exc_info=e
+                )
 
         async with asyncio.TaskGroup() as tg:
             for task in results:
