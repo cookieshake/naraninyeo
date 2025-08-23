@@ -67,7 +67,7 @@ class ReplyGeneratorAgent(ReplyGenerator):
         self.settings = settings
         self.agent = Agent(
             model=OpenAIModel(
-                model_name="deepseek/deepseek-r1-0528",
+                model_name="x-ai/grok-4",
                 provider=OpenRouterProvider(
                     api_key=settings.OPENROUTER_API_KEY
                 )
