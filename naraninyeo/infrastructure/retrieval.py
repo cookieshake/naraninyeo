@@ -77,7 +77,7 @@ class RetrievalPlannerAgent(RetrievalPlanner):
         self.settings = settings
         self.agent = Agent(
             model=OpenAIModel(
-                model_name="openai/gpt-5-mini",
+                model_name="openai/gpt-4.1",
                 provider=OpenRouterProvider(
                     api_key=settings.OPENROUTER_API_KEY
                 )
@@ -188,7 +188,7 @@ class Extractor:
         self.crawler = crawler
         self.agent = Agent(
             model=OpenAIModel(
-                model_name="openai/gpt-5-nano",
+                model_name="openai/gpt-4.1-nano",
                 provider=OpenRouterProvider(
                     api_key=settings.OPENROUTER_API_KEY,
                 )
