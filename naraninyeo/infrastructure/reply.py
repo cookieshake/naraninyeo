@@ -85,7 +85,8 @@ class ReplyGeneratorAgent(ReplyGenerator):
                 timeout=20,
                 extra_body={
                     "reasoning": {
-                        "effort": "minimal"
+                        # "effort": "minimal",
+                        "enabled": False
                     }
                 }
             ),
