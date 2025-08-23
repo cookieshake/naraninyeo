@@ -6,12 +6,13 @@ from typing import List, Optional, override, Literal
 from textwrap import dedent
 from urllib.parse import urlparse
 import uuid
+from bs4 import BeautifulSoup
 from crawl4ai import AsyncLoggerBase, AsyncWebCrawler, BrowserConfig, CrawlResult, CrawlerRunConfig, DefaultMarkdownGenerator, PruningContentFilter, SemaphoreDispatcher
 import httpx
 import dateparser
 import logfire
 
-from markdownify import markdownify as md
+from markdownify import MarkdownConverter
 from pydantic import BaseModel, computed_field
 from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
@@ -147,6 +148,7 @@ class Crawler:
         #     config=BrowserConfig()
         # )
         # self.text_embedder = text_embedder
+        self.markdown_converter = MarkdownConverter()
         pass
 
     async def start(self):
@@ -181,8 +183,20 @@ class Crawler:
             )
             response.raise_for_status()
             html = response.text
-            return md(html, strip=["a"])
-
+            soup = BeautifulSoup(html, "html.parser")
+            for a in soup.find_all("a"):
+                a.decompose()
+            # make http request to all iframes and insert html into original
+            for iframe in soup.find_all("iframe"):
+                iframe_url: str = iframe.get("src") # pyright: ignore[reportAttributeAccessIssue, reportAssignmentType]
+                if not iframe_url.startswith("http"):
+                    iframe_url = urlparse(url)._replace(path=iframe_url).geturl()
+                if iframe_url:
+                    response = await client.get(iframe_url)
+                    response.raise_for_status()
+                    iframe_html = response.text
+                    iframe.replace_with(BeautifulSoup(iframe_html, "html.parser"))
+            return self.markdown_converter.convert_soup(soup)
 
 class ExtractionResult(BaseModel):
     content: str

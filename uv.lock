@@ -1356,6 +1356,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiokafka", extra = ["zstd"] },
+    { name = "beautifulsoup4" },
     { name = "crawl4ai" },
     { name = "dateparser" },
     { name = "dishka" },
@@ -1388,6 +1389,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiokafka", extras = ["zstd"], specifier = ">=0.12.0" },
+    { name = "beautifulsoup4", specifier = ">=4.13.4" },
     { name = "crawl4ai", specifier = ">=0.7.2" },
     { name = "dateparser", specifier = ">=1.2.2" },
     { name = "dishka", specifier = ">=1.6.0" },
