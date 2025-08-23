@@ -175,7 +175,7 @@ class Crawler:
             response = await client.get(url)
             response.raise_for_status()
             html = response.text
-            return md(html)
+            return md(html, strip=["a"])
 
 
 class ExtractionResult(BaseModel):
