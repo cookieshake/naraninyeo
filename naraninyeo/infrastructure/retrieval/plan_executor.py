@@ -9,6 +9,8 @@ from naraninyeo.domain.model.retrieval import RetrievalPlan
 
 
 class LocalPlanExecutor(RetrievalPlanExecutor):
+    # TODO: This _strategies attribute is currently a class attribute, meaning all instances share the same list.
+    # It should be initialized in __init__ to prevent unintended side effects if multiple LocalPlanExecutor instances are created. (Severity: high)
     _strategies: List[PlanExecutorStrategy] = []
 
     @property
