@@ -3,6 +3,8 @@ from datetime import datetime
 from typing import AsyncIterator
 from zoneinfo import ZoneInfo
 
+import logfire
+
 from naraninyeo.domain.model.message import Message
 from naraninyeo.domain.model.reply import EnvironmentalContext, KnowledgeReference, ReplyContext
 from naraninyeo.domain.model.retrieval import RetrievalStatus
@@ -22,6 +24,7 @@ class NewMessageHandler:
         self.retrieval_use_case = retrieval_use_case
         self.reply_use_case = reply_use_case
 
+    @logfire.instrument
     async def handle(self, message: Message) -> AsyncIterator[Message]:
         save_new_message_task = asyncio.create_task(self.message_use_case.save_message(message))
 
