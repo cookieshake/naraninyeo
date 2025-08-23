@@ -27,14 +27,14 @@ class NewMessageHandler:
     async def handle(self, message: Message) -> AsyncIterator[Message]:
         with logfire.span("handle new message"):
             save_new_message_task = asyncio.create_task(self.message_use_case.save_message(message))
-
-            if not await self.message_use_case.reply_needed(message):
+            try:
+                if await self.message_use_case.reply_needed(message):
+                    with logfire.span("generate reply"):
+                        async for reply in self._generate_reply(message):
+                            yield reply
+                            await self.message_use_case.save_message(reply)
+            finally:
                 await save_new_message_task
-            else:
-                with logfire.span("generate reply"):
-                    async for reply in self._generate_reply(message):
-                        yield reply
-                        await self.message_use_case.save_message(reply)
 
     async def _generate_reply(self, message: Message) -> AsyncIterator[Message]:
         reply_context = ReplyContext(
