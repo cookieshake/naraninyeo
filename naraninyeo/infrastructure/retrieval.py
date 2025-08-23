@@ -79,7 +79,7 @@ class RetrievalPlannerAgent(RetrievalPlanner):
         self.settings = settings
         self.agent = Agent(
             model=OpenAIModel(
-                model_name="x-ai/grok-3-mini",
+                model_name="anthropic/claude-sonnet-4",
                 provider=OpenRouterProvider(
                     api_key=settings.OPENROUTER_API_KEY
                 )
