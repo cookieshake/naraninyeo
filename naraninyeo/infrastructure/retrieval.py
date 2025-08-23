@@ -172,7 +172,13 @@ class Crawler:
         # ) # pyright: ignore[reportAssignmentType]
         # return result.markdown.fit_markdown # pyright: ignore[reportOptionalMemberAccess]
         async with httpx.AsyncClient() as client:
-            response = await client.get(url)
+            response = await client.get(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                },
+                follow_redirects=True
+            )
             response.raise_for_status()
             html = response.text
             return md(html, strip=["a"])
