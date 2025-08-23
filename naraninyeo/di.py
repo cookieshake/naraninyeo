@@ -18,7 +18,7 @@ from testcontainers.qdrant import QdrantContainer
 
 from naraninyeo.domain.gateway.message import MessageRepository
 from naraninyeo.domain.gateway.reply import ReplyGenerator
-from naraninyeo.domain.gateway.retrieval import RetrievalPlanner, RetrievalPlanExecutor
+from naraninyeo.domain.gateway.retrieval import RetrievalPlanner, RetrievalPlanExecutor, RetrievalResultCollectorFactory
 from naraninyeo.domain.usecase.message import MessageUseCase
 from naraninyeo.domain.usecase.reply import ReplyUseCase
 from naraninyeo.domain.usecase.retrieval import RetrievalUseCase
@@ -28,11 +28,11 @@ from naraninyeo.infrastructure.settings import Settings
 from naraninyeo.infrastructure.embedding import TextEmbedder, Qwen306TextEmbedder
 from naraninyeo.infrastructure.message import MongoQdrantMessageRepository
 from naraninyeo.infrastructure.reply import ReplyGeneratorAgent
-from naraninyeo.infrastructure.retrieval import (
-    NaverSearchClient, RetrievalPlannerAgent, DefaultRetrievalPlanExecutor,
-    Crawler, Extractor
-)
-
+from naraninyeo.infrastructure.retrieval.plan_strategy.history import ChatHistoryStrategy
+from naraninyeo.infrastructure.retrieval.plan_strategy.naver_search import NaverSearchStrategy
+from naraninyeo.infrastructure.retrieval.plan_executor import LocalPlanExecutor
+from naraninyeo.infrastructure.retrieval.planner import RetrievalPlannerAgent
+from naraninyeo.infrastructure.retrieval.result import InMemoryRetrievalResultCollectorFactory
 
 
 class MainProvider(Provider):
@@ -56,19 +56,26 @@ class MainProvider(Provider):
         await client.close()
 
     text_embedder = provide(source=Qwen306TextEmbedder, provides=TextEmbedder)
-    naver_search_client = provide(source=NaverSearchClient, provides=NaverSearchClient)
     message_repository = provide(source=MongoQdrantMessageRepository, provides=MessageRepository)
     reply_generator = provide(source=ReplyGeneratorAgent, provides=ReplyGenerator)
     retrieval_planner = provide(source=RetrievalPlannerAgent, provides=RetrievalPlanner)
-    retrieval_executor = provide(source=DefaultRetrievalPlanExecutor, provides=RetrievalPlanExecutor)
-    @provide
-    async def crawler(self) -> AsyncIterator[Crawler]:
-        crawler = Crawler()
-        await crawler.start()
-        yield crawler
-        await crawler.stop()
+    result_collector_factory = provide(
+        source=InMemoryRetrievalResultCollectorFactory,
+        provides=RetrievalResultCollectorFactory
+    )
 
-    extractor = provide(source=Extractor, provides=Extractor)
+    naver_search_strategy = provide(source=NaverSearchStrategy, provides=NaverSearchStrategy)
+    chat_history_strategy = provide(source=ChatHistoryStrategy, provides=ChatHistoryStrategy)
+    @provide
+    async def retrieval_plan_executor(
+        self,
+        naver_search_strategy: NaverSearchStrategy,
+        chat_history_strategy: ChatHistoryStrategy
+    ) -> RetrievalPlanExecutor:
+        executor = LocalPlanExecutor()
+        executor.register_strategy(naver_search_strategy)
+        executor.register_strategy(chat_history_strategy)
+        return executor
 
     message_use_case = provide(source=MessageUseCase, provides=MessageUseCase)
     reply_use_case = provide(source=ReplyUseCase, provides=ReplyUseCase)

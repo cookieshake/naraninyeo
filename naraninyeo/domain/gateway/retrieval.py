@@ -9,11 +9,11 @@ class RetrievalResultCollector(ABC):
     """Abstract interface to collect RetrievalResult items incrementally."""
 
     @abstractmethod
-    def add(self, item: RetrievalResult) -> None:
+    async def add(self, item: RetrievalResult) -> None:
         ...
 
     @abstractmethod
-    def snapshot(self) -> list[RetrievalResult]:
+    async def snapshot(self) -> list[RetrievalResult]:
         ...
 
 
@@ -33,7 +33,7 @@ class PlanExecutorStrategy(ABC):
         ...
 
     @abstractmethod
-    async def execute(self, plan: RetrievalPlan, context: ReplyContext, result_queue, stop_event: Optional[object] = None, collector: Optional[RetrievalResultCollector] = None):
+    async def execute(self, plan: RetrievalPlan, context: ReplyContext, collector: RetrievalResultCollector):
         """
         Execute the plan and push ImplRetrievalResult-like items into result_queue.
         We keep the queue and stop_event untyped here to avoid a hard dependency on infrastructure types.

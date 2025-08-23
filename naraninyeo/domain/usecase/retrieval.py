@@ -31,4 +31,4 @@ class RetrievalUseCase:
             Variables.RETRIEVAL_EXECUTION_TIMEOUT,
             collector=collector,
         )
-        return collector.snapshot()
+        return await collector.snapshot()
