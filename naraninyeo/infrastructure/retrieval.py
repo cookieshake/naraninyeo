@@ -4,7 +4,7 @@ import html
 import re
 from typing import List, Optional, override, Literal
 from textwrap import dedent
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 import uuid
 from bs4 import BeautifulSoup
 from crawl4ai import AsyncLoggerBase, AsyncWebCrawler, BrowserConfig, CrawlResult, CrawlerRunConfig, DefaultMarkdownGenerator, PruningContentFilter, SemaphoreDispatcher
@@ -189,8 +189,7 @@ class Crawler:
             for iframe in soup.find_all("iframe"):
                 try:
                     iframe_url: str = iframe.get("src") # pyright: ignore[reportAttributeAccessIssue, reportAssignmentType]
-                    if not iframe_url.startswith("http"):
-                        iframe_url = urlparse(url)._replace(path=iframe_url).geturl()
+                    iframe_url = urljoin(url, iframe_url)
                     if iframe_url:
                         response = await client.get(iframe_url)
                         response.raise_for_status()
