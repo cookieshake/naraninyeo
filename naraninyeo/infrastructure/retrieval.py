@@ -15,6 +15,7 @@ import logfire
 from markdownify import MarkdownConverter
 from pydantic import BaseModel, computed_field
 from pydantic_ai import Agent, NativeOutput
+from pydantic_ai.profiles import ModelProfile
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
@@ -78,12 +79,12 @@ class RetrievalPlannerAgent(RetrievalPlanner):
         self.settings = settings
         self.agent = Agent(
             model=OpenAIModel(
-                model_name="openai/gpt-4.1",
+                model_name="x-ai/grok-3-mini",
                 provider=OpenRouterProvider(
                     api_key=settings.OPENROUTER_API_KEY
                 )
             ),
-            output_type=NativeOutput(List[AgentBasedRetrievalPlan]),
+            output_type=List[AgentBasedRetrievalPlan],
             instrument=True,
             model_settings=OpenAIModelSettings(
                 timeout=20,
@@ -184,18 +185,21 @@ class Crawler:
             response.raise_for_status()
             html = response.text
             soup = BeautifulSoup(html, "html.parser")
-            for a in soup.find_all("a"):
-                a.decompose()
             # make http request to all iframes and insert html into original
             for iframe in soup.find_all("iframe"):
-                iframe_url: str = iframe.get("src") # pyright: ignore[reportAttributeAccessIssue, reportAssignmentType]
-                if not iframe_url.startswith("http"):
-                    iframe_url = urlparse(url)._replace(path=iframe_url).geturl()
-                if iframe_url:
-                    response = await client.get(iframe_url)
-                    response.raise_for_status()
-                    iframe_html = response.text
-                    iframe.replace_with(BeautifulSoup(iframe_html, "html.parser"))
+                try:
+                    iframe_url: str = iframe.get("src") # pyright: ignore[reportAttributeAccessIssue, reportAssignmentType]
+                    if not iframe_url.startswith("http"):
+                        iframe_url = urlparse(url)._replace(path=iframe_url).geturl()
+                    if iframe_url:
+                        response = await client.get(iframe_url)
+                        response.raise_for_status()
+                        iframe_html = response.text
+                        iframe.replace_with(BeautifulSoup(iframe_html, "html.parser"))
+                except Exception as e:
+                    logfire.warn(f"Failed to retrieve iframe {iframe_url}: {e}")
+            for a in soup.find_all("a"):
+                a.decompose()
             return self.markdown_converter.convert_soup(soup)
 
 class ExtractionResult(BaseModel):
@@ -374,6 +378,8 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
             self.naver_search_client.search(query=plan.query, api=api, limit=7, sort="sim")
         ])
         async def enrich(item: ImplRetrievalResult):
+            if item.ref.endswith(".pdf"):
+                return
             try:
                 extraction = await self.extractor.extract(item.ref, plan.query)
                 new_item = item.model_copy(update={

@@ -45,10 +45,17 @@ class ReplyGeneratorAgent(ReplyGenerator):
             마지막으로 들어온 메시지:
             {context.last_message.text_repr}
 
+            [응답 생성 우선순위]
+            1) 직전 대화의 흐름과 톤에 자연스럽게 이어질 것
+            2) 마지막 메시지의 의도에 정확히 답할 것
+            3) 참고 정보는 보조로만 사용하고, 대화 맥락과 충돌하면 무시할 것
+            - 주제 일탈 금지. 사용자가 원하지 않으면 새로운 화제를 시작하지 말 것.
+
             위 내용을 바탕으로 '{self.settings.BOT_AUTHOR_NAME}'의 응답을 생성하세요. 
 
             중요: 반드시 메시지 내용만 작성하세요. "시간 이름: 내용" 형식이나 "나란잉여:" 같은 접두사를 절대 사용하지 마세요. 바로 답변 내용으로 시작하세요.
             짧고 간결하게, 핵심만 요약해서 전달하세요. 불필요한 미사여구나 설명은 생략하세요.
+            참고 정보에 끌려가서 대화 흐름을 깨지 않도록 주의하세요.
             """
         )
         logfire.debug("Reply generation query: {query}", query=query)
@@ -67,7 +74,7 @@ class ReplyGeneratorAgent(ReplyGenerator):
         self.settings = settings
         self.agent = Agent(
             model=OpenAIModel(
-                model_name="deepseek/deepseek-chat-v3-0324",
+                model_name="deepseek/deepseek-chat-v3.1",
                 provider=OpenRouterProvider(
                     api_key=settings.OPENROUTER_API_KEY
                 )
@@ -95,6 +102,9 @@ class ReplyGeneratorAgent(ReplyGenerator):
                 - 무조건 한국어 반말 사용
                 - "검색 결과에 따르면" 같은 표현 절대 사용 금지
                 - "시간 이름: 메시지" 형식 사용 금지
+                - 대화 맥락 우선: 직전 대화의 흐름과 톤을 최우선으로 맞출 것
+                - 참고 정보는 보조자료: 대화 맥락과 충돌하면 참고 정보를 과감히 무시할 것
+                - 주제 일탈 금지: 사용자가 원치 않으면 새로운 화제를 열지 말 것
                 """.strip()
             )
         )

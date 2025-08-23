@@ -7,7 +7,7 @@ if __name__ == "__main__":
     logfire.configure(
         send_to_logfire=False,
         console=logfire.ConsoleOptions(
-            verbose=True,
+            verbose=False,
             min_log_level="trace",
             show_project_link=False
         )

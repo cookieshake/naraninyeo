@@ -3,15 +3,17 @@
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import uuid
 import traceback
+from zoneinfo import ZoneInfo
 
 from dishka import AsyncContainer, make_async_container
 
 from naraninyeo.di import MainProvider, TestProvider
 from naraninyeo.domain.application.new_message_handler import NewMessageHandler
 from naraninyeo.domain.model.message import Author, Channel, Message, MessageContent
+from naraninyeo.infrastructure.settings import Settings
 
 class LocalClient:
     """로컬 테스트 클라이언트"""
@@ -25,6 +27,7 @@ class LocalClient:
                 
         # 서비스 및 어댑터 가져오기
         self.new_message_handler = await self.container.get(NewMessageHandler)
+        self.settings = await self.container.get(Settings)
         print("✅ 대화 서비스 준비 완료")
     
     async def run_chat_loop(self):
@@ -59,7 +62,7 @@ class LocalClient:
                     channel=Channel(channel_id="local-test", channel_name="로컬 테스트"),
                     author=Author(author_id="local-user", author_name="유저"),
                     content=MessageContent(text=text, attachments=[]),
-                    timestamp=datetime.now()
+                    timestamp=datetime.now(tz=ZoneInfo("Asia/Seoul"))
                 )
                 
                 # 메시지 처리 (저장 + 응답 생성) - 통합 서비스 사용
