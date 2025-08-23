@@ -226,9 +226,12 @@ class NaverSearchStrategy(PlanExecutorStrategy):
                     source_name=urlparse(result.link).netloc,
                     source_timestamp=result.pub_date
                 )
-                await collector.add(rresult)
+                tasks.append(asyncio.create_task(collector.add(rresult)))
                 tasks.append(asyncio.create_task(extract_worker(rid, result)))
-        await asyncio.gather(*tasks, return_exceptions=True)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, Exception):
+                logfire.info("Extraction worker failed", exc_info=result)
 
     @override
     def supports(self, plan: RetrievalPlan) -> bool:
