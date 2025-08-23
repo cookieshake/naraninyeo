@@ -23,10 +23,7 @@ ENV PATH="/root/.local/bin/:$PATH"
 # Copy pyproject.toml first to leverage Docker cache
 COPY pyproject.toml .
 COPY uv.lock .
-RUN uv sync
-
-# Install dependencies using uv
-RUN uv pip install --no-cache -e .
+RUN uv sync --no-dev
 
 # RUN uv run crawl4ai-setup && \
 #     uv run crawl4ai-doctor

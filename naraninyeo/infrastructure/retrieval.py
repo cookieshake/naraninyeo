@@ -20,22 +20,25 @@ from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 from naraninyeo.domain.gateway.message import MessageRepository
-from naraninyeo.domain.model.retrieval import RetrievalPlan, RetrievalResult, RetrievalStatus, RetrievalStatusReason
-from naraninyeo.domain.gateway.retrieval import RetrievalPlanExecutor, RetrievalPlanner
+from naraninyeo.domain.model.retrieval import (
+    RetrievalPlan,
+    RetrievalResult,
+    RetrievalStatus,
+    RetrievalStatusReason,
+)
+from naraninyeo.domain.gateway.retrieval import (
+    RetrievalPlanExecutor,
+    RetrievalPlanner,
+    PlanExecutorStrategy,
+    RetrievalResultCollector,
+    RetrievalResultCollectorFactory,
+)
 
 from naraninyeo.domain.model.reply import KnowledgeReference, ReplyContext
 from naraninyeo.infrastructure.embedding import TextEmbedder
 from naraninyeo.infrastructure.settings import Settings
 
-class AgentBasedRetrievalPlan(RetrievalPlan, BaseModel):
-    query: str
-    search_type: Literal[
-        "naver_web",
-        "naver_news",
-        "naver_blog",
-        "naver_doc",
-        "chat_history"
-    ]
+## Note: RetrievalPlan now includes search_type in domain.model.retrieval
 
 class ImplRetrievalResult(RetrievalResult, BaseModel):
     status: RetrievalStatus
@@ -84,7 +87,7 @@ class RetrievalPlannerAgent(RetrievalPlanner):
                     api_key=settings.OPENROUTER_API_KEY
                 )
             ),
-            output_type=List[AgentBasedRetrievalPlan],
+            output_type=List[RetrievalPlan],
             instrument=True,
             model_settings=OpenAIModelSettings(
                 timeout=20,
@@ -321,19 +324,178 @@ class NaverSearchClient:
         return items
 
 
+class NaverSearchExecutor(PlanExecutorStrategy):
+    def __init__(self, naver_search_client: "NaverSearchClient", extractor: "Extractor"):
+        self.naver_search_client = naver_search_client
+        self.extractor = extractor
+
+    def supports(self, plan: RetrievalPlan) -> bool:
+        return isinstance(plan, RetrievalPlan) and plan.search_type.startswith("naver_")
+
+    async def execute(self, plan: RetrievalPlan, context: ReplyContext, result_queue: asyncio.Queue["ImplRetrievalResult"], stop_event: object | None = None, collector: RetrievalResultCollector | None = None) -> None:  # type: ignore[override]
+        api_map: dict[str, Literal["news", "blog", "webkr", "doc"]] = {
+            "naver_news": "news",
+            "naver_blog": "blog",
+            "naver_web": "webkr",
+            "naver_doc": "doc",
+        }
+        api = api_map.get(plan.search_type, "doc")
+        results = asyncio.as_completed(
+            [
+                self.naver_search_client.search(query=plan.query, api=api, limit=7, sort="date"),
+                self.naver_search_client.search(query=plan.query, api=api, limit=7, sort="sim"),
+            ]
+        )
+
+        async def enrich(item: ImplRetrievalResult):
+            if isinstance(stop_event, asyncio.Event) and stop_event.is_set():
+                return
+            if item.ref.endswith(".pdf"):
+                return
+            try:
+                extraction = await self.extractor.extract(item.ref, plan.query)
+                new_item = item.model_copy(
+                    update={
+                        "content": extraction.content,
+                        "is_relevant": extraction.is_relevant if extraction.content else False,
+                    }
+                )
+                if isinstance(stop_event, asyncio.Event) and stop_event.is_set():
+                    return
+                await result_queue.put(new_item)
+                if collector:
+                    # Map ImplRetrievalResult to domain RetrievalResult by dropping impl-only fields
+                    collector.add(
+                        RetrievalResult(
+                            status=new_item.status,
+                            status_reason=new_item.status_reason,
+                            content=new_item.content,
+                            source_name=new_item.source_name,
+                            source_timestamp=new_item.source_timestamp,
+                            ref=new_item.ref,
+                        )
+                    )
+            except Exception as e:
+                logfire.warn(
+                    f"Error enriching retrieval result for ref={item.ref}: {type(e).__name__}: {e}",
+                    exc_info=e,
+                )
+
+        async with asyncio.TaskGroup() as tg:
+            for task in results:
+                if isinstance(stop_event, asyncio.Event) and stop_event.is_set():
+                    break
+                result = await task
+                for item in result:
+                    if isinstance(stop_event, asyncio.Event) and stop_event.is_set():
+                        break
+                    await result_queue.put(item)
+                    if collector:
+                        collector.add(
+                            RetrievalResult(
+                                status=item.status,
+                                status_reason=item.status_reason,
+                                content=item.content,
+                                source_name=item.source_name,
+                                source_timestamp=item.source_timestamp,
+                                ref=item.ref,
+                            )
+                        )
+                    tg.create_task(enrich(item))
+
+
+class ChatHistoryExecutor(PlanExecutorStrategy):
+    def __init__(self, message_repository: MessageRepository):
+        self.message_repository = message_repository
+
+    def supports(self, plan: RetrievalPlan) -> bool:
+        return isinstance(plan, RetrievalPlan) and plan.search_type == "chat_history"
+
+    async def execute(self, plan: RetrievalPlan, context: ReplyContext, result_queue: asyncio.Queue["ImplRetrievalResult"], stop_event: object | None = None, collector: RetrievalResultCollector | None = None) -> None:  # type: ignore[override]
+        messages = await self.message_repository.search_similar_messages(
+            channel_id=context.last_message.channel.channel_id,
+            keyword=plan.query,
+            limit=3,
+        )
+        chunks = [
+            self.message_repository.get_surrounding_messages(message=message, before=3, after=3)
+            for message in messages
+        ]
+        for task in asyncio.as_completed(chunks):
+            if isinstance(stop_event, asyncio.Event) and stop_event.is_set():
+                break
+            chunk = await task
+            if not chunk:
+                continue
+            chunk_str = "\n".join(msg.text_repr for msg in chunk)
+            await result_queue.put(
+                ImplRetrievalResult(
+                    status=RetrievalStatus.SUCCESS,
+                    status_reason=RetrievalStatusReason.SUCCESS,
+                    content=chunk_str,
+                    source_name=chunk[-1].channel.channel_id,
+                    source_timestamp=chunk[-1].timestamp,
+                    key=chunk[-1].message_id,
+                    query=plan.query,
+                    ref=f"chat_history:{chunk[-1].timestamp_str}",
+                    is_relevant=True,
+                )
+            )
+            if collector:
+                collector.add(
+                    RetrievalResult(
+                        status=RetrievalStatus.SUCCESS,
+                        status_reason=RetrievalStatusReason.SUCCESS,
+                        content=chunk_str,
+                        source_name=chunk[-1].channel.channel_id,
+                        source_timestamp=chunk[-1].timestamp,
+                        ref=f"chat_history:{chunk[-1].timestamp_str}",
+                    )
+                )
+
+
+class InMemoryRetrievalResultCollector(RetrievalResultCollector):
+    def __init__(self) -> None:
+        self._items: list[RetrievalResult] = []
+
+    def add(self, item: RetrievalResult) -> None:
+        self._items.append(item)
+
+    def snapshot(self) -> list[RetrievalResult]:
+        return list(self._items)
+
+
+class InMemoryRetrievalResultCollectorFactory(RetrievalResultCollectorFactory):
+    def create(self) -> RetrievalResultCollector:
+        return InMemoryRetrievalResultCollector()
+
+
 class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
+    @property
+    def strategies(self) -> list[PlanExecutorStrategy]:
+        return self._executors
+
+    def register_strategy(self, strategy: PlanExecutorStrategy) -> None:
+        self._executors.append(strategy)
+
     @override
-    async def execute(self, plans: list[RetrievalPlan], context: ReplyContext) -> List[RetrievalResult]:
+    async def execute(self, plans: list[RetrievalPlan], context: ReplyContext, collector: RetrievalResultCollector | None = None) -> List[RetrievalResult]:
         result_queue = asyncio.Queue[ImplRetrievalResult]()
 
         try:
             async with asyncio.TaskGroup() as tg:
                 for plan in plans:
-                    if isinstance(plan, AgentBasedRetrievalPlan):
-                        if plan.search_type.startswith("naver_"):
-                            tg.create_task(self._search_naver(plan, result_queue))
-                        elif plan.search_type == "chat_history":
-                            tg.create_task(self._search_chat_history(plan, context, result_queue))
+                    matched = False
+                    for executor in self._executors:
+                        if executor.supports(plan):
+                            matched = True
+                            tg.create_task(executor.execute(plan, context, result_queue, None, collector))
+                            break
+                    if not matched:
+                        logfire.warn(
+                            "No executor found for plan",
+                            plan=plan.model_dump() if isinstance(plan, BaseModel) else str(plan),
+                        )
         except asyncio.CancelledError:
             logfire.warn("Retrieval tasks were cancelled, so some results may be missing.")
 
@@ -349,6 +511,48 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
         )
         return list(results)
 
+    @override
+    async def execute_with_timeout(self, plans: list[RetrievalPlan], context: ReplyContext, timeout_seconds: float, collector: RetrievalResultCollector | None = None) -> List[RetrievalResult]:
+        """Execute plans with a timeout; return partial results if time runs out."""
+        result_queue: asyncio.Queue[ImplRetrievalResult] = asyncio.Queue()
+        stop_event = asyncio.Event()
+
+        async def runner() -> None:
+            try:
+                async with asyncio.TaskGroup() as tg:
+                    for plan in plans:
+                        matched = False
+                        for executor in self._executors:
+                            if executor.supports(plan):
+                                matched = True
+                                tg.create_task(
+                                    executor.execute(plan, context, result_queue, stop_event, collector)
+                                )
+                                break
+                        if not matched:
+                            logfire.warn("No executor found for plan", plan=plan.model_dump())
+            except Exception as e:
+                logfire.warn("Error during retrieval execution", exc_info=e)
+
+        try:
+            await asyncio.wait_for(runner(), timeout=timeout_seconds)
+        except asyncio.TimeoutError:
+            stop_event.set()
+            logfire.warn("Retrieval execution timed out; returning partial results")
+
+        # Drain whatever we have so far
+        result: dict[str, ImplRetrievalResult] = {}
+        while not result_queue.empty():
+            item = await result_queue.get()
+            result[item.key] = item
+        results = [r for r in result.values() if r.is_relevant is not False]
+        # If a collector was supplied, prefer returning its snapshot (contains domain-level results)
+        if collector is not None:
+            snap = collector.snapshot()
+            if snap:
+                return snap
+        return list(results)
+
     def __init__(
         self,
         settings: Settings,
@@ -358,71 +562,15 @@ class DefaultRetrievalPlanExecutor(RetrievalPlanExecutor):
         crawler: Crawler,
         extractor: Extractor
     ):
+        # keep references for possible future executors
         self.naver_search_client = naver_search_client
         self.message_repository = message_repository
         self.text_embedder = text_embedder
         self.crawler = crawler
         self.extractor = extractor
 
-    async def _search_naver(self, plan: AgentBasedRetrievalPlan, result_queue: asyncio.Queue[ImplRetrievalResult]):
-        api_map: dict[str, Literal["news", "blog", "webkr", "doc"]] = {
-            "naver_news": "news",
-            "naver_blog": "blog",
-            "naver_web": "webkr",
-            "naver_doc": "doc"
-        }
-        api = api_map.get(plan.search_type, "doc")
-        results = asyncio.as_completed([
-            self.naver_search_client.search(query=plan.query, api=api, limit=7, sort="date"),
-            self.naver_search_client.search(query=plan.query, api=api, limit=7, sort="sim")
-        ])
-        async def enrich(item: ImplRetrievalResult):
-            if item.ref.endswith(".pdf"):
-                return
-            try:
-                extraction = await self.extractor.extract(item.ref, plan.query)
-                new_item = item.model_copy(update={
-                    "content": extraction.content,
-                    "is_relevant": extraction.is_relevant if extraction.content else False
-                })
-                await result_queue.put(new_item)
-            except Exception as e:
-                logfire.warn(
-                    f"Error enriching retrieval result for ref={item.ref}: {type(e).__name__}: {e}",
-                    exc_info=e
-                )
-
-        async with asyncio.TaskGroup() as tg:
-            for task in results:
-                result = await task
-                for item in result:
-                    await result_queue.put(item)
-                    tg.create_task(enrich(item))
-
-    async def _search_chat_history(self, plan: AgentBasedRetrievalPlan, context: ReplyContext, result_queue: asyncio.Queue[ImplRetrievalResult]):
-        messages = await self.message_repository.search_similar_messages(
-            channel_id=context.last_message.channel.channel_id,
-            keyword=plan.query,
-            limit=3
-        )
-        chunks = [
-            self.message_repository.get_surrounding_messages(
-                message=message, before=3, after=3
-            ) for message in messages
+        # compose specific executors
+        self._executors: list[PlanExecutorStrategy] = [
+            NaverSearchExecutor(self.naver_search_client, self.extractor),
+            ChatHistoryExecutor(self.message_repository),
         ]
-        for task in asyncio.as_completed(chunks):
-            chunk = await task
-            chunk_str = "\n".join(msg.text_repr for msg in chunk)
-            await result_queue.put(
-                ImplRetrievalResult(
-                    status=RetrievalStatus.SUCCESS,
-                    status_reason=RetrievalStatusReason.SUCCESS,
-                    content=chunk_str,
-                    source_name=chunk[-1].channel.channel_id,
-                    source_timestamp=chunk[-1].timestamp,
-                    key=chunk[-1].message_id,
-                    query=plan.query,
-                    ref= f"chat_history:{chunk[-1].timestamp_str}",
-                    is_relevant=True
-                )
-            )
