@@ -1351,6 +1351,15 @@ wheels = [
 ]
 
 [[package]]
+name = "nanoid"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b7/9d/0250bf5935d88e214df469d35eccc0f6ff7e9db046fc8a9aeb4b2a192775/nanoid-2.0.0.tar.gz", hash = "sha256:5a80cad5e9c6e9ae3a41fa2fb34ae189f7cb420b2a5d8f82bd9d23466e4efa68", size = 3290, upload-time = "2018-11-20T14:45:51.578Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2e/0d/8630f13998638dc01e187fadd2e5c6d42d127d08aeb4943d231664d6e539/nanoid-2.0.0-py3-none-any.whl", hash = "sha256:90aefa650e328cffb0893bbd4c236cfd44c48bc1f2d0b525ecc53c3187b653bb", size = 5844, upload-time = "2018-11-20T14:45:50.165Z" },
+]
+
+[[package]]
 name = "naraninyeo"
 version = "0.1.0"
 source = { editable = "." }
@@ -1366,6 +1375,7 @@ dependencies = [
     { name = "loguru" },
     { name = "markdownify" },
     { name = "motor" },
+    { name = "nanoid" },
     { name = "nest-asyncio" },
     { name = "ollama" },
     { name = "openai" },
@@ -1399,6 +1409,7 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "markdownify", specifier = ">=1.2.0" },
     { name = "motor", specifier = ">=3.7.1" },
+    { name = "nanoid", specifier = ">=2.0.0" },
     { name = "nest-asyncio", specifier = ">=1.6.0" },
     { name = "ollama", specifier = ">=0.5.1" },
     { name = "openai", specifier = ">=1.91.0" },

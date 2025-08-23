@@ -24,6 +24,7 @@ dependencies = [
     "logfire[httpx,pymongo]>=4.3.3",
     "markdownify>=1.2.0",
     "beautifulsoup4>=4.13.4",
+    "nanoid>=2.0.0",
 ]
 
 [project.scripts]
