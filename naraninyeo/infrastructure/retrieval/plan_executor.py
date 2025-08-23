@@ -9,6 +9,8 @@ from naraninyeo.domain.model.retrieval import RetrievalPlan
 
 
 class LocalPlanExecutor(RetrievalPlanExecutor):
+    # TODO: This _strategies attribute is currently a class attribute, meaning all instances share the same list.
+    # It should be initialized in __init__ to prevent unintended side effects if multiple LocalPlanExecutor instances are created. (Severity: high)
     _strategies: List[PlanExecutorStrategy] = []
 
     @property
@@ -36,7 +38,10 @@ class LocalPlanExecutor(RetrievalPlanExecutor):
                         "No executor found for plan: {plan}",
                         plan=plan.model_dump() if isinstance(plan, BaseModel) else str(plan),
                     )
-            await asyncio.gather(*tasks, return_exceptions=True)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for result in results:
+                if isinstance(result, Exception):
+                    logfire.info("A retrieval strategy failed", exc_info=result)
         except asyncio.CancelledError:
             logfire.info("Retrieval tasks were cancelled, so some results may be missing.")
 

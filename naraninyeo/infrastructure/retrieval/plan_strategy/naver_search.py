@@ -190,12 +190,18 @@ class NaverSearchStrategy(PlanExecutorStrategy):
                 logfire.warn(f"NaverSearchStrategy does not support plan: {plan}")
                 raise ValueError("Unsupported plan type")
             
-        search_results = await asyncio.gather(
+        search_tasks = [
             asyncio.create_task(self.client.search(query=plan.query, api=search_api, limit=7, sort="sim")),
             asyncio.create_task(self.client.search(query=plan.query, api=search_api, limit=7, sort="date")),
-            return_exceptions=True
-        )
-        search_results = [results for results in search_results if isinstance(results, list)]
+        ]
+        search_results_raw = await asyncio.gather(*search_tasks, return_exceptions=True)
+
+        search_results = []
+        for res in search_results_raw:
+            if isinstance(res, Exception):
+                logfire.info("Naver search API call failed", exc_info=res)
+            elif res:
+                search_results.append(res)
         async def extract_worker(rid: str, search_result: NaverSearchResult):
             extraction = await self.extractor.extract(url=search_result.link, query=plan.query)
             if not extraction.content.strip():
