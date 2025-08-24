@@ -56,10 +56,10 @@ jobs:
 
       - name: Pyright type check
         run: |
-          pyright
+          uv run pyright
 
       - name: Run tests (pytest)
         env:
           PYTHONUNBUFFERED: '1'
         run: |
-          uv run -m pytest -q
+          uv run pytest -q
