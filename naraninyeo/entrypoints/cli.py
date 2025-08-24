@@ -9,10 +9,11 @@ from zoneinfo import ZoneInfo
 
 from dishka import AsyncContainer, make_async_container
 
-from naraninyeo.di import MainProvider, TestProvider
+from naraninyeo.di import MainProvider
 from naraninyeo.domain.application.new_message_handler import NewMessageHandler
 from naraninyeo.domain.model.message import Author, Channel, Message, MessageContent
 from naraninyeo.infrastructure.settings import Settings
+from naraninyeo.tests.conftest import TestProvider
 
 
 class LocalClient:

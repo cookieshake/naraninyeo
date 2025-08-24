@@ -1,0 +1,157 @@
+name: CI (develop PR)
+
+on:
+  pull_request:
+    branches: [ "develop" ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  lint-type-and-test:
+    runs-on: ubuntu-latest
+    env:
+      TESTCONTAINERS_RYUK_DISABLED: "false"
+      TESTCONTAINERS_CHECKS_DISABLE: "false"
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Verify Docker is ready
+        run: |
+          docker --version
+          docker info
+
+      - name: Install dependencies (dev)
+        run: |
+          uv sync --group dev
+
+      - name: Ruff lint
+        id: ruff-lint
+        continue-on-error: true
+        run: |
+          echo "🔍 Running Ruff lint check..."
+          uvx ruff check --output-format=github . > ruff-lint-output.txt 2>&1 || echo "ruff_lint_failed=true" >> $GITHUB_OUTPUT
+          echo "ruff_lint_output<<EOF" >> $GITHUB_OUTPUT
+          cat ruff-lint-output.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Ruff format check
+        id: ruff-format
+        continue-on-error: true
+        run: |
+          echo "🎨 Running Ruff format check..."
+          uvx ruff format --check . > ruff-format-output.txt 2>&1 || echo "ruff_format_failed=true" >> $GITHUB_OUTPUT
+          echo "ruff_format_output<<EOF" >> $GITHUB_OUTPUT
+          cat ruff-format-output.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Set up Node.js for Pyright
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Pyright
+        run: |
+          npm install -g pyright@latest
+
+      - name: Pyright type check
+        id: pyright
+        continue-on-error: true
+        run: |
+          echo "🔎 Running Pyright type check..."
+          uv run pyright > pyright-output.txt 2>&1 || echo "pyright_failed=true" >> $GITHUB_OUTPUT
+          echo "pyright_output<<EOF" >> $GITHUB_OUTPUT
+          cat pyright-output.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Run tests (pytest)
+        id: pytest
+        continue-on-error: true
+        env:
+          PYTHONUNBUFFERED: '1'
+        run: |
+          echo "🧪 Running pytest..."
+          uv run pytest -v --tb=short > pytest-output.txt 2>&1 || echo "pytest_failed=true" >> $GITHUB_OUTPUT
+          echo "pytest_output<<EOF" >> $GITHUB_OUTPUT
+          cat pytest-output.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create PR comment
+        uses: peter-evans/create-or-update-comment@v4
+        if: always()
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## 🔍 CI Results
+            
+            **Commit:** `${{ github.event.pull_request.head.sha }}`
+            
+            ### 📋 Summary
+            | Check | Status |
+            |-------|--------|
+            | Ruff Lint | ${{ steps.ruff-lint.outputs.ruff_lint_failed == 'true' && '❌ Failed' || '✅ Passed' }} |
+            | Ruff Format | ${{ steps.ruff-format.outputs.ruff_format_failed == 'true' && '❌ Failed' || '✅ Passed' }} |
+            | Pyright Type Check | ${{ steps.pyright.outputs.pyright_failed == 'true' && '❌ Failed' || '✅ Passed' }} |
+            | Pytest | ${{ steps.pytest.outputs.pytest_failed == 'true' && '❌ Failed' || '✅ Passed' }} |
+            
+            <details>
+            <summary>🔍 Ruff Lint Results</summary>
+            
+            ```
+            ${{ steps.ruff-lint.outputs.ruff_lint_output }}
+            ```
+            </details>
+            
+            <details>
+            <summary>🎨 Ruff Format Results</summary>
+            
+            ```
+            ${{ steps.ruff-format.outputs.ruff_format_output }}
+            ```
+            </details>
+            
+            <details>
+            <summary>🔎 Pyright Type Check Results</summary>
+            
+            ```
+            ${{ steps.pyright.outputs.pyright_output }}
+            ```
+            </details>
+            
+            <details>
+            <summary>🧪 Pytest Results</summary>
+            
+            ```
+            ${{ steps.pytest.outputs.pytest_output }}
+            ```
+            </details>
+            
+            ---
+            *Workflow job: [${{ github.job }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ github.job }})*
+
+      - name: Check if any step failed
+        if: always()
+        run: |
+          if [[ "${{ steps.ruff-lint.outputs.ruff_lint_failed }}" == "true" || \
+                "${{ steps.ruff-format.outputs.ruff_format_failed }}" == "true" || \
+                "${{ steps.pyright.outputs.pyright_failed }}" == "true" || \
+                "${{ steps.pytest.outputs.pytest_failed }}" == "true" ]]; then
+            echo "❌ One or more checks failed"
+            exit 1
+          else
+            echo "✅ All checks passed"
+          fi

@@ -50,8 +50,8 @@ class Crawler:
             soup = BeautifulSoup(html, "html.parser")
             # make http request to all iframes and insert html into original
             for iframe in soup.find_all("iframe"):
+                iframe_url: str = iframe.get("src")  # pyright: ignore[reportAttributeAccessIssue, reportAssignmentType]
                 try:
-                    iframe_url: str = iframe.get("src")  # pyright: ignore[reportAttributeAccessIssue, reportAssignmentType]
                     iframe_url = urljoin(url, iframe_url)
                     if iframe_url:
                         response = await client.get(iframe_url)
