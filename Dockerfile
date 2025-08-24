@@ -39,4 +39,4 @@ COPY main.py main.py
 # ENV OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
 
 # Run the application with OpenTelemetry instrumentation - using kafka consumer mode
-CMD ["uv", "run", "python", "main.py", "kafka"]
+CMD ["uv", "run", "--no-dev", "python", "main.py", "kafka"]
