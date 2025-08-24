@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 from typing import override
+from opentelemetry.trace import get_tracer
 
 from motor.motor_asyncio import AsyncIOMotorDatabase, AsyncIOMotorCollection
 from qdrant_client import AsyncQdrantClient, models as qmodels
@@ -25,6 +26,7 @@ class MongoQdrantMessageRepository(MessageRepository):
         self._text_embedder = text_embedder
 
     @override
+    @get_tracer(__name__).start_as_current_span("save message")
     async def save(self, message: Message) -> None:
         tasks = []
         tasks.append(self._collection.update_one(
@@ -51,6 +53,7 @@ class MongoQdrantMessageRepository(MessageRepository):
         await asyncio.gather(*tasks)
 
     @override
+    @get_tracer(__name__).start_as_current_span("load message")
     async def load(self, message_id: str) -> Message | None:
         document = await self._collection.find_one({"message_id": message_id})
         if document:
@@ -58,6 +61,7 @@ class MongoQdrantMessageRepository(MessageRepository):
         return None
 
     @override
+    @get_tracer(__name__).start_as_current_span("get closest message by timestamp")
     async def get_closest_by_timestamp(self, channel_id: str, timestamp: float) -> Message | None:
         document = await self._collection.find_one({
             "channel_id": channel_id,
@@ -68,6 +72,7 @@ class MongoQdrantMessageRepository(MessageRepository):
         return None
     
     @override
+    @get_tracer(__name__).start_as_current_span("get surrounding messages")
     async def get_surrounding_messages(self, message: Message, before: int = 5, after: int = 5) -> list[Message]:
         tasks = []
         if before > 0:
@@ -100,6 +105,7 @@ class MongoQdrantMessageRepository(MessageRepository):
         return messages
 
     @override
+    @get_tracer(__name__).start_as_current_span("search similar messages")
     async def search_similar_messages(self, channel_id: str, keyword: str, limit: int) -> list[Message]:
         result = await self._qdrant_client.query_points(
             collection_name=self._qdrant_collection,

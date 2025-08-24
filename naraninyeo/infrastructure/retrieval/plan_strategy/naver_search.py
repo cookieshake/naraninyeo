@@ -6,12 +6,11 @@ import re
 from textwrap import dedent
 from typing import List, Literal, Optional, override
 from urllib.parse import urljoin, urlparse
-import uuid
+from opentelemetry.trace import get_tracer
 from bs4 import BeautifulSoup
 import dateparser
 import httpx
 from markdownify import MarkdownConverter
-from opentelemetry._logs import get_logger
 import nanoid
 from pydantic import UUID4, BaseModel
 from pydantic_ai import Agent, NativeOutput
@@ -28,6 +27,7 @@ class Crawler:
     def __init__(self):
         self.markdown_converter = MarkdownConverter()
 
+    @get_tracer(__name__).start_as_current_span("get markdown from url")
     async def get_markdown_from_url(self, url: str) -> str:
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -73,6 +73,7 @@ class Extractor:
             ),
             # Structured output so we can know when content is irrelevant
             output_type=NativeOutput(ExtractionResult),
+            instrument=True,
             model_settings=OpenAIModelSettings(
                 timeout=5,
                 extra_body={
@@ -93,6 +94,7 @@ class Extractor:
             """).strip()
         )
     
+    @get_tracer(__name__).start_as_current_span("extract from markdown")
     async def extract(self, url: str, query: str) -> ExtractionResult:
         markdown = await self.crawler.get_markdown_from_url(url)
         if not markdown:
@@ -134,6 +136,7 @@ class NaverSearchClient:
         self.client_id = settings.NAVER_CLIENT_ID
         self.client_secret = settings.NAVER_CLIENT_SECRET
 
+    @get_tracer(__name__).start_as_current_span("search naver")
     async def search(self, query: str, api: Literal["news", "blog", "webkr", "doc"], limit: int = 5, sort: Literal["sim", "date"] = "sim") -> List[NaverSearchResult]:
         url = f"https://openapi.naver.com/v1/search/{api}.json"
         headers = {
@@ -177,6 +180,7 @@ class NaverSearchStrategy(PlanExecutorStrategy):
         self.crawler = Crawler()
         self.extractor = Extractor(settings=settings, crawler=self.crawler)
 
+    @get_tracer(__name__).start_as_current_span("execute naver search")
     async def execute(self, plan: RetrievalPlan, context: ReplyContext, collector: RetrievalResultCollector):
         match plan.search_type:
             case "naver_web":

@@ -2,6 +2,8 @@ import logging
 from textwrap import dedent
 from typing import List, override
 
+from opentelemetry.trace import get_tracer
+
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
 from pydantic_ai.providers.openrouter import OpenRouterProvider
@@ -13,6 +15,7 @@ from naraninyeo.infrastructure.settings import Settings
 
 class RetrievalPlannerAgent(RetrievalPlanner):
     @override
+    @get_tracer(__name__).start_as_current_span("plan retrieval")
     async def plan(self, context: ReplyContext) -> list[RetrievalPlan]:
         message = dedent(
         f"""

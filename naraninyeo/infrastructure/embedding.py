@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import override
+from opentelemetry.trace import get_tracer
 
 from naraninyeo.infrastructure.settings import Settings
 
@@ -16,6 +17,7 @@ class Qwen306TextEmbedder(TextEmbedder):
         self.model = "qwen3-embedding-0.6b"
 
     @override
+    @get_tracer(__name__).start_as_current_span("embed texts")
     async def embed(self, texts: list[str]) -> list[list[float]]:
         async with httpx.AsyncClient() as client:
             response = await client.post(

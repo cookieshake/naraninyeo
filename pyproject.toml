@@ -29,6 +29,8 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.36.0",
     "openinference-semantic-conventions>=0.1.21",
     "openinference-instrumentation-pydantic-ai>=0.1.4",
+    "opentelemetry-instrumentation-httpx>=0.57b0",
+    "opentelemetry-instrumentation-pymongo>=0.57b0",
 ]
 
 [project.scripts]
