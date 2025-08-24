@@ -49,6 +49,7 @@ class Crawler:
             response.raise_for_status()
             html = response.text
             soup = BeautifulSoup(html, "html.parser")
+
             # make http request to all iframes and insert html into original
             async def get_soup_from_iframe(iframe_url: str) -> BeautifulSoup:
                 async with httpx.AsyncClient() as client:
@@ -58,16 +59,15 @@ class Crawler:
                     return BeautifulSoup(iframe_html, "html.parser")
 
             iframes = soup.find_all("iframe")
-            iframe_links = [urljoin(url, iframe.get("src")) for iframe in iframes] # type: ignore
+            iframe_links = [urljoin(url, iframe.get("src")) for iframe in iframes]  # type: ignore
             iframe_htmls = await asyncio.gather(
-                *[get_soup_from_iframe(iframe_url) for iframe_url in iframe_links],
-                return_exceptions=True
+                *[get_soup_from_iframe(iframe_url) for iframe_url in iframe_links], return_exceptions=True
             )
             for iframe, iframe_html in zip(iframes, iframe_htmls, strict=False):
                 if isinstance(iframe_html, BeautifulSoup):
                     iframe.replace_with(iframe_html)
                 else:
-                    logging.warning(f"Failed to retrieve iframe {iframe.get('src')}: {iframe_html}") # type: ignore
+                    logging.warning(f"Failed to retrieve iframe {iframe.get('src')}: {iframe_html}")  # type: ignore
             tags_to_remove = ["a", "button"]
             for tag in tags_to_remove:
                 for element in soup.find_all(tag):
