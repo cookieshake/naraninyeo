@@ -1,5 +1,4 @@
 from abc import abstractmethod, ABC
-from typing import AsyncIterator, List, Optional
 
 from naraninyeo.domain.model.reply import ReplyContext
 from naraninyeo.domain.model.retrieval import RetrievalPlan, RetrievalResult
@@ -9,28 +8,24 @@ class RetrievalResultCollector(ABC):
     """Abstract interface to collect RetrievalResult items incrementally."""
 
     @abstractmethod
-    async def add(self, item: RetrievalResult) -> None:
-        ...
+    async def add(self, item: RetrievalResult) -> None: ...
 
     @abstractmethod
-    async def snapshot(self) -> list[RetrievalResult]:
-        ...
+    async def snapshot(self) -> list[RetrievalResult]: ...
 
 
 class RetrievalResultCollectorFactory(ABC):
     """Factory for creating a new RetrievalResultCollector per execution."""
 
     @abstractmethod
-    def create(self) -> RetrievalResultCollector:
-        ...
+    def create(self) -> RetrievalResultCollector: ...
 
 
 class PlanExecutorStrategy(ABC):
     """Strategy interface that can execute one plan type. Used by composite executors."""
 
     @abstractmethod
-    def supports(self, plan: RetrievalPlan) -> bool:
-        ...
+    def supports(self, plan: RetrievalPlan) -> bool: ...
 
     @abstractmethod
     async def execute(self, plan: RetrievalPlan, context: ReplyContext, collector: RetrievalResultCollector):
@@ -44,8 +39,7 @@ class PlanExecutorStrategy(ABC):
 
 class RetrievalPlanner(ABC):
     @abstractmethod
-    async def plan(self, context: ReplyContext) -> list[RetrievalPlan]:
-        ...
+    async def plan(self, context: ReplyContext) -> list[RetrievalPlan]: ...
 
 
 class RetrievalPlanExecutor(ABC):
@@ -61,10 +55,17 @@ class RetrievalPlanExecutor(ABC):
         ...
 
     @abstractmethod
-    async def execute(self, plans: list[RetrievalPlan], context: ReplyContext, collector: RetrievalResultCollector) -> None:
-        ...
+    async def execute(
+        self, plans: list[RetrievalPlan], context: ReplyContext, collector: RetrievalResultCollector
+    ) -> None: ...
 
     @abstractmethod
-    async def execute_with_timeout(self, plans: list[RetrievalPlan], context: ReplyContext, timeout_seconds: float, collector: RetrievalResultCollector) -> None:
+    async def execute_with_timeout(
+        self,
+        plans: list[RetrievalPlan],
+        context: ReplyContext,
+        timeout_seconds: float,
+        collector: RetrievalResultCollector,
+    ) -> None:
         """Execute plans but return partial results if a timeout occurs."""
         ...

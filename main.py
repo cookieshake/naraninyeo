@@ -23,6 +23,7 @@ from openinference.instrumentation.pydantic_ai import OpenInferenceSpanProcessor
 ENABLE_OTLP_EXPORTER = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip() != ""
 
 if __name__ == "__main__":
+
     def pretty_span(span: ReadableSpan) -> str:
         name = span.name
         status = span.status
@@ -45,8 +46,10 @@ if __name__ == "__main__":
         return " ".join(parts) + "\n"
 
     def tiny_log(record: LogRecord) -> str:
-        level = record.severity_text if record.severity_text else (
-            str(record.severity_number) if record.severity_number is not None else None
+        level = (
+            record.severity_text
+            if record.severity_text
+            else (str(record.severity_number) if record.severity_number is not None else None)
         )
         body = record.body
         if not isinstance(body, str):
@@ -74,9 +77,7 @@ if __name__ == "__main__":
         parts.append(body)
         return " ".join(parts) + "\n"
 
-    resource = Resource.create({
-        ResourceAttributes.PROJECT_NAME: "naraninyeo"
-    })
+    resource = Resource.create({ResourceAttributes.PROJECT_NAME: "naraninyeo"})
 
     # TRACES
     tracer_provider = TracerProvider(resource=resource)
@@ -114,9 +115,11 @@ if __name__ == "__main__":
     match arg:
         case "cli":
             from naraninyeo.entrypoints.cli import main
+
             asyncio.run(main())
         case "kafka":
             from naraninyeo.entrypoints.kafka import main
+
             asyncio.run(main())
         case _:
             raise ValueError(f"Unknown entrypoint: {arg}. Use 'cli' or 'kafka'.")

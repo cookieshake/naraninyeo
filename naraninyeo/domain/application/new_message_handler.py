@@ -18,7 +18,7 @@ class NewMessageHandler:
         self,
         message_use_case: MessageUseCase,
         retrieval_use_case: RetrievalUseCase,
-        reply_use_case: ReplyUseCase
+        reply_use_case: ReplyUseCase,
     ):
         self.message_use_case = message_use_case
         self.retrieval_use_case = retrieval_use_case
@@ -39,13 +39,12 @@ class NewMessageHandler:
     async def _generate_reply(self, message: Message) -> AsyncIterator[Message]:
         reply_context = ReplyContext(
             environment=EnvironmentalContext(
-                timestamp=datetime.now(tz=ZoneInfo("Asia/Seoul")),
-                location="Seoul, Korea"
+                timestamp=datetime.now(tz=ZoneInfo("Asia/Seoul")), location="Seoul, Korea"
             ),
             last_message=message,
             latest_history=await self.message_use_case.get_recent_messages(message, limit=7),
             knowledge_references=[],
-            processing_logs=[]
+            processing_logs=[],
         )
 
         plans = await self.retrieval_use_case.plan_retrieval(reply_context)
@@ -54,7 +53,7 @@ class NewMessageHandler:
             KnowledgeReference(
                 content=result.content,
                 source_name=result.source_name,
-                timestamp=result.source_timestamp
+                timestamp=result.source_timestamp,
             )
             for result in retrieval_results
             if result.status == RetrievalStatus.SUCCESS

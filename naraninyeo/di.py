@@ -2,11 +2,12 @@
 Dishka 기반 의존성 주입 컨테이너 설정
 - 간소화된 Provide 사용 방식 적용
 """
+
 import time
-from typing import Iterator, Optional, Iterable
+from typing import Iterator
 from collections.abc import AsyncIterator
 
-from dishka import Provider, Scope, make_async_container, provide, AnyOf
+from dishka import Provider, Scope, make_async_container, provide
 import httpx
 from motor.motor_asyncio import AsyncIOMotorDatabase, AsyncIOMotorClient
 from qdrant_client import AsyncQdrantClient
@@ -18,7 +19,11 @@ from testcontainers.qdrant import QdrantContainer
 
 from naraninyeo.domain.gateway.message import MessageRepository
 from naraninyeo.domain.gateway.reply import ReplyGenerator
-from naraninyeo.domain.gateway.retrieval import RetrievalPlanner, RetrievalPlanExecutor, RetrievalResultCollectorFactory
+from naraninyeo.domain.gateway.retrieval import (
+    RetrievalPlanner,
+    RetrievalPlanExecutor,
+    RetrievalResultCollectorFactory,
+)
 from naraninyeo.domain.usecase.message import MessageUseCase
 from naraninyeo.domain.usecase.reply import ReplyUseCase
 from naraninyeo.domain.usecase.retrieval import RetrievalUseCase
@@ -37,11 +42,11 @@ from naraninyeo.infrastructure.retrieval.result import InMemoryRetrievalResultCo
 
 class MainProvider(Provider):
     scope = Scope.APP
-    
+
     @provide
     async def settings(self) -> Settings:
         return Settings()
-    
+
     @provide
     async def mongo_database(self, settings: Settings) -> AsyncIterator[AsyncIOMotorDatabase]:
         client = AsyncIOMotorClient(settings.MONGODB_URL, tz_aware=True)
@@ -60,17 +65,15 @@ class MainProvider(Provider):
     reply_generator = provide(source=ReplyGeneratorAgent, provides=ReplyGenerator)
     retrieval_planner = provide(source=RetrievalPlannerAgent, provides=RetrievalPlanner)
     result_collector_factory = provide(
-        source=InMemoryRetrievalResultCollectorFactory,
-        provides=RetrievalResultCollectorFactory
+        source=InMemoryRetrievalResultCollectorFactory, provides=RetrievalResultCollectorFactory
     )
 
     naver_search_strategy = provide(source=NaverSearchStrategy, provides=NaverSearchStrategy)
     chat_history_strategy = provide(source=ChatHistoryStrategy, provides=ChatHistoryStrategy)
+
     @provide
     async def retrieval_plan_executor(
-        self,
-        naver_search_strategy: NaverSearchStrategy,
-        chat_history_strategy: ChatHistoryStrategy
+        self, naver_search_strategy: NaverSearchStrategy, chat_history_strategy: ChatHistoryStrategy
     ) -> RetrievalPlanExecutor:
         executor = LocalPlanExecutor()
         executor.register_strategy(naver_search_strategy)
@@ -83,30 +86,33 @@ class MainProvider(Provider):
 
     new_message_handler = provide(source=NewMessageHandler, provides=NewMessageHandler)
 
+
 class LlamaCppContainer(DockerContainer):
     """LlamaCpp 테스트 컨테이너를 위한 클래스"""
+
     def __init__(self):
         super().__init__(
             image="ghcr.io/ggml-org/llama.cpp:server",
-            env={
-                "LLAMA_CACHE": "/tmp/llamacpp/cache"
-            },
-            command=" ".join([
-                "--host 0.0.0.0",
-                "--port 8080",
-                "--parallel 5",
-                "--hf-repo Qwen/Qwen3-Embedding-0.6B-GGUF:Q8_0",
-                "--embedding",
-                "--pooling last",
-                "--ubatch-size 8192",
-                "--verbose-prompt"
-            ])
+            env={"LLAMA_CACHE": "/tmp/llamacpp/cache"},
+            command=" ".join(
+                [
+                    "--host 0.0.0.0",
+                    "--port 8080",
+                    "--parallel 5",
+                    "--hf-repo Qwen/Qwen3-Embedding-0.6B-GGUF:Q8_0",
+                    "--embedding",
+                    "--pooling last",
+                    "--ubatch-size 8192",
+                    "--verbose-prompt",
+                ]
+            ),
         )
         self.with_exposed_ports(8080)
         self.with_volume_mapping("/tmp/llamacpp/cache", "/tmp/llamacpp/cache", mode="rw")
 
     def get_connection_url(self) -> str:
         return f"http://{self.get_container_host_ip()}:{self.get_exposed_port(8080)}"
+
 
 class TestProvider(Provider):
     scope = Scope.APP
@@ -125,7 +131,9 @@ class TestProvider(Provider):
         qdrant = QdrantContainer(image="qdrant/qdrant:v1.15.1")
         qdrant.start()
         client = qdrant.get_client()
-        client.create_collection("naraninyeo-messages", vectors_config=VectorParams(size=1024, distance=Distance.COSINE))
+        client.create_collection(
+            "naraninyeo-messages", vectors_config=VectorParams(size=1024, distance=Distance.COSINE)
+        )
         yield qdrant
         qdrant.stop()
 
@@ -151,17 +159,18 @@ class TestProvider(Provider):
         self,
         mongodb_container: MongoDbContainer,
         llamacpp_container: LlamaCppContainer,
-        qdrant_container: QdrantContainer
+        qdrant_container: QdrantContainer,
     ) -> Settings:
         settings = Settings()
-        settings = settings.model_copy(update={
-            "MONGODB_URL": mongodb_container.get_connection_url(),
-            "LLAMA_CPP_EMBEDDINGS_URL": llamacpp_container.get_connection_url(),
-            "QDRANT_URL": f"http://{qdrant_container.rest_host_address}"
-        })
+        settings = settings.model_copy(
+            update={
+                "MONGODB_URL": mongodb_container.get_connection_url(),
+                "LLAMA_CPP_EMBEDDINGS_URL": llamacpp_container.get_connection_url(),
+                "QDRANT_URL": f"http://{qdrant_container.rest_host_address}",
+            }
+        )
 
         return settings
 
-container = make_async_container(
-    MainProvider()
-)
+
+container = make_async_container(MainProvider())

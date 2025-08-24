@@ -1,4 +1,3 @@
-
 import asyncio
 
 from opentelemetry.trace import get_tracer
@@ -6,7 +5,13 @@ import nanoid
 from naraninyeo.domain.gateway.message import MessageRepository
 from naraninyeo.domain.gateway.retrieval import PlanExecutorStrategy, RetrievalResultCollector
 from naraninyeo.domain.model.reply import ReplyContext
-from naraninyeo.domain.model.retrieval import ChatHistoryRef, RetrievalPlan, RetrievalResult, RetrievalStatus, RetrievalStatusReason
+from naraninyeo.domain.model.retrieval import (
+    ChatHistoryRef,
+    RetrievalPlan,
+    RetrievalResult,
+    RetrievalStatus,
+    RetrievalStatusReason,
+)
 
 
 class ChatHistoryStrategy(PlanExecutorStrategy):
@@ -24,8 +29,7 @@ class ChatHistoryStrategy(PlanExecutorStrategy):
             limit=3,
         )
         chunks = [
-            self.message_repository.get_surrounding_messages(message=message, before=3, after=3)
-            for message in messages
+            self.message_repository.get_surrounding_messages(message=message, before=3, after=3) for message in messages
         ]
         for task in asyncio.as_completed(chunks):
             chunk = await task
@@ -41,6 +45,6 @@ class ChatHistoryStrategy(PlanExecutorStrategy):
                     status=RetrievalStatus.SUCCESS,
                     status_reason=RetrievalStatusReason.SUCCESS,
                     source_name=f"chat_history_{chunk[-1].timestamp_str}",
-                    source_timestamp=chunk[-1].timestamp if chunk else None
+                    source_timestamp=chunk[-1].timestamp if chunk else None,
                 )
             )

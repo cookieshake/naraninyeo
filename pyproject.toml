@@ -56,3 +56,13 @@ asyncio_mode = "auto"
 addopts = [
     "--import-mode=importlib",
 ]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+
+[tool.ruff.format]
+docstring-code-format = false
+docstring-code-line-length = 50

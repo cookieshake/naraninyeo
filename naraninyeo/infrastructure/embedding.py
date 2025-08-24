@@ -6,10 +6,11 @@ from naraninyeo.infrastructure.settings import Settings
 
 import httpx
 
+
 class TextEmbedder(ABC):
     @abstractmethod
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        ...
+    async def embed(self, texts: list[str]) -> list[list[float]]: ...
+
 
 class Qwen306TextEmbedder(TextEmbedder):
     def __init__(self, settings: Settings):
@@ -23,7 +24,7 @@ class Qwen306TextEmbedder(TextEmbedder):
             response = await client.post(
                 f"{self.api_url}/v1/embeddings",
                 json={"model": self.model, "input": texts},
-                timeout=60
+                timeout=60,
             )
             response.raise_for_status()
             data = response.json().get("data", [])

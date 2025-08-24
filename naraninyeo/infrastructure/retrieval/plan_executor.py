@@ -3,14 +3,16 @@ import logging
 from typing import List, override
 
 from pydantic import BaseModel
-from naraninyeo.domain.gateway.retrieval import PlanExecutorStrategy, RetrievalPlanExecutor, RetrievalResultCollector
+from naraninyeo.domain.gateway.retrieval import (
+    PlanExecutorStrategy,
+    RetrievalPlanExecutor,
+    RetrievalResultCollector,
+)
 from naraninyeo.domain.model.reply import ReplyContext
 from naraninyeo.domain.model.retrieval import RetrievalPlan
 
 
 class LocalPlanExecutor(RetrievalPlanExecutor):
-    # TODO: This _strategies attribute is currently a class attribute, meaning all instances share the same list.
-    # It should be initialized in __init__ to prevent unintended side effects if multiple LocalPlanExecutor instances are created. (Severity: high)
     _strategies: List[PlanExecutorStrategy] = []
 
     @property
@@ -21,7 +23,9 @@ class LocalPlanExecutor(RetrievalPlanExecutor):
         self._strategies.append(strategy)
 
     @override
-    async def execute(self, plans: list[RetrievalPlan], context: ReplyContext, collector: RetrievalResultCollector) -> None:
+    async def execute(
+        self, plans: list[RetrievalPlan], context: ReplyContext, collector: RetrievalResultCollector
+    ) -> None:
         tasks = []
         try:
             for plan in plans:
@@ -29,9 +33,7 @@ class LocalPlanExecutor(RetrievalPlanExecutor):
                 for strategy in self.strategies:
                     if strategy.supports(plan):
                         matched = True
-                        tasks.append(
-                            asyncio.create_task(strategy.execute(plan, context, collector))
-                        )
+                        tasks.append(asyncio.create_task(strategy.execute(plan, context, collector)))
                         break
                 if not matched:
                     logging.warning(
@@ -45,7 +47,13 @@ class LocalPlanExecutor(RetrievalPlanExecutor):
             logging.info("Retrieval tasks were cancelled, so some results may be missing.")
 
     @override
-    async def execute_with_timeout(self, plans: list[RetrievalPlan], context: ReplyContext, timeout_seconds: float, collector: RetrievalResultCollector) -> None:
+    async def execute_with_timeout(
+        self,
+        plans: list[RetrievalPlan],
+        context: ReplyContext,
+        timeout_seconds: float,
+        collector: RetrievalResultCollector,
+    ) -> None:
         """Execute plans with a timeout; return partial results if time runs out."""
         try:
             await asyncio.wait_for(self.execute(plans, context, collector), timeout=timeout_seconds)

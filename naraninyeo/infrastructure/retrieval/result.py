@@ -1,9 +1,9 @@
-import asyncio
 from naraninyeo.domain.gateway.retrieval import (
     RetrievalResultCollector,
-    RetrievalResultCollectorFactory
+    RetrievalResultCollectorFactory,
 )
 from naraninyeo.domain.model.retrieval import RetrievalResult
+
 
 class InMemoryRetrievalResultCollector(RetrievalResultCollector):
     def __init__(self):
@@ -14,6 +14,7 @@ class InMemoryRetrievalResultCollector(RetrievalResultCollector):
 
     async def snapshot(self) -> list[RetrievalResult]:
         return list(self._results.values())
+
 
 class InMemoryRetrievalResultCollectorFactory(RetrievalResultCollectorFactory):
     def create(self) -> RetrievalResultCollector:

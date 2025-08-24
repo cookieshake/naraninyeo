@@ -4,7 +4,7 @@ from typing import AsyncIterator
 from naraninyeo.domain.model.message import Message
 from naraninyeo.domain.model.reply import ReplyContext
 
+
 class ReplyGenerator(ABC):
     @abstractmethod
-    async def generate_reply(self, context: ReplyContext) -> AsyncIterator[Message]:
-        ...
+    async def generate_reply(self, context: ReplyContext) -> AsyncIterator[Message]: ...

@@ -1,18 +1,19 @@
-import asyncio
-
-
-from naraninyeo.domain.model.message import Message
 from naraninyeo.domain.model.reply import ReplyContext
 from naraninyeo.domain.variable import Variables
-from naraninyeo.domain.gateway.retrieval import RetrievalPlanExecutor, RetrievalPlanner, RetrievalResultCollectorFactory
-from naraninyeo.domain.model.retrieval import RetrievalPlan, RetrievalResult, RetrievalStatus
+from naraninyeo.domain.gateway.retrieval import (
+    RetrievalPlanExecutor,
+    RetrievalPlanner,
+    RetrievalResultCollectorFactory,
+)
+from naraninyeo.domain.model.retrieval import RetrievalPlan, RetrievalResult
+
 
 class RetrievalUseCase:
     def __init__(
         self,
         planner: RetrievalPlanner,
         executor: RetrievalPlanExecutor,
-        collector_factory: RetrievalResultCollectorFactory
+        collector_factory: RetrievalResultCollectorFactory,
     ):
         self.planner = planner
         self.executor = executor

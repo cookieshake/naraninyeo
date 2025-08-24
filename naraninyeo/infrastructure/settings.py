@@ -1,5 +1,8 @@
-import dotenv; dotenv.load_dotenv()
+import dotenv
 from pydantic_settings import BaseSettings
+
+dotenv.load_dotenv()
+
 
 class Settings(BaseSettings):
     # MongoDB settings
@@ -29,7 +32,7 @@ class Settings(BaseSettings):
     DEFAULT_SEARCH_LIMIT: int = 3
     TIMEZONE: str = "Asia/Seoul"
     LOCATION: str = "Seoul, South Korea"
-    
+
     # 봇 정보
     BOT_AUTHOR_ID: str = "bot-naraninyeo"
     BOT_AUTHOR_NAME: str = "나란잉여"

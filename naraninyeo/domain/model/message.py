@@ -4,9 +4,11 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+
 class Author(BaseModel):
     author_id: str
     author_name: str
+
 
 class Attachment(BaseModel):
     attachment_id: str
@@ -14,13 +16,16 @@ class Attachment(BaseModel):
     content_type: Optional[str] = None
     content_length: Optional[int] = None
 
+
 class MessageContent(BaseModel):
     text: str
     attachments: list[Attachment] = Field(default_factory=list)
 
+
 class Channel(BaseModel):
     channel_id: str
     channel_name: str
+
 
 class Message(BaseModel):
     message_id: str

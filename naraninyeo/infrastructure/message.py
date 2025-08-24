@@ -3,7 +3,7 @@ import hashlib
 from typing import override
 from opentelemetry.trace import get_tracer
 
-from motor.motor_asyncio import AsyncIOMotorDatabase, AsyncIOMotorCollection
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from qdrant_client import AsyncQdrantClient, models as qmodels
 
 from naraninyeo.domain.gateway.message import MessageRepository
@@ -11,13 +11,12 @@ from naraninyeo.domain.model.message import Message
 from naraninyeo.infrastructure.embedding import TextEmbedder
 
 
-
 class MongoQdrantMessageRepository(MessageRepository):
     def __init__(
         self,
         mongodb: AsyncIOMotorDatabase,
         qdrant_client: AsyncQdrantClient,
-        text_embedder: TextEmbedder
+        text_embedder: TextEmbedder,
     ):
         self._db = mongodb
         self._collection = mongodb["messages"]
@@ -29,27 +28,27 @@ class MongoQdrantMessageRepository(MessageRepository):
     @get_tracer(__name__).start_as_current_span("save message")
     async def save(self, message: Message) -> None:
         tasks = []
-        tasks.append(self._collection.update_one(
-            {"message_id": message.message_id},
-            {"$set": message.model_dump()},
-            upsert=True
-        ))
-        tasks.append(self._qdrant_client.upsert(
-            collection_name=self._qdrant_collection,
-            points=[
-                qmodels.PointStruct(
-                    id=self._str_to_64bit(message.message_id),
-                    vector=(await self._text_embedder.embed([message.content.text]))[0],
-                    payload={
-                        "message_id": message.message_id,
-                        "room": message.channel.channel_id,
-                        "text": message.content.text,
-                        "timestamp": message.timestamp.isoformat(),
-                        "author": message.author.author_name,
-                    }
-                )
-            ]
-        ))
+        tasks.append(
+            self._collection.update_one({"message_id": message.message_id}, {"$set": message.model_dump()}, upsert=True)
+        )
+        tasks.append(
+            self._qdrant_client.upsert(
+                collection_name=self._qdrant_collection,
+                points=[
+                    qmodels.PointStruct(
+                        id=self._str_to_64bit(message.message_id),
+                        vector=(await self._text_embedder.embed([message.content.text]))[0],
+                        payload={
+                            "message_id": message.message_id,
+                            "room": message.channel.channel_id,
+                            "text": message.content.text,
+                            "timestamp": message.timestamp.isoformat(),
+                            "author": message.author.author_name,
+                        },
+                    )
+                ],
+            )
+        )
         await asyncio.gather(*tasks)
 
     @override
@@ -63,34 +62,37 @@ class MongoQdrantMessageRepository(MessageRepository):
     @override
     @get_tracer(__name__).start_as_current_span("get closest message by timestamp")
     async def get_closest_by_timestamp(self, channel_id: str, timestamp: float) -> Message | None:
-        document = await self._collection.find_one({
-            "channel_id": channel_id,
-            "timestamp": {"$lte": timestamp}
-        }, sort=[("timestamp", -1)])
+        document = await self._collection.find_one(
+            {"channel_id": channel_id, "timestamp": {"$lte": timestamp}}, sort=[("timestamp", -1)]
+        )
         if document:
             return Message.model_validate(document)
         return None
-    
+
     @override
     @get_tracer(__name__).start_as_current_span("get surrounding messages")
     async def get_surrounding_messages(self, message: Message, before: int = 5, after: int = 5) -> list[Message]:
         tasks = []
         if before > 0:
             tasks.append(
-                self._collection.find({
-                    "channel.channel_id": message.channel.channel_id,
-                    "message_id": {"$lt": message.message_id}
-                })
+                self._collection.find(
+                    {
+                        "channel.channel_id": message.channel.channel_id,
+                        "message_id": {"$lt": message.message_id},
+                    }
+                )
                 .sort("timestamp", -1)
                 .limit(before)
                 .to_list(length=before)
             )
         if after > 0:
             tasks.append(
-                self._collection.find({
-                    "channel.channel_id": message.channel.channel_id,
-                    "message_id": {"$gt": message.message_id}
-                })
+                self._collection.find(
+                    {
+                        "channel.channel_id": message.channel.channel_id,
+                        "message_id": {"$gt": message.message_id},
+                    }
+                )
                 .sort("timestamp", 1)
                 .limit(after)
                 .to_list(length=after)
@@ -111,15 +113,13 @@ class MongoQdrantMessageRepository(MessageRepository):
             collection_name=self._qdrant_collection,
             query=(await self._text_embedder.embed([keyword]))[0],
             query_filter=qmodels.Filter(
-                must=[
-                    qmodels.FieldCondition(key="channel_id", match=qmodels.MatchValue(value=channel_id))
-                ]
+                must=[qmodels.FieldCondition(key="channel_id", match=qmodels.MatchValue(value=channel_id))]
             ),
-            limit=limit
+            limit=limit,
         )
         message_ids = [point.payload["message_id"] for point in result.points if point.payload is not None]
         loaded_messages = await asyncio.gather(*[self.load(message_id) for message_id in message_ids])
         return [msg for msg in loaded_messages if msg is not None]
-    
+
     def _str_to_64bit(self, s: str) -> int:
-        return int(hashlib.sha256(s.encode('utf-8')).hexdigest()[:16], 16)
+        return int(hashlib.sha256(s.encode("utf-8")).hexdigest()[:16], 16)

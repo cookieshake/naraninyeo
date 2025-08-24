@@ -18,7 +18,7 @@ class RetrievalPlannerAgent(RetrievalPlanner):
     @get_tracer(__name__).start_as_current_span("plan retrieval")
     async def plan(self, context: ReplyContext) -> list[RetrievalPlan]:
         message = dedent(
-        f"""
+            f"""
         직전 대화 기록:
         ---
         {"\n".join([msg.text_repr for msg in context.latest_history])}
@@ -27,8 +27,10 @@ class RetrievalPlannerAgent(RetrievalPlanner):
         새로 들어온 메시지:
         {context.last_message.text_repr}
 
-        위 메시지에 답하기 위해 어떤 종류의 검색을 어떤 검색어로 해야할까요? 참고할만한 예전 대화 기록을 활용하여 더 정확한 검색 계획을 수립하세요.
-        """).strip()
+        위 메시지에 답하기 위해 어떤 종류의 검색을 어떤 검색어로 해야할까요?
+        참고할만한 예전 대화 기록을 활용하여 더 정확한 검색 계획을 수립하세요.
+        """
+        ).strip()
 
         result = await self.agent.run(message)
         plans = result.output
@@ -36,26 +38,16 @@ class RetrievalPlannerAgent(RetrievalPlanner):
         logging.debug(f"Retrieval plans generated: {[p.model_dump() for p in plans]}")
         return list(plans)
 
-
     def __init__(self, settings: Settings):
         self.settings = settings
         self.agent = Agent(
             model=OpenAIModel(
                 model_name="anthropic/claude-sonnet-4",
-                provider=OpenRouterProvider(
-                    api_key=settings.OPENROUTER_API_KEY
-                )
+                provider=OpenRouterProvider(api_key=settings.OPENROUTER_API_KEY),
             ),
             output_type=List[RetrievalPlan],
             instrument=True,
-            model_settings=OpenAIModelSettings(
-                timeout=20,
-                extra_body={
-                    "reasoning": {
-                        "effort": "minimal"
-                    }
-                }
-            ),
+            model_settings=OpenAIModelSettings(timeout=20, extra_body={"reasoning": {"effort": "minimal"}}),
             system_prompt=dedent(
                 """
                 당신은 사용자의 질문에 답하기 위해 어떤 정보를 검색해야 할지 계획하는 AI입니다.
@@ -78,5 +70,5 @@ class RetrievalPlannerAgent(RetrievalPlanner):
                 검색이 필요하지 않은 경우, 빈 배열을 반환하세요.
                 검색이 필요한 경우 되도록이면 다양한 검색 유형을 포함하여 계획을 세우세요.
                 """.strip()
-            )
+            ),
         )

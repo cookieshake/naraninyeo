@@ -1,4 +1,3 @@
-
 from typing import AsyncIterator
 from naraninyeo.domain.gateway.reply import ReplyGenerator
 from naraninyeo.domain.model.message import Message
@@ -10,5 +9,5 @@ class ReplyUseCase:
         self.reply_generator = reply_generator
 
     async def create_replies(self, context: ReplyContext) -> AsyncIterator[Message]:
-        async for reply in self.reply_generator.generate_reply(context): # type: ignore
+        async for reply in self.reply_generator.generate_reply(context):  # type: ignore
             yield reply
