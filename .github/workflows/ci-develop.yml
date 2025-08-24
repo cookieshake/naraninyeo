@@ -13,6 +13,7 @@ jobs:
     env:
       TESTCONTAINERS_RYUK_DISABLED: "false"
       TESTCONTAINERS_CHECKS_DISABLE: "false"
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
 
     steps:
       - name: Checkout repository
