@@ -77,4 +77,5 @@ class MainProvider(Provider):
 
     new_message_handler = provide(source=NewMessageHandler, provides=NewMessageHandler)
 
+
 container = make_async_container(MainProvider())
