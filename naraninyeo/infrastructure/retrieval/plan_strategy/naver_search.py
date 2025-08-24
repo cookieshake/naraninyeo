@@ -60,8 +60,10 @@ class Crawler:
                         iframe.replace_with(BeautifulSoup(iframe_html, "html.parser"))
                 except Exception as e:
                     logging.warning(f"Failed to retrieve iframe {iframe_url}: {e}")
-            for a in soup.find_all("a"):
-                a.decompose()
+            tags_to_remove = ["a", "button"]
+            for tag in tags_to_remove:
+                for element in soup.find_all(tag):
+                    element.decompose()
             return self.markdown_converter.convert_soup(soup)
 
 
