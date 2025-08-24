@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import AsyncIterator
 from zoneinfo import ZoneInfo
 
-import logfire
+from opentelemetry.trace import get_tracer
 
 from naraninyeo.domain.model.message import Message
 from naraninyeo.domain.model.reply import EnvironmentalContext, KnowledgeReference, ReplyContext
@@ -24,17 +24,17 @@ class NewMessageHandler:
         self.retrieval_use_case = retrieval_use_case
         self.reply_use_case = reply_use_case
 
+    @get_tracer(__name__).start_as_current_span("handle new message")
     async def handle(self, message: Message) -> AsyncIterator[Message]:
-        with logfire.span("handle new message"):
-            save_new_message_task = asyncio.create_task(self.message_use_case.save_message(message))
-            try:
-                if await self.message_use_case.reply_needed(message):
-                    with logfire.span("generate reply"):
-                        async for reply in self._generate_reply(message):
-                            yield reply
-                            await self.message_use_case.save_message(reply)
-            finally:
-                await save_new_message_task
+        save_new_message_task = asyncio.create_task(self.message_use_case.save_message(message))
+        try:
+            if await self.message_use_case.reply_needed(message):
+                with get_tracer(__name__).start_as_current_span("generate reply"):
+                    async for reply in self._generate_reply(message):
+                        yield reply
+                        await self.message_use_case.save_message(reply)
+        finally:
+            await save_new_message_task
 
     async def _generate_reply(self, message: Message) -> AsyncIterator[Message]:
         reply_context = ReplyContext(

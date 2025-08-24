@@ -1,7 +1,7 @@
 import asyncio
+import logging
 from typing import List, override
 
-import logfire
 from pydantic import BaseModel
 from naraninyeo.domain.gateway.retrieval import PlanExecutorStrategy, RetrievalPlanExecutor, RetrievalResultCollector
 from naraninyeo.domain.model.reply import ReplyContext
@@ -34,16 +34,15 @@ class LocalPlanExecutor(RetrievalPlanExecutor):
                         )
                         break
                 if not matched:
-                    logfire.warn(
-                        "No executor found for plan: {plan}",
-                        plan=plan.model_dump() if isinstance(plan, BaseModel) else str(plan),
+                    logging.warning(
+                        f"No executor found for plan: {plan.model_dump() if isinstance(plan, BaseModel) else str(plan)}"
                     )
             results = await asyncio.gather(*tasks, return_exceptions=True)
             for result in results:
                 if isinstance(result, Exception):
-                    logfire.info("A retrieval strategy failed", exc_info=result)
+                    logging.info("A retrieval strategy failed", exc_info=result)
         except asyncio.CancelledError:
-            logfire.info("Retrieval tasks were cancelled, so some results may be missing.")
+            logging.info("Retrieval tasks were cancelled, so some results may be missing.")
 
     @override
     async def execute_with_timeout(self, plans: list[RetrievalPlan], context: ReplyContext, timeout_seconds: float, collector: RetrievalResultCollector) -> None:
@@ -51,4 +50,4 @@ class LocalPlanExecutor(RetrievalPlanExecutor):
         try:
             await asyncio.wait_for(self.execute(plans, context, collector), timeout=timeout_seconds)
         except asyncio.TimeoutError:
-            logfire.info("Retrieval execution timed out; returning partial results")
+            logging.info("Retrieval execution timed out; returning partial results")

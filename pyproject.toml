@@ -21,10 +21,14 @@ dependencies = [
     "crawl4ai>=0.7.2",
     "nest-asyncio>=1.6.0",
     "dateparser>=1.2.2",
-    "logfire[httpx,pymongo]>=4.3.3",
     "markdownify>=1.2.0",
     "beautifulsoup4>=4.13.4",
     "nanoid>=2.0.0",
+    "opentelemetry-api>=1.36.0",
+    "opentelemetry-sdk>=1.36.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.36.0",
+    "openinference-semantic-conventions>=0.1.21",
+    "openinference-instrumentation-pydantic-ai>=0.1.4",
 ]
 
 [project.scripts]

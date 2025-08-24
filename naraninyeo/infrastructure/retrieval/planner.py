@@ -1,7 +1,7 @@
+import logging
 from textwrap import dedent
 from typing import List, override
 
-import logfire
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
 from pydantic_ai.providers.openrouter import OpenRouterProvider
@@ -30,7 +30,7 @@ class RetrievalPlannerAgent(RetrievalPlanner):
         result = await self.agent.run(message)
         plans = result.output
 
-        logfire.debug(f"Retrieval plans generated: {plans}", plans=[p.model_dump() for p in plans])
+        logging.debug(f"Retrieval plans generated: {[p.model_dump() for p in plans]}")
         return list(plans)
 
 

@@ -3,7 +3,6 @@ from typing import AsyncIterable, AsyncIterator, Union, override
 from textwrap import dedent
 from zoneinfo import ZoneInfo
 
-import logfire
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
 from pydantic_ai.providers.openrouter import OpenRouterProvider
@@ -58,7 +57,6 @@ class ReplyGeneratorAgent(ReplyGenerator):
             참고 정보에 끌려가서 대화 흐름을 깨지 않도록 주의하세요.
             """
         )
-        logfire.debug("Reply generation query: {query}", query=query)
 
         async with self.agent.run_stream(query) as stream:
             last_text = ""

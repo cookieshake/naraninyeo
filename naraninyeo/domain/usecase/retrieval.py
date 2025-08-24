@@ -1,6 +1,5 @@
 import asyncio
 
-import logfire
 
 from naraninyeo.domain.model.message import Message
 from naraninyeo.domain.model.reply import ReplyContext

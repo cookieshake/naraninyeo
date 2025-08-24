@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 import html
+import logging
 import re
 from textwrap import dedent
 from typing import List, Literal, Optional, override
@@ -9,8 +10,8 @@ import uuid
 from bs4 import BeautifulSoup
 import dateparser
 import httpx
-import logfire
 from markdownify import MarkdownConverter
+from opentelemetry._logs import get_logger
 import nanoid
 from pydantic import UUID4, BaseModel
 from pydantic_ai import Agent, NativeOutput
@@ -50,7 +51,7 @@ class Crawler:
                         iframe_html = response.text
                         iframe.replace_with(BeautifulSoup(iframe_html, "html.parser"))
                 except Exception as e:
-                    logfire.warn(f"Failed to retrieve iframe {iframe_url}: {e}")
+                    logging.warning(f"Failed to retrieve iframe {iframe_url}: {e}")
             for a in soup.find_all("a"):
                 a.decompose()
             return self.markdown_converter.convert_soup(soup)
@@ -95,7 +96,7 @@ class Extractor:
     async def extract(self, url: str, query: str) -> ExtractionResult:
         markdown = await self.crawler.get_markdown_from_url(url)
         if not markdown:
-            logfire.warn(f"Failed to retrieve markdown for {url}")
+            logging.warning(f"Failed to retrieve markdown for {url}")
             return ExtractionResult(content="", is_relevant=False)
         enhancement_result = await self.agent.run(dedent(
             f"""
@@ -187,7 +188,7 @@ class NaverSearchStrategy(PlanExecutorStrategy):
             case "naver_doc":
                 search_api = "doc"
             case _:
-                logfire.warn(f"NaverSearchStrategy does not support plan: {plan}")
+                logging.warning(f"NaverSearchStrategy does not support plan: {plan}")
                 raise ValueError("Unsupported plan type")
             
         search_tasks = [
@@ -199,7 +200,7 @@ class NaverSearchStrategy(PlanExecutorStrategy):
         search_results = []
         for res in search_results_raw:
             if isinstance(res, Exception):
-                logfire.info("Naver search API call failed", exc_info=res)
+                logging.info("Naver search API call failed", exc_info=res)
             elif res:
                 search_results.append(res)
         async def extract_worker(rid: str, search_result: NaverSearchResult):
@@ -237,7 +238,7 @@ class NaverSearchStrategy(PlanExecutorStrategy):
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for result in results:
             if isinstance(result, Exception):
-                logfire.info("Extraction worker failed", exc_info=result)
+                logging.info("Extraction worker failed", exc_info=result)
 
     @override
     def supports(self, plan: RetrievalPlan) -> bool:

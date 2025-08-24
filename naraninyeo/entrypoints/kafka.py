@@ -4,13 +4,13 @@ Kafka 메시지 처리 진입점
 """
 import asyncio
 from datetime import datetime
+import logging
 from typing import Literal
 import uuid
 from zoneinfo import ZoneInfo
 import httpx
 from opentelemetry import trace
 import json
-import logfire
 import traceback
 from aiokafka import AIOKafkaConsumer, ConsumerRecord
 
@@ -77,9 +77,9 @@ class KafkaConsumer:
                 await self.api_client.send_response(response)
 
         except json.JSONDecodeError as e:
-            logfire.error(f"Invalid JSON message: {e}")
+            logging.error(f"Invalid JSON message: {e}")
         except Exception as e:
-            logfire.error("Error processing message: {error}, {traceback}", error=e, traceback=traceback.format_exc())
+            logging.error(f"Error processing message: {e}, {traceback.format_exc()}")
 
     async def parse_message(self, message_data: dict) -> Message:
         message_id = message_data["json"]["id"]
@@ -184,6 +184,6 @@ async def main():
     try:
         await kafka_consumer.start()
     except Exception as e:
-        logfire.error(f"Error occurred: {e}")
+        logging.error(f"Error occurred: {e}")
     finally:
         await kafka_consumer.stop()

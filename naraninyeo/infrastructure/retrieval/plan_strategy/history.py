@@ -2,6 +2,8 @@
 import asyncio
 
 import nanoid
+from opentelemetry.trace import get_tracer
+
 from naraninyeo.domain.gateway.message import MessageRepository
 from naraninyeo.domain.gateway.retrieval import PlanExecutorStrategy, RetrievalResultCollector
 from naraninyeo.domain.model.reply import ReplyContext
@@ -15,6 +17,7 @@ class ChatHistoryStrategy(PlanExecutorStrategy):
     def supports(self, plan: RetrievalPlan) -> bool:
         return isinstance(plan, RetrievalPlan) and plan.search_type == "chat_history"
 
+    @get_tracer(__name__).start_as_current_span("execute chat history retrieval")
     async def execute(self, plan: RetrievalPlan, context: ReplyContext, collector: RetrievalResultCollector):
         messages = await self.message_repository.search_similar_messages(
             channel_id=context.last_message.channel.channel_id,
