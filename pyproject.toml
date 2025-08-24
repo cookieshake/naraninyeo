@@ -61,7 +61,7 @@ addopts = [
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "F", "W"]
+select = ["E", "F", "W", "B", "I"]
 
 [tool.ruff.format]
 docstring-code-format = false

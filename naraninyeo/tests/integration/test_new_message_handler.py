@@ -1,9 +1,10 @@
 import logging
-from datetime import datetime
 import uuid
-from dishka import AsyncContainer
+from datetime import datetime
+
 import pytest
 import pytest_asyncio
+from dishka import AsyncContainer
 
 from naraninyeo.domain.application.new_message_handler import NewMessageHandler
 from naraninyeo.domain.model.message import Author, Channel, Message, MessageContent

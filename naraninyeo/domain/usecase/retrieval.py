@@ -1,11 +1,11 @@
-from naraninyeo.domain.model.reply import ReplyContext
-from naraninyeo.domain.variable import Variables
 from naraninyeo.domain.gateway.retrieval import (
     RetrievalPlanExecutor,
     RetrievalPlanner,
     RetrievalResultCollectorFactory,
 )
+from naraninyeo.domain.model.reply import ReplyContext
 from naraninyeo.domain.model.retrieval import RetrievalPlan, RetrievalResult
+from naraninyeo.domain.variable import Variables
 
 
 class RetrievalUseCase:

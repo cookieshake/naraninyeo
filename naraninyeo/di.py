@@ -4,40 +4,38 @@ Dishka 기반 의존성 주입 컨테이너 설정
 """
 
 import time
-from typing import Iterator
 from collections.abc import AsyncIterator
+from typing import Iterator
 
-from dishka import Provider, Scope, make_async_container, provide
 import httpx
-from motor.motor_asyncio import AsyncIOMotorDatabase, AsyncIOMotorClient
+from dishka import Provider, Scope, make_async_container, provide
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.http.models import VectorParams, Distance
-
+from qdrant_client.http.models import Distance, VectorParams
 from testcontainers.core.container import DockerContainer
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.qdrant import QdrantContainer
 
+from naraninyeo.domain.application.new_message_handler import NewMessageHandler
 from naraninyeo.domain.gateway.message import MessageRepository
 from naraninyeo.domain.gateway.reply import ReplyGenerator
 from naraninyeo.domain.gateway.retrieval import (
-    RetrievalPlanner,
     RetrievalPlanExecutor,
+    RetrievalPlanner,
     RetrievalResultCollectorFactory,
 )
 from naraninyeo.domain.usecase.message import MessageUseCase
 from naraninyeo.domain.usecase.reply import ReplyUseCase
 from naraninyeo.domain.usecase.retrieval import RetrievalUseCase
-from naraninyeo.domain.application.new_message_handler import NewMessageHandler
-
-from naraninyeo.infrastructure.settings import Settings
-from naraninyeo.infrastructure.embedding import TextEmbedder, Qwen306TextEmbedder
+from naraninyeo.infrastructure.embedding import Qwen306TextEmbedder, TextEmbedder
 from naraninyeo.infrastructure.message import MongoQdrantMessageRepository
 from naraninyeo.infrastructure.reply import ReplyGeneratorAgent
+from naraninyeo.infrastructure.retrieval.plan_executor import LocalPlanExecutor
 from naraninyeo.infrastructure.retrieval.plan_strategy.history import ChatHistoryStrategy
 from naraninyeo.infrastructure.retrieval.plan_strategy.naver_search import NaverSearchStrategy
-from naraninyeo.infrastructure.retrieval.plan_executor import LocalPlanExecutor
 from naraninyeo.infrastructure.retrieval.planner import RetrievalPlannerAgent
 from naraninyeo.infrastructure.retrieval.result import InMemoryRetrievalResultCollectorFactory
+from naraninyeo.infrastructure.settings import Settings
 
 
 class MainProvider(Provider):

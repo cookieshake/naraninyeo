@@ -1,6 +1,7 @@
 from collections.abc import AsyncIterator
-from dishka import AsyncContainer, make_async_container
+
 import pytest_asyncio
+from dishka import AsyncContainer, make_async_container
 
 from naraninyeo.di import MainProvider, TestProvider
 

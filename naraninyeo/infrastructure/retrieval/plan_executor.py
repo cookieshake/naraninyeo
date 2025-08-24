@@ -3,6 +3,7 @@ import logging
 from typing import List, override
 
 from pydantic import BaseModel
+
 from naraninyeo.domain.gateway.retrieval import (
     PlanExecutorStrategy,
     RetrievalPlanExecutor,

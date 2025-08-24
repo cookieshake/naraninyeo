@@ -2,9 +2,9 @@
 나란잉여를 CLI로 실행하고 메시지를 주고받는 테스트 클라이언트
 """
 
-from datetime import datetime
-import uuid
 import traceback
+import uuid
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from dishka import AsyncContainer, make_async_container

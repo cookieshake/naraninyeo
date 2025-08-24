@@ -1,10 +1,11 @@
 import asyncio
 import hashlib
 from typing import override
-from opentelemetry.trace import get_tracer
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from qdrant_client import AsyncQdrantClient, models as qmodels
+from opentelemetry.trace import get_tracer
+from qdrant_client import AsyncQdrantClient
+from qdrant_client import models as qmodels
 
 from naraninyeo.domain.gateway.message import MessageRepository
 from naraninyeo.domain.model.message import Message

@@ -1,7 +1,8 @@
 import asyncio
 
-from opentelemetry.trace import get_tracer
 import nanoid
+from opentelemetry.trace import get_tracer
+
 from naraninyeo.domain.gateway.message import MessageRepository
 from naraninyeo.domain.gateway.retrieval import PlanExecutorStrategy, RetrievalResultCollector
 from naraninyeo.domain.model.reply import ReplyContext

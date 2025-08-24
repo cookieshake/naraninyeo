@@ -1,4 +1,5 @@
 import asyncio
+
 from naraninyeo.domain.gateway.message import MessageRepository
 from naraninyeo.domain.model.message import Message
 

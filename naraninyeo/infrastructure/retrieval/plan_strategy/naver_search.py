@@ -1,17 +1,18 @@
 import asyncio
-from datetime import datetime
 import html
 import logging
 import re
+from datetime import datetime
 from textwrap import dedent
 from typing import List, Literal, Optional, override
 from urllib.parse import urljoin, urlparse
-from opentelemetry.trace import get_tracer
-from bs4 import BeautifulSoup
+
 import dateparser
 import httpx
-from markdownify import MarkdownConverter
 import nanoid
+from bs4 import BeautifulSoup
+from markdownify import MarkdownConverter
+from opentelemetry.trace import get_tracer
 from pydantic import BaseModel
 from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings

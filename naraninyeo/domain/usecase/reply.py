@@ -1,4 +1,5 @@
 from typing import AsyncIterator
+
 from naraninyeo.domain.gateway.reply import ReplyGenerator
 from naraninyeo.domain.model.message import Message
 from naraninyeo.domain.model.reply import ReplyContext

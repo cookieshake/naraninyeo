@@ -3,10 +3,10 @@ from textwrap import dedent
 from typing import List, override
 
 from opentelemetry.trace import get_tracer
-
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
 from pydantic_ai.providers.openrouter import OpenRouterProvider
+
 from naraninyeo.domain.gateway.retrieval import RetrievalPlanner
 from naraninyeo.domain.model.reply import ReplyContext
 from naraninyeo.domain.model.retrieval import RetrievalPlan

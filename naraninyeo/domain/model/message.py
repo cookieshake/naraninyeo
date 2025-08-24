@@ -1,6 +1,6 @@
-from zoneinfo import ZoneInfo
-from typing import Literal, Optional
 from datetime import datetime
+from typing import Literal, Optional
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 

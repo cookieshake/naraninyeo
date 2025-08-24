@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import AsyncIterator, override
 from textwrap import dedent
+from typing import AsyncIterator, override
 from zoneinfo import ZoneInfo
+
 from opentelemetry.trace import get_tracer
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings

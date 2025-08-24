@@ -4,20 +4,21 @@ Kafka 메시지 처리 진입점
 """
 
 import asyncio
-from datetime import datetime
-import logging
-from typing import Literal
-import uuid
-from zoneinfo import ZoneInfo
-import httpx
 import json
+import logging
 import traceback
+import uuid
+from datetime import datetime
+from typing import Literal
+from zoneinfo import ZoneInfo
+
+import httpx
 from aiokafka import AIOKafkaConsumer, ConsumerRecord
 
+from naraninyeo.di import container
 from naraninyeo.domain.application.new_message_handler import NewMessageHandler
 from naraninyeo.domain.model.message import Attachment, Author, Channel, Message, MessageContent
 from naraninyeo.infrastructure.settings import Settings
-from naraninyeo.di import container
 
 
 class APIClient:

@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import override
+
+import httpx
 from opentelemetry.trace import get_tracer
 
 from naraninyeo.infrastructure.settings import Settings
-
-import httpx
 
 
 class TextEmbedder(ABC):
