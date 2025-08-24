@@ -1,0 +1,65 @@
+name: CI (develop PR)
+
+on:
+  pull_request:
+    branches: [ "develop" ]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-type-and-test:
+    runs-on: ubuntu-latest
+    env:
+      TESTCONTAINERS_RYUK_DISABLED: "false"
+      TESTCONTAINERS_CHECKS_DISABLE: "false"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Verify Docker is ready
+        run: |
+          docker --version
+          docker info
+
+      - name: Install dependencies (dev)
+        run: |
+          uv sync --group dev
+
+      - name: Ruff lint
+        run: |
+          uvx ruff check --output-format=github .
+
+      - name: Ruff format check
+        run: |
+          uvx ruff format --check .
+
+      - name: Set up Node.js for Pyright
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Pyright
+        run: |
+          npm install -g pyright@latest
+
+      - name: Pyright type check
+        run: |
+          pyright
+
+      - name: Run tests (pytest)
+        env:
+          PYTHONUNBUFFERED: '1'
+        run: |
+          uv run -m pytest -q
