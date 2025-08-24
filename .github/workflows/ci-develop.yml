@@ -141,7 +141,7 @@ jobs:
             </details>
             
             ---
-            *Workflow run: ${{ github.run_id }}*
+            *Workflow job: [${{ github.job }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ github.job }})*
 
       - name: Check if any step failed
         if: always()
