@@ -98,7 +98,7 @@ jobs:
           body: |
             ## 🔍 CI Results
             
-            **Commit:** `${{ github.sha }}`
+            **Commit:** `${{ github.event.pull_request.head.sha }}`
             
             ### 📋 Summary
             | Check | Status |
