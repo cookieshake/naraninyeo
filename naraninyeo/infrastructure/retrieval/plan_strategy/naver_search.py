@@ -15,6 +15,7 @@ from markdownify import MarkdownConverter
 from opentelemetry.trace import get_tracer
 from pydantic import BaseModel
 from pydantic_ai import Agent, NativeOutput
+from pydantic_ai.models.instrumented import InstrumentationSettings
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
@@ -48,19 +49,39 @@ class Crawler:
             response.raise_for_status()
             html = response.text
             soup = BeautifulSoup(html, "html.parser")
+
             # make http request to all iframes and insert html into original
-            for iframe in soup.find_all("iframe"):
-                iframe_url: str = iframe.get("src")  # pyright: ignore[reportAttributeAccessIssue, reportAssignmentType]
-                try:
-                    iframe_url = urljoin(url, iframe_url)
-                    if iframe_url:
-                        response = await client.get(iframe_url)
+            async def get_soup_from_iframe(iframe_url: str) -> BeautifulSoup:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(iframe_url)
+                    response.raise_for_status()
+                    iframe_html = response.text
+                    return BeautifulSoup(iframe_html, "html.parser")
+
+            iframes_to_process = [iframe for iframe in soup.find_all("iframe") if isinstance(iframe.get("src"), str)]  # type: ignore
+            if iframes_to_process:
+                # Using a single client for all iframe requests is more efficient.
+                # For even better performance and consistency (e.g. User-Agent), consider
+                # creating one client for the entire get_markdown_from_url function.
+                async with httpx.AsyncClient() as iframe_client:
+
+                    async def get_soup_from_iframe(iframe_url: str) -> BeautifulSoup:
+                        response = await iframe_client.get(iframe_url)
                         response.raise_for_status()
                         iframe_html = response.text
-                        iframe.replace_with(BeautifulSoup(iframe_html, "html.parser"))
-                except Exception as e:
-                    logging.warning(f"Failed to retrieve iframe {iframe_url}: {e}")
-            tags_to_remove = ["a", "button"]
+                        return BeautifulSoup(iframe_html, "html.parser")
+
+                    iframe_links = [urljoin(url, iframe.get("src")) for iframe in iframes_to_process]  # type: ignore
+                    iframe_htmls = await asyncio.gather(
+                        *[get_soup_from_iframe(iframe_url) for iframe_url in iframe_links],
+                        return_exceptions=True,
+                    )
+                for iframe, iframe_html in zip(iframes_to_process, iframe_htmls, strict=False):
+                    if isinstance(iframe_html, BeautifulSoup):
+                        iframe.replace_with(iframe_html)
+                    else:
+                        logging.warning(f"Failed to retrieve iframe {iframe.get('src')}: {iframe_html}")  # type: ignore
+            tags_to_remove = ["a", "button", "iframe"]
             for tag in tags_to_remove:
                 for element in soup.find_all(tag):
                     element.decompose()
@@ -85,7 +106,7 @@ class Extractor:
             ),
             # Structured output so we can know when content is irrelevant
             output_type=NativeOutput(ExtractionResult),
-            instrument=True,
+            instrument=InstrumentationSettings(event_mode="logs"),
             model_settings=OpenAIModelSettings(timeout=5, extra_body={"reasoning": {"effort": "minimal"}}),
             system_prompt=dedent(
                 """

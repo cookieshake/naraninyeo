@@ -4,6 +4,7 @@ from typing import List, override
 
 from opentelemetry.trace import get_tracer
 from pydantic_ai import Agent
+from pydantic_ai.models.instrumented import InstrumentationSettings
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
@@ -46,7 +47,7 @@ class RetrievalPlannerAgent(RetrievalPlanner):
                 provider=OpenRouterProvider(api_key=settings.OPENROUTER_API_KEY),
             ),
             output_type=List[RetrievalPlan],
-            instrument=True,
+            instrument=InstrumentationSettings(event_mode="logs"),
             model_settings=OpenAIModelSettings(timeout=20, extra_body={"reasoning": {"effort": "minimal"}}),
             system_prompt=dedent(
                 """
