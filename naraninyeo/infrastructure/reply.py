@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 from opentelemetry.trace import get_tracer
 from pydantic_ai import Agent
+from pydantic_ai.models.instrumented import InstrumentationSettings
 from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
@@ -78,7 +79,7 @@ class ReplyGeneratorAgent(ReplyGenerator):
                 model_name="deepseek/deepseek-chat-v3.1",
                 provider=OpenRouterProvider(api_key=settings.OPENROUTER_API_KEY),
             ),
-            instrument=True,
+            instrument=InstrumentationSettings(event_mode="logs"),
             output_type=str,
             model_settings=OpenAIModelSettings(
                 timeout=20,
