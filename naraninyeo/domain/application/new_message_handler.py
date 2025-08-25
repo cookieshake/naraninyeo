@@ -42,7 +42,7 @@ class NewMessageHandler:
                 timestamp=datetime.now(tz=ZoneInfo("Asia/Seoul")), location="Seoul, Korea"
             ),
             last_message=message,
-            latest_history=await self.message_use_case.get_recent_messages(message, limit=7),
+            latest_history=await self.message_use_case.get_recent_messages(message, limit=20),
             knowledge_references=[],
             processing_logs=[],
         )
