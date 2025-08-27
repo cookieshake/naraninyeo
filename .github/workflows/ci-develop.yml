@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   lint-type-and-test:
-    runs-on: self-hosted
+    runs-on: gha-runner-naraninyeo
     env:
       TESTCONTAINERS_RYUK_DISABLED: "false"
       TESTCONTAINERS_CHECKS_DISABLE: "false"
