@@ -37,6 +37,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+            type=sha
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -49,12 +50,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max 
 
-      - name: Delete all containers from package without tags
-        uses: Chizkiyahu/delete-untagged-ghcr-action@v6
-        with:
-            token: ${{ secrets.GITHUB_TOKEN }}
-            repository_owner: cookieshake
-            repository: naraninyeo
-            package_name: naraninyeo
-            untagged_only: true
-            owner_type: user
+      # - name: Delete all containers from package without tags
+      #   uses: Chizkiyahu/delete-untagged-ghcr-action@v6
+      #   with:
+      #       token: ${{ secrets.GITHUB_TOKEN }}
+      #       repository_owner: cookieshake
+      #       repository: naraninyeo
+      #       package_name: naraninyeo
+      #       untagged_only: true
+      #       owner_type: user
+      - name: ghcr.io cleanup action
+        steps:
+          - uses: dataaxiom/ghcr-cleanup-action@v1
+            with:
+              older-than: 3 months
+              delete-untagged: true
+              keep-n-tagged: 10
