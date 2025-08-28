@@ -167,7 +167,7 @@ class KafkaConsumer:
             )
 
 
-async def health_handler(request):
+async def health_handler(request: web.Request) -> web.Response:
     return web.Response(text="OK", status=200)
 
 
