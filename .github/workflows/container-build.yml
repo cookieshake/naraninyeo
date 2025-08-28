@@ -50,18 +50,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max 
 
-      # - name: Delete all containers from package without tags
-      #   uses: Chizkiyahu/delete-untagged-ghcr-action@v6
-      #   with:
-      #       token: ${{ secrets.GITHUB_TOKEN }}
-      #       repository_owner: cookieshake
-      #       repository: naraninyeo
-      #       package_name: naraninyeo
-      #       untagged_only: true
-      #       owner_type: user
-      - name: ghcr.io cleanup action
+      - name: Delete all containers from package without tags
+        uses: Chizkiyahu/delete-untagged-ghcr-action@v6
+        with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            repository_owner: cookieshake
+            repository: naraninyeo
+            package_name: naraninyeo
+            untagged_only: true
+            owner_type: user
+
+      - name: Cleanup old images from GitHub Container Registry
         uses: dataaxiom/ghcr-cleanup-action@v1
         with:
           older-than: 3 months
-          delete-untagged: true
           keep-n-tagged: 10
