@@ -171,12 +171,9 @@ async def health_handler(request: web.Request) -> web.Response:
     return web.Response(text="OK", status=200)
 
 
-async def start_health_server(port: int, kafka_consumer: Optional[KafkaConsumer] = None) -> web.AppRunner:
+async def start_health_server(port: int) -> web.AppRunner:
     app = web.Application()
     app.router.add_get("/", health_handler)
-
-    # Store Kafka consumer in app for health checks
-    app["kafka_consumer"] = kafka_consumer
 
     runner = web.AppRunner(app)
     await runner.setup()
@@ -194,13 +191,10 @@ async def main():
     kafka_consumer = KafkaConsumer(settings=settings, message_handler=message_handler, api_client=api_client)
 
     # Start health check server with access to the Kafka consumer
-    health_server = await start_health_server(settings.PORT, kafka_consumer)
+    health_server = await start_health_server(settings.PORT)
 
     # Create a task for Kafka consumer
     kafka_task = asyncio.create_task(kafka_consumer.start())
-
-    # Set up signal handlers for graceful shutdown
-    shutdown_event = asyncio.Event()
 
     def handle_shutdown_signal(sig):
         logging.info(f"Received shutdown signal: {sig}")
