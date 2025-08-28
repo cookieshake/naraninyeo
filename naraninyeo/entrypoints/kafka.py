@@ -6,6 +6,7 @@ Kafka 메시지 처리 진입점
 import asyncio
 import json
 import logging
+import signal
 import traceback
 import uuid
 from datetime import datetime
@@ -13,6 +14,7 @@ from typing import Literal
 from zoneinfo import ZoneInfo
 
 import httpx
+from aiohttp import web
 from aiokafka import AIOKafkaConsumer, ConsumerRecord
 
 from naraninyeo.di import container
@@ -165,15 +167,59 @@ class KafkaConsumer:
             )
 
 
+async def health_handler(request):
+    return web.Response(text="OK", status=200)
+
+
+async def start_health_server(port, kafka_consumer=None):
+    app = web.Application()
+    app.router.add_get("/", health_handler)
+
+    # Store Kafka consumer in app for health checks
+    app["kafka_consumer"] = kafka_consumer
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    logging.info(f"Health check server started on port {port}")
+    return runner
+
+
 async def main():
     settings = await container.get(Settings)
     api_client = APIClient(settings)
     message_handler = await container.get(NewMessageHandler)
 
     kafka_consumer = KafkaConsumer(settings=settings, message_handler=message_handler, api_client=api_client)
+
+    # Start health check server with access to the Kafka consumer
+    health_server = await start_health_server(settings.PORT, kafka_consumer)
+
+    # Create a task for Kafka consumer
+    kafka_task = asyncio.create_task(kafka_consumer.start())
+
+    # Set up signal handlers for graceful shutdown
+    shutdown_event = asyncio.Event()
+
+    def handle_shutdown_signal(sig, frame):
+        logging.info(f"Received shutdown signal: {sig}")
+        shutdown_event.set()
+        kafka_task.cancel()
+
+    # Register signal handlers
+    signal.signal(signal.SIGINT, handle_shutdown_signal)
+    signal.signal(signal.SIGTERM, handle_shutdown_signal)
+
     try:
-        await kafka_consumer.start()
+        # Wait for either the Kafka task to complete or a shutdown signal
+        await kafka_task
+    except asyncio.CancelledError:
+        logging.info("Kafka consumer task was cancelled")
     except Exception as e:
         logging.error(f"Error occurred: {e}")
     finally:
+        logging.info("Shutting down application...")
         await kafka_consumer.stop()
+        await health_server.cleanup()
+        logging.info("Application shutdown complete")
