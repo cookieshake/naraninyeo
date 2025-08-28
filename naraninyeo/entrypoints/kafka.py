@@ -202,14 +202,14 @@ async def main():
     # Set up signal handlers for graceful shutdown
     shutdown_event = asyncio.Event()
 
-    def handle_shutdown_signal(sig, frame):
+    def handle_shutdown_signal(sig):
         logging.info(f"Received shutdown signal: {sig}")
-        shutdown_event.set()
         kafka_task.cancel()
 
     # Register signal handlers
-    signal.signal(signal.SIGINT, handle_shutdown_signal)
-    signal.signal(signal.SIGTERM, handle_shutdown_signal)
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, handle_shutdown_signal, sig)
 
     try:
         # Wait for either the Kafka task to complete or a shutdown signal
