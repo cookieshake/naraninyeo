@@ -171,7 +171,7 @@ async def health_handler(request: web.Request) -> web.Response:
     return web.Response(text="OK", status=200)
 
 
-async def start_health_server(port, kafka_consumer=None):
+async def start_health_server(port: int, kafka_consumer: Optional[KafkaConsumer] = None) -> web.AppRunner:
     app = web.Application()
     app.router.add_get("/", health_handler)
 
