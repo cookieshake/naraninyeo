@@ -48,7 +48,33 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
-          cache-to: type=gha,mode=max 
+          cache-to: type=gha,mode=max
+
+      - name: Install kn CLI (if not already present)
+        run: |
+          if ! command -v kn &> /dev/null; then
+            curl -L https://github.com/knative/client/releases/download/knative-v1.16.0/kn-linux-amd64 \
+              -o /usr/local/bin/kn
+            chmod +x /usr/local/bin/kn
+          fi
+
+      - name: Deploy to Knative
+        run: |
+          SERVICE_NAME="naraninyeo"
+          BRANCH="${{ github.ref }}"
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+
+          if [ "$BRANCH" == "main" ]; then
+            kn service update $SERVICE_NAME \
+              --namespace $NAMESPACE \
+              --image $IMAGE \
+              --revision-name ${SERVICE_NAME}-main
+          elif [ "$BRANCH" == "develop" ]; then
+            kn service update $SERVICE_NAME \
+              --namespace $NAMESPACE \
+              --image $IMAGE \
+              --revision-name ${SERVICE_NAME}-develop
+          fi
 
       - name: Delete all containers from package without tags
         uses: Chizkiyahu/delete-untagged-ghcr-action@v6
