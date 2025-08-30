@@ -11,7 +11,7 @@ env:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    runs-on: gha-runner-naraninyeo
     permissions:
       contents: read
       packages: write
