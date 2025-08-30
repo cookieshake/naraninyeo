@@ -53,9 +53,9 @@ jobs:
       - name: Install kn CLI (if not already present)
         run: |
           if ! command -v kn &> /dev/null; then
-            curl -L https://github.com/knative/client/releases/download/knative-v1.16.0/kn-linux-amd64 \
-              -o /usr/local/bin/kn
-            chmod +x /usr/local/bin/kn
+            curl -L https://github.com/knative/client/releases/download/knative-v1.16.0/kn-linux-amd64 -o kn-linux-amd64
+            sudo mv kn-linux-amd64 /usr/local/bin/kn
+            sudo chmod +x /usr/local/bin/kn
           fi
 
       - name: Deploy to Knative
