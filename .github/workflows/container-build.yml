@@ -11,10 +11,12 @@ env:
 
 jobs:
   build-and-push:
-    runs-on: gha-runner-naraninyeo
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
 
     steps:
       - name: Checkout repository
@@ -50,6 +52,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  deploy:
+    needs: build-and-push
+    runs-on: gha-runner-naraninyeo
+    steps:
       - name: Install kn CLI (if not already present)
         run: |
           if ! command -v kn &> /dev/null; then
@@ -62,7 +68,7 @@ jobs:
         run: |
           SERVICE_NAME="naraninyeo"
           BRANCH="${{ github.ref_name }}"
-          SHA_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep -o "sha-[a-f0-9]\{7\}")
+          SHA_TAG=$(echo "${{ needs.build-and-push.outputs.tags }}" | grep -o "sha-[a-f0-9]\{7\}")
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHA_TAG}"
 
           kn service update $SERVICE_NAME \
@@ -70,6 +76,10 @@ jobs:
             --image $IMAGE \
             --revision-name ${SERVICE_NAME}-${BRANCH}
 
+  cleanup:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
       - name: Delete all containers from package without tags
         uses: Chizkiyahu/delete-untagged-ghcr-action@v6
         with:

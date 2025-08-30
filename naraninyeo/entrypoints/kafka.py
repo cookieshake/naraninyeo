@@ -18,33 +18,13 @@ from aiohttp import web
 from aiokafka import AIOKafkaConsumer, ConsumerRecord
 
 from naraninyeo.di import container
-from naraninyeo.domain.application.new_message_handler import NewMessageHandler
 from naraninyeo.domain.model.message import Attachment, Author, Channel, Message, MessageContent
 from naraninyeo.infrastructure.settings import Settings
 
 
-class APIClient:
-    def __init__(self, settings: Settings):
-        self.api_url = settings.NARANINYEO_API_URL
-
-    async def send_response(self, message: Message):
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.api_url}/reply",
-                json={
-                    "type": "text",
-                    "room": message.channel.channel_id,
-                    "data": message.content.text,
-                },
-            )
-            response.raise_for_status()
-
-
 class KafkaConsumer:
-    def __init__(self, settings: Settings, message_handler: NewMessageHandler, api_client: APIClient):
+    def __init__(self, settings: Settings):
         self.settings = settings
-        self.message_handler = message_handler
-        self.api_client = api_client
         self.consumer = AIOKafkaConsumer(
             settings.KAFKA_TOPIC,
             bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
@@ -52,6 +32,7 @@ class KafkaConsumer:
             auto_offset_reset="earliest",
             enable_auto_commit=False,
         )
+        self.client = httpx.AsyncClient()
 
     async def start(self):
         await self.consumer.start()
@@ -72,8 +53,10 @@ class KafkaConsumer:
             value = json.loads(message_string)
             message = await self.parse_message(value)
 
-            async for response in self.message_handler.handle(message):
-                await self.api_client.send_response(response)
+            await self.client.post(
+                f"{self.settings.NARANINYEO_NEW_MESSAGE_API}/handle_new_message",
+                json=message.model_dump(),
+            )
 
         except json.JSONDecodeError as e:
             logging.error(f"Invalid JSON message: {e}")
@@ -185,10 +168,8 @@ async def start_health_server(port: int) -> web.AppRunner:
 
 async def main():
     settings = await container.get(Settings)
-    api_client = APIClient(settings)
-    message_handler = await container.get(NewMessageHandler)
 
-    kafka_consumer = KafkaConsumer(settings=settings, message_handler=message_handler, api_client=api_client)
+    kafka_consumer = KafkaConsumer(settings=settings)
 
     # Start health check server with access to the Kafka consumer
     health_server = await start_health_server(settings.PORT)

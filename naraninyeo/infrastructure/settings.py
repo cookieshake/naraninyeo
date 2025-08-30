@@ -20,6 +20,7 @@ class Settings(BaseSettings):
 
     # Naraninyeo API settings
     NARANINYEO_API_URL: str = "http://localhost:8000"
+    NARANINYEO_NEW_MESSAGE_API: str = "http://localhost:8001"
 
     # LLM API settings
     LLAMA_CPP_EMBEDDINGS_URL: str = "http://localhost:11435/model"
