@@ -61,20 +61,14 @@ jobs:
       - name: Deploy to Knative
         run: |
           SERVICE_NAME="naraninyeo"
-          BRANCH="${{ github.ref }}"
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          BRANCH="${{ github.ref_name }}"
+          SHA_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep -o "sha-[a-f0-9]\{7\}")
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHA_TAG}"
 
-          if [ "$BRANCH" == "main" ]; then
-            kn service update $SERVICE_NAME \
-              --namespace $NAMESPACE \
-              --image $IMAGE \
-              --revision-name ${SERVICE_NAME}-main
-          elif [ "$BRANCH" == "develop" ]; then
-            kn service update $SERVICE_NAME \
-              --namespace $NAMESPACE \
-              --image $IMAGE \
-              --revision-name ${SERVICE_NAME}-develop
-          fi
+          kn service update $SERVICE_NAME \
+            --namespace $NAMESPACE \
+            --image $IMAGE \
+            --revision-name ${SERVICE_NAME}-${BRANCH}
 
       - name: Delete all containers from package without tags
         uses: Chizkiyahu/delete-untagged-ghcr-action@v6
