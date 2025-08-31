@@ -30,4 +30,5 @@ COPY naraninyeo/ naraninyeo/
 COPY main.py main.py
 
 # Run the application with OpenTelemetry instrumentation - using kafka consumer mode
-CMD ["uv", "run", "--no-dev", "python", "main.py", "http"]
+ENTRYPOINT ["uv", "run", "--no-dev", "python", "main.py"]
+CMD [ "http" ]
