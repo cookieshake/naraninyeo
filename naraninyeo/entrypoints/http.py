@@ -53,5 +53,5 @@ async def handle_new_message(
         await api_client.send_response(reply)
 
 
-async def main():
+def main():
     uvicorn.run(app, host="0.0.0.0", port=8000)
