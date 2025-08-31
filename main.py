@@ -120,5 +120,9 @@ if __name__ == "__main__":
             from naraninyeo.entrypoints.kafka import main
 
             asyncio.run(main())
+        case "http":
+            from naraninyeo.entrypoints.http import main
+
+            asyncio.run(main())
         case _:
             raise ValueError(f"Unknown entrypoint: {arg}. Use 'cli' or 'kafka'.")
