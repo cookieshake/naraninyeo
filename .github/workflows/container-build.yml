@@ -81,7 +81,7 @@ jobs:
       - name: Delete all containers from package without tags
         uses: Chizkiyahu/delete-untagged-ghcr-action@v6
         with:
-            token: ${{ secrets.GITHUB_TOKEN }}
+            token: ${{ secrets.GH_DELETE_PAT }}
             repository_owner: cookieshake
             repository: naraninyeo
             package_name: naraninyeo
