@@ -71,7 +71,7 @@ jobs:
           SHA_TAG=$(echo "${{ needs.build-and-push.outputs.tags }}" | grep -o "sha-[a-f0-9]\{7\}")
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHA_TAG}"
 
-          kn service update $SERVICE_NAME \
+          kn service update ${SERVICE_NAME}-${BRANCH} \
             --namespace naraninyeo \
             --image $IMAGE
   cleanup:
