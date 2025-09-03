@@ -72,10 +72,8 @@ jobs:
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHA_TAG}"
 
           kn service update $SERVICE_NAME \
-            --namespace knative-service \
-            --image $IMAGE \
-            --revision-name ${SERVICE_NAME}-${BRANCH}
-
+            --namespace naraninyeo \
+            --image $IMAGE
   cleanup:
     needs: deploy
     runs-on: ubuntu-latest

@@ -55,7 +55,8 @@ class KafkaConsumer:
 
             await self.client.post(
                 f"{self.settings.NARANINYEO_NEW_MESSAGE_API}/handle_new_message",
-                json=message.model_dump(),
+                content=message.model_dump_json(),
+                headers={"Content-Type": "application/json"},
             )
 
         except json.JSONDecodeError as e:
