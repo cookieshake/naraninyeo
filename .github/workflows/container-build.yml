@@ -2,7 +2,7 @@ name: Docker Build and Push
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
   workflow_dispatch:
 
 env:
@@ -15,6 +15,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
 
     steps:
       - name: Checkout repository
@@ -37,6 +39,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+            type=sha
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -47,14 +50,46 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
-          cache-to: type=gha,mode=max 
+          cache-to: type=gha,mode=max
 
+  deploy:
+    needs: build-and-push
+    runs-on: gha-runner-naraninyeo
+    steps:
+      - name: Install kn CLI (if not already present)
+        run: |
+          if ! command -v kn &> /dev/null; then
+            curl -L https://github.com/knative/client/releases/download/knative-v1.16.0/kn-linux-amd64 -o kn-linux-amd64
+            sudo mv kn-linux-amd64 /usr/local/bin/kn
+            sudo chmod +x /usr/local/bin/kn
+          fi
+
+      - name: Deploy to Knative
+        run: |
+          SERVICE_NAME="naraninyeo"
+          BRANCH="${{ github.ref_name }}"
+          SHA_TAG=$(echo "${{ needs.build-and-push.outputs.tags }}" | grep -o "sha-[a-f0-9]\{7\}")
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHA_TAG}"
+
+          kn service update ${SERVICE_NAME}-${BRANCH} \
+            --namespace naraninyeo \
+            --image $IMAGE
+  cleanup:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
       - name: Delete all containers from package without tags
         uses: Chizkiyahu/delete-untagged-ghcr-action@v6
         with:
-            token: ${{ secrets.GITHUB_TOKEN }}
+            token: ${{ secrets.GH_DELETE_PAT }}
             repository_owner: cookieshake
             repository: naraninyeo
             package_name: naraninyeo
             untagged_only: true
             owner_type: user
+
+      - name: Cleanup old images from GitHub Container Registry
+        uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          older-than: 3 months
+          keep-n-tagged: 10

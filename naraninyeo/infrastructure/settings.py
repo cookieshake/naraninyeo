@@ -20,6 +20,7 @@ class Settings(BaseSettings):
 
     # Naraninyeo API settings
     NARANINYEO_API_URL: str = "http://localhost:8000"
+    NARANINYEO_NEW_MESSAGE_API: str = "http://localhost:8001"
 
     # LLM API settings
     LLAMA_CPP_EMBEDDINGS_URL: str = "http://localhost:11435/model"
@@ -39,3 +40,6 @@ class Settings(BaseSettings):
 
     # OpenRouter API settings
     OPENROUTER_API_KEY: str = ""
+
+    # Health check server settings
+    PORT: int = 8080

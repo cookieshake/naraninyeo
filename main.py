@@ -45,11 +45,11 @@ if __name__ == "__main__":
         return " ".join(parts) + "\n"
 
     def tiny_log(record: LogRecord) -> str:
-        level = (
-            record.severity_text
-            if record.severity_text
-            else (str(record.severity_number) if record.severity_number is not None else None)
-        )
+        # level = (
+        #     record.severity_text
+        #     if record.severity_text
+        #     else (str(record.severity_number) if record.severity_number is not None else None)
+        # )
         body = record.body
         if not isinstance(body, str):
             body = str(body)
@@ -69,8 +69,8 @@ if __name__ == "__main__":
             logger_name = None
 
         parts: list[str] = []
-        if level:
-            parts.append(level)
+        # if level:
+        #     parts.append(level)
         if logger_name:
             parts.append(f"{logger_name}:")
         parts.append(body)
@@ -120,5 +120,9 @@ if __name__ == "__main__":
             from naraninyeo.entrypoints.kafka import main
 
             asyncio.run(main())
+        case "http":
+            from naraninyeo.entrypoints.http import main
+
+            main()
         case _:
             raise ValueError(f"Unknown entrypoint: {arg}. Use 'cli' or 'kafka'.")

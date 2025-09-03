@@ -6,6 +6,7 @@ Kafka 메시지 처리 진입점
 import asyncio
 import json
 import logging
+import signal
 import traceback
 import uuid
 from datetime import datetime
@@ -13,10 +14,10 @@ from typing import Literal
 from zoneinfo import ZoneInfo
 
 import httpx
+from aiohttp import web
 from aiokafka import AIOKafkaConsumer, ConsumerRecord
 
 from naraninyeo.di import container
-from naraninyeo.domain.application.new_message_handler import NewMessageHandler
 from naraninyeo.domain.model.message import Attachment, Author, Channel, Message, MessageContent
 from naraninyeo.infrastructure.settings import Settings
 
@@ -39,10 +40,8 @@ class APIClient:
 
 
 class KafkaConsumer:
-    def __init__(self, settings: Settings, message_handler: NewMessageHandler, api_client: APIClient):
+    def __init__(self, settings: Settings):
         self.settings = settings
-        self.message_handler = message_handler
-        self.api_client = api_client
         self.consumer = AIOKafkaConsumer(
             settings.KAFKA_TOPIC,
             bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
@@ -50,6 +49,8 @@ class KafkaConsumer:
             auto_offset_reset="earliest",
             enable_auto_commit=False,
         )
+        self.client = httpx.AsyncClient()
+        self.api_client = APIClient(settings)
 
     async def start(self):
         await self.consumer.start()
@@ -70,13 +71,30 @@ class KafkaConsumer:
             value = json.loads(message_string)
             message = await self.parse_message(value)
 
-            async for response in self.message_handler.handle(message):
-                await self.api_client.send_response(response)
-
+            async with self.client.stream(
+                "POST", f"{self.settings.NARANINYEO_NEW_MESSAGE_API}/handle_new_message",
+                content=message.model_dump_json(),
+                headers={"Content-Type": "application/json"},
+                timeout=60.0,
+            ) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line:
+                        continue
+                    logging.info(f"Response from API: {line}")
+                    response = Message.model_validate_json(line)
+                    await self.api_client.send_response(response)
         except json.JSONDecodeError as e:
             logging.error(f"Invalid JSON message: {e}")
         except Exception as e:
             logging.error(f"Error processing message: {e}, {traceback.format_exc()}")
+            await self.api_client.send_response(Message(
+                message_id=str(uuid.uuid4()),
+                channel=message.channel, # pyright: ignore[reportPossiblyUnboundVariable]
+                author=Author(author_id="bot", author_name="bot"),
+                content=MessageContent(text=str(e)),
+                timestamp=datetime.now(tz=ZoneInfo(self.settings.TIMEZONE)),
+            ))
 
     async def parse_message(self, message_data: dict) -> Message:
         message_id = message_data["json"]["id"]
@@ -165,15 +183,51 @@ class KafkaConsumer:
             )
 
 
+async def health_handler(request: web.Request) -> web.Response:
+    return web.Response(text="OK", status=200)
+
+
+async def start_health_server(port: int) -> web.AppRunner:
+    app = web.Application()
+    app.router.add_get("/", health_handler)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    logging.info(f"Health check server started on port {port}")
+    return runner
+
+
 async def main():
     settings = await container.get(Settings)
-    api_client = APIClient(settings)
-    message_handler = await container.get(NewMessageHandler)
 
-    kafka_consumer = KafkaConsumer(settings=settings, message_handler=message_handler, api_client=api_client)
+    kafka_consumer = KafkaConsumer(settings=settings)
+
+    # Start health check server with access to the Kafka consumer
+    health_server = await start_health_server(settings.PORT)
+
+    # Create a task for Kafka consumer
+    kafka_task = asyncio.create_task(kafka_consumer.start())
+
+    def handle_shutdown_signal(sig):
+        logging.info(f"Received shutdown signal: {sig}")
+        kafka_task.cancel()
+
+    # Register signal handlers
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, handle_shutdown_signal, sig)
+
     try:
-        await kafka_consumer.start()
+        # Wait for either the Kafka task to complete or a shutdown signal
+        await kafka_task
+    except asyncio.CancelledError:
+        logging.info("Kafka consumer task was cancelled")
     except Exception as e:
         logging.error(f"Error occurred: {e}")
     finally:
+        logging.info("Shutting down application...")
         await kafka_consumer.stop()
+        await health_server.cleanup()
+        logging.info("Application shutdown complete")
