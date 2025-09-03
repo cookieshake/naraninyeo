@@ -79,6 +79,8 @@ class KafkaConsumer:
             ) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
+                    if not line:
+                        continue
                     logging.info(f"Response from API: {line}")
                     response = Message.model_validate_json(line)
                     await self.api_client.send_response(response)
