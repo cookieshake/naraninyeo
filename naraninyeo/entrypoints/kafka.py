@@ -57,6 +57,7 @@ class KafkaConsumer:
                 f"{self.settings.NARANINYEO_NEW_MESSAGE_API}/handle_new_message",
                 content=message.model_dump_json(),
                 headers={"Content-Type": "application/json"},
+                timeout=60.0
             )
 
         except json.JSONDecodeError as e:
