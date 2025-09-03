@@ -71,27 +71,28 @@ class KafkaConsumer:
             value = json.loads(message_string)
             message = await self.parse_message(value)
 
-            await self.client.post(
-                f"{self.settings.NARANINYEO_NEW_MESSAGE_API}/handle_new_message",
-                content=message.model_dump_json(),
-                headers={"Content-Type": "application/json"},
-                timeout=60.0
-            )
             async with self.client.stream(
                 "POST", f"{self.settings.NARANINYEO_NEW_MESSAGE_API}/handle_new_message",
                 content=message.model_dump_json(),
                 headers={"Content-Type": "application/json"},
+                timeout=60.0,
             ) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     logging.info(f"Response from API: {line}")
                     response = Message.model_validate_json(line)
                     await self.api_client.send_response(response)
-
         except json.JSONDecodeError as e:
             logging.error(f"Invalid JSON message: {e}")
         except Exception as e:
             logging.error(f"Error processing message: {e}, {traceback.format_exc()}")
+            await self.api_client.send_response(Message(
+                message_id=str(uuid.uuid4()),
+                channel=message.channel, # pyright: ignore[reportPossiblyUnboundVariable]
+                author=Author(author_id="bot", author_name="bot"),
+                content=MessageContent(text=str(e)),
+                timestamp=datetime.now(tz=ZoneInfo(self.settings.TIMEZONE)),
+            ))
 
     async def parse_message(self, message_data: dict) -> Message:
         message_id = message_data["json"]["id"]
