@@ -22,6 +22,23 @@ from naraninyeo.domain.model.message import Attachment, Author, Channel, Message
 from naraninyeo.infrastructure.settings import Settings
 
 
+class APIClient:
+    def __init__(self, settings: Settings):
+        self.api_url = settings.NARANINYEO_API_URL
+
+    async def send_response(self, message: Message):
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.api_url}/reply",
+                json={
+                    "type": "text",
+                    "room": message.channel.channel_id,
+                    "data": message.content.text,
+                },
+            )
+            response.raise_for_status()
+
+
 class KafkaConsumer:
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -33,6 +50,7 @@ class KafkaConsumer:
             enable_auto_commit=False,
         )
         self.client = httpx.AsyncClient()
+        self.api_client = APIClient(settings)
 
     async def start(self):
         await self.consumer.start()
@@ -59,6 +77,16 @@ class KafkaConsumer:
                 headers={"Content-Type": "application/json"},
                 timeout=60.0
             )
+            async with self.client.stream(
+                "POST", f"{self.settings.NARANINYEO_NEW_MESSAGE_API}/handle_new_message",
+                content=message.model_dump_json(),
+                headers={"Content-Type": "application/json"},
+            ) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    logging.info(f"Response from API: {line}")
+                    response = Message.model_validate_json(line)
+                    await self.api_client.send_response(response)
 
         except json.JSONDecodeError as e:
             logging.error(f"Invalid JSON message: {e}")

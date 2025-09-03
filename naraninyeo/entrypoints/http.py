@@ -1,9 +1,10 @@
-from typing import Annotated
 import os
+from typing import Annotated
 
 import httpx
 import uvicorn
 from fastapi import Depends, FastAPI
+from fastapi.responses import StreamingResponse
 
 from naraninyeo.di import container
 from naraninyeo.domain.application.new_message_handler import NewMessageHandler
@@ -34,11 +35,6 @@ async def get_message_handler() -> NewMessageHandler:
     return await container.get(NewMessageHandler)
 
 
-async def get_api_client() -> APIClient:
-    settings = await container.get(Settings)
-    return APIClient(settings)
-
-
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
@@ -48,10 +44,16 @@ async def read_root():
 async def handle_new_message(
     new_message: Message,
     message_handler: Annotated[NewMessageHandler, Depends(get_message_handler)],
-    api_client: Annotated[APIClient, Depends(get_api_client)],
 ):
-    async for reply in message_handler.handle(new_message):
-        await api_client.send_response(reply)
+    async def make_reply():
+        is_first = True
+        async for reply in message_handler.handle(new_message):
+            if not is_first:
+                yield "\n"
+            else:
+                is_first = False
+            yield reply.model_dump_json()
+    return StreamingResponse(make_reply(), media_type="application/ld+json")
 
 
 def main():
