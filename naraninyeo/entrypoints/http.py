@@ -53,6 +53,7 @@ async def handle_new_message(
             else:
                 is_first = False
             yield reply.model_dump_json()
+
     return StreamingResponse(make_reply(), media_type="application/ld+json")
 
 

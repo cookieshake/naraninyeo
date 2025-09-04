@@ -63,7 +63,7 @@ class ReplyGeneratorAgent(ReplyGenerator):
             )
 
             async with self.agent.run_stream(query) as stream:
-                last_text = ""
+                last_text = self.settings.REPLY_TEXT_PREFIX
                 async for message in stream.stream_text(delta=True):
                     last_text += message
                     while "\n\n" in last_text:

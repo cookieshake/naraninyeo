@@ -43,3 +43,5 @@ class Settings(BaseSettings):
 
     # Health check server settings
     PORT: int = 8080
+
+    REPLY_TEXT_PREFIX: str = ""
