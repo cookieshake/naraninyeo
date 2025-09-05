@@ -83,8 +83,11 @@ class KafkaConsumer:
                     if not line:
                         continue
                     logging.info(f"Response from API: {line}")
-                    response = Message.model_validate_json(line)
-                    await self.api_client.send_response(response)
+                    try:
+                        response = Message.model_validate_json(line)
+                        await self.api_client.send_response(response)
+                    except Exception as e:
+                        logging.error(f"Error validating API response: {e}")
         except json.JSONDecodeError as e:
             logging.error(f"Invalid JSON message: {e}")
         except Exception as e:
