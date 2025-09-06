@@ -27,6 +27,6 @@ class MessageUseCase:
             asyncio.create_task(self.message_repository.get_surrounding_messages(message=msg, before=3, after=3))
             for msg in similar_messages
         ]
-        blocks = asyncio.gather(*blocks, return_exceptions=True)
-        blocks = [b for b in blocks if not isinstance(b, Exception)]
-        return blocks
+        results = await asyncio.gather(*blocks, return_exceptions=True)
+        results = [b for b in results if not isinstance(b, Exception)]
+        return results

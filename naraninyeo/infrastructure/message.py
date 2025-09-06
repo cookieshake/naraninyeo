@@ -41,7 +41,7 @@ class MongoQdrantMessageRepository(MessageRepository):
                         vector=(await self._text_embedder.embed([message.content.text]))[0],
                         payload={
                             "message_id": message.message_id,
-                            "room": message.channel.channel_id,
+                            "channel_id": message.channel.channel_id,
                             "text": message.content.text,
                             "timestamp": message.timestamp.isoformat(),
                             "author": message.author.author_name,
@@ -64,7 +64,7 @@ class MongoQdrantMessageRepository(MessageRepository):
     @get_tracer(__name__).start_as_current_span("get closest message by timestamp")
     async def get_closest_by_timestamp(self, channel_id: str, timestamp: float) -> Message | None:
         document = await self._collection.find_one(
-            {"channel_id": channel_id, "timestamp": {"$lte": timestamp}}, sort=[("timestamp", -1)]
+            {"channel.channel_id": channel_id, "timestamp": {"$lte": timestamp}}, sort=[("timestamp", -1)]
         )
         if document:
             return Message.model_validate(document)

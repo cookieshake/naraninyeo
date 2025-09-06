@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from naraninyeo.domain.model.message import Message
+from naraninyeo.domain.model.memory import MemoryItem
 
 
 class EnvironmentalContext(BaseModel):
@@ -23,3 +24,4 @@ class ReplyContext(BaseModel):
     latest_history: List[Message]
     knowledge_references: List[KnowledgeReference]
     processing_logs: list[str]
+    short_term_memory: List[MemoryItem] = Field(default_factory=list)

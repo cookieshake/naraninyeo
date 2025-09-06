@@ -17,6 +17,7 @@ class RetrievalPlan(BaseModel):
         "naver_blog",
         "naver_doc",
         "chat_history",
+        "wikipedia",
     ]
 
 

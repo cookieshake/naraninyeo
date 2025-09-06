@@ -14,7 +14,10 @@ from naraninyeo.domain.model.retrieval import RetrievalPlan
 
 
 class LocalPlanExecutor(RetrievalPlanExecutor):
-    _strategies: List[PlanExecutorStrategy] = []
+    def __init__(self, max_concurrency: int | None = None) -> None:
+        # Use instance-level strategy registry to avoid cross-instance leakage
+        self._strategies: List[PlanExecutorStrategy] = []
+        self._semaphore = asyncio.Semaphore(max_concurrency or 999999)
 
     @property
     def strategies(self) -> list[PlanExecutorStrategy]:
@@ -34,7 +37,10 @@ class LocalPlanExecutor(RetrievalPlanExecutor):
                 for strategy in self.strategies:
                     if strategy.supports(plan):
                         matched = True
-                        tasks.append(asyncio.create_task(strategy.execute(plan, context, collector)))
+                        async def run_with_sem(s=strategy, p=plan):
+                            async with self._semaphore:
+                                await s.execute(p, context, collector)
+                        tasks.append(asyncio.create_task(run_with_sem()))
                         break
                 if not matched:
                     logging.warning(
