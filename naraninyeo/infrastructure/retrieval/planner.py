@@ -1,15 +1,15 @@
 import logging
 from textwrap import dedent
 from typing import override
-from pydantic_ai import Agent
 
 from opentelemetry.trace import get_tracer
 
+from naraninyeo.core.llm.agent import Agent
+from naraninyeo.core.llm.spec import list_of
 from naraninyeo.domain.gateway.retrieval import RetrievalPlanner
 from naraninyeo.domain.model.reply import ReplyContext
 from naraninyeo.domain.model.retrieval import RetrievalPlan
 from naraninyeo.infrastructure.llm.factory import LLMAgentFactory
-from naraninyeo.core.llm.spec import list_of
 from naraninyeo.infrastructure.settings import Settings
 
 
@@ -17,6 +17,12 @@ class RetrievalPlannerAgent(RetrievalPlanner):
     @override
     @get_tracer(__name__).start_as_current_span("plan retrieval")
     async def plan(self, context: ReplyContext) -> list[RetrievalPlan]:
+        mem_text = (
+            "\n".join([m.content for m in (context.short_term_memory or [])])
+            if getattr(context, "short_term_memory", None)
+            else "(없음)"
+        )
+
         message = dedent(
             f"""
         직전 대화 기록:
@@ -29,7 +35,7 @@ class RetrievalPlannerAgent(RetrievalPlanner):
 
         단기 기억(있다면 우선 고려):
         ---
-        {"\n".join([m.content for m in (context.short_term_memory or [])]) if getattr(context, "short_term_memory", None) else "(없음)"}
+        {mem_text}
         ---
 
         위 메시지에 답하기 위해 어떤 종류의 검색을 어떤 검색어로 해야할까요?
@@ -46,6 +52,4 @@ class RetrievalPlannerAgent(RetrievalPlanner):
     def __init__(self, settings: Settings, llm_factory: LLMAgentFactory):
         self.settings = settings
         # Keep original system prompt semantics via factory
-        self.agent: Agent[list[RetrievalPlan]] = llm_factory.planner_agent(
-            output_type=list_of(RetrievalPlan)
-        )
+        self.agent: Agent[list[RetrievalPlan]] = llm_factory.planner_agent(output_type=list_of(RetrievalPlan))

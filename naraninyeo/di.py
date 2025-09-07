@@ -13,7 +13,6 @@ from naraninyeo.core.middleware import ChatMiddleware
 from naraninyeo.core.pipeline.runner import PipelineRunner
 from naraninyeo.core.pipeline.steps import StepRegistry
 from naraninyeo.core.plugins import AppRegistry, PluginManager
-from naraninyeo.infrastructure.pipeline.context import ReplyContextBuilder
 from naraninyeo.domain.application.new_message_handler import NewMessageHandler
 from naraninyeo.domain.gateway.memory import MemoryExtractor, MemoryStore
 from naraninyeo.domain.gateway.message import MessageRepository
@@ -31,6 +30,7 @@ from naraninyeo.infrastructure.memory.extractor import RuleBasedMemoryExtractor
 from naraninyeo.infrastructure.memory.extractor_llm import LLMMemoryExtractor
 from naraninyeo.infrastructure.memory.store import MongoMemoryStore
 from naraninyeo.infrastructure.message import MongoQdrantMessageRepository
+from naraninyeo.infrastructure.pipeline.context import ReplyContextBuilder
 from naraninyeo.infrastructure.pipeline.steps import (
     AfterReplyStreamHookStep,
     AfterRetrievalHookStep,

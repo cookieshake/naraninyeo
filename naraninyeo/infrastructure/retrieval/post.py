@@ -18,10 +18,16 @@ class DefaultRetrievalPostProcessor(RetrievalPostProcessor):
         deduped: list[RetrievalResult] = []
         for r in filt:
             try:
-                ref_val = r.ref.as_text if hasattr(r.ref, "as_text") else str(r.ref)
+                as_text_attr = getattr(r.ref, "as_text", None)
+                if callable(as_text_attr):
+                    ref_val_str: str = str(as_text_attr())
+                elif isinstance(as_text_attr, str):
+                    ref_val_str = as_text_attr
+                else:
+                    ref_val_str = str(r.ref)
             except Exception:
-                ref_val = str(r.ref)
-            key = (ref_val, r.content.strip())
+                ref_val_str = str(r.ref)
+            key = (ref_val_str, r.content.strip())
             if key in seen:
                 continue
             seen.add(key)

@@ -5,13 +5,13 @@ from zoneinfo import ZoneInfo
 
 from opentelemetry.trace import get_tracer
 
+from naraninyeo.core.llm.agent import Agent
+from naraninyeo.core.llm.spec import text
 from naraninyeo.domain.gateway.reply import ReplyGenerator
 from naraninyeo.domain.model.message import Author, Message, MessageContent
 from naraninyeo.domain.model.reply import ReplyContext
 from naraninyeo.infrastructure.llm.factory import LLMAgentFactory
-from naraninyeo.core.llm.spec import text
 from naraninyeo.infrastructure.settings import Settings
-from pydantic_ai import Agent
 
 
 class ReplyGeneratorAgent(ReplyGenerator):

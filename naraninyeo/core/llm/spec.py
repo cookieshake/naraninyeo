@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Sequence, TypeVar, cast
+from typing import Callable, Sequence, TypeVar, cast
 
 from pydantic_ai import NativeOutput, PromptedOutput, TextOutput, ToolOutput
 from pydantic_ai.output import OutputSpec
@@ -21,7 +21,13 @@ def native(tp: type[T]) -> OutputSpec[T]:
     return NativeOutput(tp)
 
 
-def tool(tp: type[T], *, name: str | None = None, description: str | None = None, strict: bool | None = None) -> OutputSpec[T]:
+def tool(
+    tp: type[T],
+    *,
+    name: str | None = None,
+    description: str | None = None,
+    strict: bool | None = None,
+) -> OutputSpec[T]:
     """Force tool-based structured output for a single type."""
     return ToolOutput(tp, name=name, description=description, strict=strict)
 
@@ -60,4 +66,3 @@ def text_fn(fn: Callable[[str], T]) -> OutputSpec[T]:
     Equivalent to `TextOutput(fn)`.
     """
     return TextOutput(fn)
-

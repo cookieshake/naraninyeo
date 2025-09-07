@@ -52,4 +52,3 @@ class ReplyContextBuilder:
             processing_logs=[],
             short_term_memory=short_term_memory,
         )
-

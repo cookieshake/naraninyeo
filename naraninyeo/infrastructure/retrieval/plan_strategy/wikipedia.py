@@ -6,8 +6,9 @@ from typing import List, Optional, override
 import httpx
 import nanoid
 from opentelemetry.trace import get_tracer
-from pydantic_ai import Agent
 
+from naraninyeo.core.llm.agent import Agent
+from naraninyeo.core.llm.spec import native
 from naraninyeo.domain.gateway.retrieval import PlanExecutorStrategy, RetrievalResultCollector
 from naraninyeo.domain.model.reply import ReplyContext
 from naraninyeo.domain.model.retrieval import (
@@ -18,7 +19,6 @@ from naraninyeo.domain.model.retrieval import (
     UrlRef,
 )
 from naraninyeo.infrastructure.llm.factory import LLMAgentFactory
-from naraninyeo.core.llm.spec import native
 from naraninyeo.infrastructure.settings import Settings
 
 
@@ -77,16 +77,13 @@ class WikipediaExtractor:
     def __init__(self, llm_factory: LLMAgentFactory):
         # reuse extractor agent prompt suited for text relevance/summary
         from pydantic import BaseModel
-        from pydantic_ai import NativeOutput
 
         class ExtractionResult(BaseModel):
             content: str
             is_relevant: Optional[bool]
 
         self.ExtractionResult = ExtractionResult
-        self.agent: Agent[ExtractionResult] = llm_factory.extractor_agent(
-            output_type=native(ExtractionResult)
-        )
+        self.agent: Agent[ExtractionResult] = llm_factory.extractor_agent(output_type=native(ExtractionResult))
 
     async def summarize(self, text: str, query: str) -> str:
         if not text:

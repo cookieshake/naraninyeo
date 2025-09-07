@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from abc import ABC
-
 from naraninyeo.domain.model.message import Message
 from naraninyeo.domain.model.reply import ReplyContext
 
 
-class ChatMiddleware(ABC):
+class ChatMiddleware:
     """Hook points around the chat pipeline. All methods are optional no-ops by default."""
 
     async def before_handle(self, message: Message) -> None:  # noqa: D401

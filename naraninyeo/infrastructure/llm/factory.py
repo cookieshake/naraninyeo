@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from textwrap import dedent
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
-from pydantic_ai import Agent, NativeOutput, PromptedOutput, TextOutput, ToolOutput
-from pydantic_ai.output import OutputSpec
+from pydantic_ai import NativeOutput, PromptedOutput, TextOutput, ToolOutput
 from pydantic_ai.models.instrumented import InstrumentationSettings
 from pydantic_ai.models.openai import OpenAIModelSettings
+from pydantic_ai.output import OutputSpec
 
+from naraninyeo.core.llm.agent import Agent as AppAgent
 from naraninyeo.core.llm.providers import LLMProviderRegistry, OpenRouterLLMProvider
 from naraninyeo.infrastructure.settings import Settings
 
@@ -26,7 +27,6 @@ class LLMAgentFactory:
         except KeyError:
             # Safe fallback to OpenRouter if misconfigured
             self._provider = OpenRouterLLMProvider(settings)
-
 
     def _select_output_spec(self, output_type: OutputSpec[T], model) -> OutputSpec[T]:
         """Choose the best OutputSpec based on model capabilities.
@@ -47,18 +47,22 @@ class LLMAgentFactory:
             pass
         return output_type
 
-    def _agent(self, *, model_name: str, timeout: int, output_type: OutputSpec[T], system_prompt: str) -> Agent[T]:
+    def _agent(self, *, model_name: str, timeout: int, output_type: OutputSpec[T], system_prompt: str) -> AppAgent[T]:
         model = self._provider.create_model(model_name=model_name)
         output_spec = self._select_output_spec(output_type, model)
-        return Agent(
+        from pydantic_ai import Agent as _PydAgent
+
+        inner = _PydAgent(
             model=model,
             output_type=output_spec,
             instrument=InstrumentationSettings(event_mode="logs"),
             model_settings=OpenAIModelSettings(timeout=timeout, extra_body={"reasoning": {"effort": "minimal"}}),
             system_prompt=dedent(system_prompt).strip(),
         )
+        inner_typed = cast(_PydAgent[Any, T], inner)
+        return AppAgent(inner_typed)
 
-    def reply_agent(self, *, output_type: OutputSpec[T] = str) -> Agent[T]:
+    def reply_agent(self, *, output_type: OutputSpec[T] = str) -> AppAgent[T]:
         return self._agent(
             model_name=self.settings.REPLY_MODEL_NAME,
             timeout=self.settings.LLM_TIMEOUT_SECONDS_REPLY,
@@ -81,7 +85,7 @@ class LLMAgentFactory:
             """,
         )
 
-    def planner_agent(self, *, output_type: OutputSpec[T]) -> Agent[T]:
+    def planner_agent(self, *, output_type: OutputSpec[T]) -> AppAgent[T]:
         return self._agent(
             model_name=self.settings.PLANNER_MODEL_NAME,
             timeout=self.settings.LLM_TIMEOUT_SECONDS_PLANNER,
@@ -103,7 +107,7 @@ class LLMAgentFactory:
             """,
         )
 
-    def memory_agent(self, *, output_type: OutputSpec[T]) -> Agent[T]:
+    def memory_agent(self, *, output_type: OutputSpec[T]) -> AppAgent[T]:
         return self._agent(
             model_name=self.settings.MEMORY_MODEL_NAME,
             timeout=self.settings.LLM_TIMEOUT_SECONDS_MEMORY,
@@ -118,7 +122,7 @@ class LLMAgentFactory:
             """,
         )
 
-    def extractor_agent(self, *, output_type: OutputSpec[T]) -> Agent[T]:
+    def extractor_agent(self, *, output_type: OutputSpec[T]) -> AppAgent[T]:
         return self._agent(
             model_name=self.settings.EXTRACTOR_MODEL_NAME,
             timeout=self.settings.LLM_TIMEOUT_SECONDS_EXTRACTOR,
