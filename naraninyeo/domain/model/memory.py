@@ -14,4 +14,3 @@ class MemoryItem(BaseModel):
     expires_at: Optional[datetime] = None
     # Optional vector for future similarity lookup
     vector: Optional[list[float]] = None
-

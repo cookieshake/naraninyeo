@@ -19,4 +19,3 @@ class MemoryStore(ABC):
 class MemoryExtractor(ABC):
     @abstractmethod
     async def extract_from_message(self, message: Message, history: list[Message]) -> list[MemoryItem]: ...
-

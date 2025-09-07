@@ -7,4 +7,3 @@ from naraninyeo.domain.model.retrieval import RetrievalResult
 class RetrievalPostProcessor(ABC):
     @abstractmethod
     def process(self, results: list[RetrievalResult], context: ReplyContext) -> list[RetrievalResult]: ...
-

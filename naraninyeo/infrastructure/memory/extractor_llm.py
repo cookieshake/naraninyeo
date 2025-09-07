@@ -3,16 +3,17 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 from textwrap import dedent
-from typing import List, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
+from naraninyeo.core.llm.spec import list_of
 
 from naraninyeo.domain.gateway.memory import MemoryExtractor
 from naraninyeo.domain.model.memory import MemoryItem
 from naraninyeo.domain.model.message import Message
-from naraninyeo.infrastructure.settings import Settings
 from naraninyeo.infrastructure.llm.factory import LLMAgentFactory
+from naraninyeo.infrastructure.settings import Settings
 
 
 class LLMExtractionItem(BaseModel):
@@ -25,7 +26,9 @@ class LLMExtractionItem(BaseModel):
 class LLMMemoryExtractor(MemoryExtractor):
     def __init__(self, settings: Settings, llm_factory: LLMAgentFactory):
         self.settings = settings
-        self.agent: Agent = llm_factory.memory_agent(output_type=List[LLMExtractionItem])
+        self.agent: Agent[list[LLMExtractionItem]] = llm_factory.memory_agent(
+            output_type=list_of(LLMExtractionItem)
+        )
 
     async def extract_from_message(self, message: Message, history: list[Message]) -> list[MemoryItem]:
         # Skip commands
@@ -47,7 +50,7 @@ class LLMMemoryExtractor(MemoryExtractor):
 
         try:
             result = await self.agent.run(prompt)
-            items: List[LLMExtractionItem] = result.output or []
+            items: list[LLMExtractionItem] = result.output or []
         except Exception:
             return []
 

@@ -3,8 +3,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from naraninyeo.domain.model.message import Message
 from naraninyeo.domain.model.memory import MemoryItem
+from naraninyeo.domain.model.message import Message
 
 
 class EnvironmentalContext(BaseModel):

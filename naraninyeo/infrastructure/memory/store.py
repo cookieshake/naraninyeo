@@ -27,9 +27,7 @@ class MongoMemoryStore(MemoryStore):
         ops = []
         for item in items:
             ops.append(
-                self._collection.update_one(
-                    {"memory_id": item.memory_id}, {"$set": item.model_dump()}, upsert=True
-                )
+                self._collection.update_one({"memory_id": item.memory_id}, {"$set": item.model_dump()}, upsert=True)
             )
         # Fire sequentially to avoid overwhelming small test DB; could be optimized
         for op in ops:

@@ -1,30 +1,64 @@
 from __future__ import annotations
 
 from textwrap import dedent
+from typing import Any, TypeVar
 
-from pydantic_ai import Agent
+from pydantic_ai import Agent, NativeOutput, PromptedOutput, TextOutput, ToolOutput
+from pydantic_ai.output import OutputSpec
 from pydantic_ai.models.instrumented import InstrumentationSettings
-from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
-from pydantic_ai.providers.openrouter import OpenRouterProvider
+from pydantic_ai.models.openai import OpenAIModelSettings
 
+from naraninyeo.core.llm.providers import LLMProviderRegistry, OpenRouterLLMProvider
 from naraninyeo.infrastructure.settings import Settings
+
+# Generic type variable for agent output
+T = TypeVar("T")
 
 
 class LLMAgentFactory:
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, provider_registry: LLMProviderRegistry | None = None):
         self.settings = settings
-        self.provider = OpenRouterProvider(api_key=settings.OPENROUTER_API_KEY)
+        # Build provider from registry if available; default to built-in OpenRouter
+        registry = provider_registry or LLMProviderRegistry()
+        provider_name = getattr(settings, "LLM_PROVIDER", "openrouter")
+        try:
+            self._provider = registry.build(provider_name, settings)
+        except KeyError:
+            # Safe fallback to OpenRouter if misconfigured
+            self._provider = OpenRouterLLMProvider(settings)
 
-    def _agent(self, *, model_name: str, timeout: int, output_type, system_prompt: str) -> Agent:
+
+    def _select_output_spec(self, output_type: OutputSpec[T], model) -> OutputSpec[T]:
+        """Choose the best OutputSpec based on model capabilities.
+
+        - If caller provided an OutputSpec (Native/Prompted/Text/Tool), use it as-is.
+        - If `str`, keep text mode (for streaming and simplicity).
+        - Otherwise: prefer NativeOutput only when the model supports native JSON schema output.
+          Fallback to raw type (which will default to tool-based structured output) for broader compatibility.
+        """
+        if output_type is str:
+            return output_type  # type: ignore[return-value]
+        if isinstance(output_type, (NativeOutput, PromptedOutput, TextOutput, ToolOutput)):
+            return output_type
+        try:
+            if getattr(getattr(model, "profile", None), "supports_json_schema_output", False):
+                return NativeOutput(output_type)  # type: ignore[return-value]
+        except Exception:
+            pass
+        return output_type
+
+    def _agent(self, *, model_name: str, timeout: int, output_type: OutputSpec[T], system_prompt: str) -> Agent[T]:
+        model = self._provider.create_model(model_name=model_name)
+        output_spec = self._select_output_spec(output_type, model)
         return Agent(
-            model=OpenAIModel(model_name=model_name, provider=self.provider),
-            output_type=output_type,
+            model=model,
+            output_type=output_spec,
             instrument=InstrumentationSettings(event_mode="logs"),
             model_settings=OpenAIModelSettings(timeout=timeout, extra_body={"reasoning": {"effort": "minimal"}}),
             system_prompt=dedent(system_prompt).strip(),
         )
 
-    def reply_agent(self, *, output_type=str) -> Agent:
+    def reply_agent(self, *, output_type: OutputSpec[T] = str) -> Agent[T]:
         return self._agent(
             model_name=self.settings.REPLY_MODEL_NAME,
             timeout=self.settings.LLM_TIMEOUT_SECONDS_REPLY,
@@ -47,7 +81,7 @@ class LLMAgentFactory:
             """,
         )
 
-    def planner_agent(self, *, output_type) -> Agent:
+    def planner_agent(self, *, output_type: OutputSpec[T]) -> Agent[T]:
         return self._agent(
             model_name=self.settings.PLANNER_MODEL_NAME,
             timeout=self.settings.LLM_TIMEOUT_SECONDS_PLANNER,
@@ -69,7 +103,7 @@ class LLMAgentFactory:
             """,
         )
 
-    def memory_agent(self, *, output_type) -> Agent:
+    def memory_agent(self, *, output_type: OutputSpec[T]) -> Agent[T]:
         return self._agent(
             model_name=self.settings.MEMORY_MODEL_NAME,
             timeout=self.settings.LLM_TIMEOUT_SECONDS_MEMORY,
@@ -84,7 +118,7 @@ class LLMAgentFactory:
             """,
         )
 
-    def extractor_agent(self, *, output_type) -> Agent:
+    def extractor_agent(self, *, output_type: OutputSpec[T]) -> Agent[T]:
         return self._agent(
             model_name=self.settings.EXTRACTOR_MODEL_NAME,
             timeout=self.settings.LLM_TIMEOUT_SECONDS_EXTRACTOR,

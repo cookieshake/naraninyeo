@@ -4,13 +4,14 @@ from typing import AsyncIterator, override
 from zoneinfo import ZoneInfo
 
 from opentelemetry.trace import get_tracer
-from pydantic_ai import Agent
 
 from naraninyeo.domain.gateway.reply import ReplyGenerator
 from naraninyeo.domain.model.message import Author, Message, MessageContent
 from naraninyeo.domain.model.reply import ReplyContext
-from naraninyeo.infrastructure.settings import Settings
 from naraninyeo.infrastructure.llm.factory import LLMAgentFactory
+from naraninyeo.core.llm.spec import text
+from naraninyeo.infrastructure.settings import Settings
+from pydantic_ai import Agent
 
 
 class ReplyGeneratorAgent(ReplyGenerator):
@@ -78,7 +79,7 @@ class ReplyGeneratorAgent(ReplyGenerator):
 
     def __init__(self, settings: Settings, llm_factory: LLMAgentFactory):
         self.settings = settings
-        self.agent = llm_factory.reply_agent(output_type=str)
+        self.agent: Agent[str] = llm_factory.reply_agent(output_type=text())
 
     def _create_new_message(self, context: ReplyContext, text: str) -> Message:
         now = datetime.now(ZoneInfo(self.settings.TIMEZONE))

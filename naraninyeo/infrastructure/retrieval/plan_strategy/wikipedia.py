@@ -6,11 +6,19 @@ from typing import List, Optional, override
 import httpx
 import nanoid
 from opentelemetry.trace import get_tracer
+from pydantic_ai import Agent
 
 from naraninyeo.domain.gateway.retrieval import PlanExecutorStrategy, RetrievalResultCollector
 from naraninyeo.domain.model.reply import ReplyContext
-from naraninyeo.domain.model.retrieval import RetrievalPlan, RetrievalResult, RetrievalStatus, RetrievalStatusReason, UrlRef
+from naraninyeo.domain.model.retrieval import (
+    RetrievalPlan,
+    RetrievalResult,
+    RetrievalStatus,
+    RetrievalStatusReason,
+    UrlRef,
+)
 from naraninyeo.infrastructure.llm.factory import LLMAgentFactory
+from naraninyeo.core.llm.spec import native
 from naraninyeo.infrastructure.settings import Settings
 
 
@@ -40,7 +48,11 @@ class WikipediaClient:
             data = resp.json()
         results = []
         for item in data.get("query", {}).get("search", []):
-            results.append(WikiSearchResult(title=item.get("title", ""), pageid=item.get("pageid", 0), snippet=item.get("snippet", "")))
+            results.append(
+                WikiSearchResult(
+                    title=item.get("title", ""), pageid=item.get("pageid", 0), snippet=item.get("snippet", "")
+                )
+            )
         return results
 
     @get_tracer(__name__).start_as_current_span("wikipedia page extract")
@@ -64,15 +76,17 @@ class WikipediaClient:
 class WikipediaExtractor:
     def __init__(self, llm_factory: LLMAgentFactory):
         # reuse extractor agent prompt suited for text relevance/summary
-        from pydantic_ai import NativeOutput
         from pydantic import BaseModel
+        from pydantic_ai import NativeOutput
 
         class ExtractionResult(BaseModel):
             content: str
             is_relevant: Optional[bool]
 
         self.ExtractionResult = ExtractionResult
-        self.agent = llm_factory.extractor_agent(output_type=NativeOutput(ExtractionResult))
+        self.agent: Agent[ExtractionResult] = llm_factory.extractor_agent(
+            output_type=native(ExtractionResult)
+        )
 
     async def summarize(self, text: str, query: str) -> str:
         if not text:
@@ -138,4 +152,3 @@ class WikipediaStrategy(PlanExecutorStrategy):
                 logging.info("Wikipedia worker failed", exc_info=e)
 
         await asyncio.gather(*[worker(r) for r in results], return_exceptions=True)
-

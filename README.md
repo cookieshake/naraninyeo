@@ -105,3 +105,56 @@ python main.py kafka
 - **ConversationService**: 메시지 저장, 응답 여부 판단, 컨텍스트 수집, 응답 생성 등 대화의 전체 흐름을 관리하는 핵심 서비스입니다.
 - **Adapters**: `LLMClient`, `EmbeddingClient`, `SearchClient`, `MessageRepository` 등 외부 시스템과의 상호작용을 추상화하는 역할을 합니다. 이를 통해 비즈니스 로직의 변경 없이 외부 시스템을 쉽게 교체할 수 있습니다.
 - **LLM Agents**: 단순한 LLM 호출을 넘어, `SearchPlan`을 생성하는 등 더 능동적인 작업을 수행하는 에이전트 로직을 포함합니다.
+
+## 확장성(Plugins & Registries)
+
+이제 플러그인과 레지스트리 기반 구조로 새로운 기능을 쉽게 추가할 수 있습니다.
+
+- LLM Provider Registry: `Settings.LLM_PROVIDER`로 사용할 제공자를 선택합니다. 기본값은 `openrouter`입니다.
+- Retrieval Strategy Plugins: 전략 빌더를 플러그인 모듈에 등록하면 DI가 자동으로 가져와 실행기에 등록합니다.
+- Chat Middleware Hooks: 대화 파이프라인 전/후에 훅을 연결해 로깅, 필터링 등을 쉽게 추가할 수 있습니다.
+
+사용법 요약:
+- `Settings.PLUGINS = ["your_pkg.plugins.my_plugin"]`
+- 플러그인 모듈은 아래 중 하나를 노출합니다.
+  - `register(registry)` 함수에서 `registry.register_retrieval_strategy(...)`, `registry.register_chat_middleware(...)` 등 호출
+  - 또는 `RETRIEVAL_STRATEGY_BUILDERS`, `CHAT_MIDDLEWARE_BUILDERS` 목록을 제공
+
+예시 (플러그인 모듈):
+
+```python
+# your_pkg/plugins/my_plugin.py
+from naraninyeo.core.plugins import AppRegistry
+
+def register(registry: AppRegistry):
+    # registry.register_retrieval_strategy(lambda settings, llm_factory: MyStrategy(settings, llm_factory))
+    # registry.register_chat_middleware(lambda settings: MyMiddleware(settings))
+    ...
+```
+
+## 파이프라인 구성(Logic Flow)
+
+대화 처리 흐름은 설정으로 바꿀 수 있는 파이프라인으로 구성됩니다. 각 스텝은 독립 클래스로 구현되어 필요에 따라 순서를 바꾸거나 끼워넣을 수 있습니다.
+
+- 설정 키: `Settings.PIPELINE` (스텝 이름 배열). 비어 있으면 기본 순서를 사용합니다.
+- 기본 스텝 이름:
+  - `save_incoming`: 입력 메시지 저장(비동기)
+  - `ingest_memory`: 최근 기록 수집 후 메모리 추출(비동기)
+  - `should_reply`: 응답 필요 여부 판단(false면 중단)
+  - `build_context`: ReplyContext 구성
+  - `before_retrieval_hook`: 미들웨어 훅 호출
+  - `plan_retrieval`: 검색 계획 수립
+  - `execute_retrieval`: 검색 실행(타임아웃/랭킹/후처리 포함)
+  - `after_retrieval_hook`: 미들웨어 훅 호출
+  - `attach_references`: 검색 결과를 답변 컨텍스트에 연결
+  - `before_reply_stream_hook`: 미들웨어 훅 호출
+  - `stream_reply`: 답변 스트리밍 생성(`ReplyUseCase`)
+  - `after_reply_stream_hook`: 미들웨어 훅 호출
+  - `finalize`: 백그라운드 태스크 정리
+
+스텝 추가/교체 방법:
+- 플러그인에서 `register(registry)` 함수로 커스텀 파이프라인 스텝 등록
+  - `registry.register_pipeline_step("my_step", lambda deps: MyStep(deps))`
+- `Settings.PLUGINS`에 플러그인 모듈 추가 후, `Settings.PIPELINE`에 `"my_step"`를 원하는 위치에 삽입
+
+참고: 스텝은 `deps`(Settings, UseCase, Middleware 등 공용 의존성)로 생성되며, 상태는 `PipelineState`로 주고받습니다.

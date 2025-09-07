@@ -14,7 +14,8 @@ from bs4 import BeautifulSoup
 from markdownify import MarkdownConverter
 from opentelemetry.trace import get_tracer
 from pydantic import BaseModel
-from pydantic_ai import NativeOutput
+from pydantic_ai import Agent
+from naraninyeo.core.llm.spec import native
 
 from naraninyeo.domain.gateway.retrieval import PlanExecutorStrategy, RetrievalResultCollector
 from naraninyeo.domain.model.reply import ReplyContext
@@ -25,8 +26,8 @@ from naraninyeo.domain.model.retrieval import (
     RetrievalStatusReason,
     UrlRef,
 )
-from naraninyeo.infrastructure.settings import Settings
 from naraninyeo.infrastructure.llm.factory import LLMAgentFactory
+from naraninyeo.infrastructure.settings import Settings
 
 
 class Crawler:
@@ -106,7 +107,9 @@ class Extractor:
     def __init__(self, settings: Settings, crawler: Crawler, llm_factory: LLMAgentFactory) -> None:
         self.settings = settings
         self.crawler = crawler
-        self.agent = llm_factory.extractor_agent(output_type=NativeOutput(ExtractionResult))
+        self.agent: Agent[ExtractionResult] = llm_factory.extractor_agent(
+            output_type=native(ExtractionResult)
+        )
 
     @get_tracer(__name__).start_as_current_span("extract from markdown")
     async def extract(self, url: str, query: str) -> ExtractionResult:
@@ -134,7 +137,7 @@ class Extractor:
             )
         )
         # enhancement_result.output 는 ExtractionResult 타입
-        extraction: ExtractionResult = enhancement_result.output
+        extraction: ExtractionResult = enhancement_result.output # pyright: ignore[reportAssignmentType]
         # 안전장치: 모델이 is_relevant를 누락했을 경우 content 유무로 결정
         if extraction.is_relevant is None:
             extraction.is_relevant = bool(extraction.content.strip())

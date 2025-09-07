@@ -34,8 +34,10 @@ class APIClient:
 async def get_message_handler() -> NewMessageHandler:
     return await container.get(NewMessageHandler)
 
+
 async def get_settings() -> Settings:
     return await container.get(Settings)
+
 
 @app.get("/")
 async def read_root():
@@ -61,6 +63,8 @@ async def handle_new_message(
 
 def main():
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+
+
 @app.get("/health")
 async def health(settings: Annotated[Settings, Depends(get_settings)]):
     return {

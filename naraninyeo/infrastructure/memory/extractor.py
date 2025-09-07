@@ -40,4 +40,3 @@ class RuleBasedMemoryExtractor(MemoryExtractor):
                 expires_at=expires,
             )
         ]
-

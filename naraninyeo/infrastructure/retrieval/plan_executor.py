@@ -37,9 +37,11 @@ class LocalPlanExecutor(RetrievalPlanExecutor):
                 for strategy in self.strategies:
                     if strategy.supports(plan):
                         matched = True
+
                         async def run_with_sem(s=strategy, p=plan):
                             async with self._semaphore:
                                 await s.execute(p, context, collector)
+
                         tasks.append(asyncio.create_task(run_with_sem()))
                         break
                 if not matched:

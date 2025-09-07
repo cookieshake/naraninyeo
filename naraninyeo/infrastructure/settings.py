@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     # OpenRouter API settings
     OPENROUTER_API_KEY: str = ""
 
+    # LLM provider selection (via registry)
+    # Available out of the box: "openrouter"
+    LLM_PROVIDER: str = "openrouter"
+
     # Health check server settings
     PORT: int = 8080
 
@@ -81,6 +85,12 @@ class Settings(BaseSettings):
     }
     RECENCY_WINDOW_HOURS: int = 24
     RECENCY_BONUS_MAX: float = 0.5
+
+    # Plugin modules to auto-load at startup (e.g., ["my_pkg.plugins.search_bing"])
+    PLUGINS: list[str] = []
+
+    # Pipeline order (override to customize flow). If empty, uses built-in default.
+    PIPELINE: list[str] = []
 
     @field_validator("ENABLED_RETRIEVAL_STRATEGIES")
     @classmethod
