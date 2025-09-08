@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     # LLM model names and timeouts
     REPLY_MODEL_NAME: str = "deepseek/deepseek-chat-v3.1"
     PLANNER_MODEL_NAME: str = "anthropic/claude-sonnet-4"
-    MEMORY_MODEL_NAME: str = "openai/gpt-4.1-mini"
+    MEMORY_MODEL_NAME: str = "openai/gpt-5-nano"
     EXTRACTOR_MODEL_NAME: str = "openai/gpt-4.1-nano"
     LLM_TIMEOUT_SECONDS_REPLY: int = 20
     LLM_TIMEOUT_SECONDS_PLANNER: int = 20
