@@ -1,18 +1,16 @@
 import asyncio
 import hashlib
-from typing import override
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from opentelemetry.trace import get_tracer
 from qdrant_client import AsyncQdrantClient
 from qdrant_client import models as qmodels
 
-from naraninyeo.domain.gateway.message import MessageRepository
-from naraninyeo.domain.model.message import Message
+from naraninyeo.core.models.message import Message
 from naraninyeo.infrastructure.embedding import TextEmbedder
 
 
-class MongoQdrantMessageRepository(MessageRepository):
+class MongoQdrantMessageRepository:
     def __init__(
         self,
         mongodb: AsyncIOMotorDatabase,
@@ -25,7 +23,6 @@ class MongoQdrantMessageRepository(MessageRepository):
         self._qdrant_collection = "naraninyeo-messages"
         self._text_embedder = text_embedder
 
-    @override
     @get_tracer(__name__).start_as_current_span("save message")
     async def save(self, message: Message) -> None:
         tasks = []
@@ -41,7 +38,7 @@ class MongoQdrantMessageRepository(MessageRepository):
                         vector=(await self._text_embedder.embed([message.content.text]))[0],
                         payload={
                             "message_id": message.message_id,
-                            "room": message.channel.channel_id,
+                            "channel_id": message.channel.channel_id,
                             "text": message.content.text,
                             "timestamp": message.timestamp.isoformat(),
                             "author": message.author.author_name,
@@ -52,7 +49,6 @@ class MongoQdrantMessageRepository(MessageRepository):
         )
         await asyncio.gather(*tasks)
 
-    @override
     @get_tracer(__name__).start_as_current_span("load message")
     async def load(self, message_id: str) -> Message | None:
         document = await self._collection.find_one({"message_id": message_id})
@@ -60,17 +56,15 @@ class MongoQdrantMessageRepository(MessageRepository):
             return Message.model_validate(document)
         return None
 
-    @override
     @get_tracer(__name__).start_as_current_span("get closest message by timestamp")
     async def get_closest_by_timestamp(self, channel_id: str, timestamp: float) -> Message | None:
         document = await self._collection.find_one(
-            {"channel_id": channel_id, "timestamp": {"$lte": timestamp}}, sort=[("timestamp", -1)]
+            {"channel.channel_id": channel_id, "timestamp": {"$lte": timestamp}}, sort=[("timestamp", -1)]
         )
         if document:
             return Message.model_validate(document)
         return None
 
-    @override
     @get_tracer(__name__).start_as_current_span("get surrounding messages")
     async def get_surrounding_messages(self, message: Message, before: int = 5, after: int = 5) -> list[Message]:
         tasks = []
@@ -107,7 +101,6 @@ class MongoQdrantMessageRepository(MessageRepository):
         messages.sort(key=lambda m: m.timestamp)
         return messages
 
-    @override
     @get_tracer(__name__).start_as_current_span("search similar messages")
     async def search_similar_messages(self, channel_id: str, keyword: str, limit: int) -> list[Message]:
         result = await self._qdrant_client.query_points(

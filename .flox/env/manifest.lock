@@ -3,6 +3,9 @@
   "manifest": {
     "version": 1,
     "install": {
+      "pyright": {
+        "pkg-path": "pyright"
+      },
       "python313": {
         "pkg-path": "python313"
       },
@@ -23,6 +26,126 @@
   },
   "packages": [
     {
+      "attr_path": "pyright",
+      "broken": false,
+      "derivation": "/nix/store/qh75pv1pjrz6n0a7c9lrwv9dl6lnz9id-pyright-1.1.399.drv",
+      "description": "Type checker for the Python language",
+      "install_id": "pyright",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9e83b64f727c88a7711a2c463a7b16eedb69a84c",
+      "name": "pyright-1.1.399",
+      "pname": "pyright",
+      "rev": "9e83b64f727c88a7711a2c463a7b16eedb69a84c",
+      "rev_count": 816272,
+      "rev_date": "2025-06-17T04:31:58Z",
+      "scrape_date": "2025-06-18T00:36:24.942341Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.1.399",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/mxkg78zd4j8ds2mfj56dccx66nif1wag-pyright-1.1.399"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "pyright",
+      "broken": false,
+      "derivation": "/nix/store/zkcg1vcadhr9dm65g4hfg3lbgcsna8dq-pyright-1.1.399.drv",
+      "description": "Type checker for the Python language",
+      "install_id": "pyright",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9e83b64f727c88a7711a2c463a7b16eedb69a84c",
+      "name": "pyright-1.1.399",
+      "pname": "pyright",
+      "rev": "9e83b64f727c88a7711a2c463a7b16eedb69a84c",
+      "rev_count": 816272,
+      "rev_date": "2025-06-17T04:31:58Z",
+      "scrape_date": "2025-06-18T00:55:10.761303Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.1.399",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/kn710vcfmid1q4bhfyaxymkbyd3g29ms-pyright-1.1.399"
+      },
+      "system": "aarch64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "pyright",
+      "broken": false,
+      "derivation": "/nix/store/aql8656a6d079x0xk9v97nprkpr510v6-pyright-1.1.399.drv",
+      "description": "Type checker for the Python language",
+      "install_id": "pyright",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9e83b64f727c88a7711a2c463a7b16eedb69a84c",
+      "name": "pyright-1.1.399",
+      "pname": "pyright",
+      "rev": "9e83b64f727c88a7711a2c463a7b16eedb69a84c",
+      "rev_count": 816272,
+      "rev_date": "2025-06-17T04:31:58Z",
+      "scrape_date": "2025-06-18T01:12:32.458695Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.1.399",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/j1fq3cpgjdw2yfslzkgkazbm9pi2h1cl-pyright-1.1.399"
+      },
+      "system": "x86_64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "pyright",
+      "broken": false,
+      "derivation": "/nix/store/phpih6j3kfklrkba90mb6flmibv17513-pyright-1.1.399.drv",
+      "description": "Type checker for the Python language",
+      "install_id": "pyright",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9e83b64f727c88a7711a2c463a7b16eedb69a84c",
+      "name": "pyright-1.1.399",
+      "pname": "pyright",
+      "rev": "9e83b64f727c88a7711a2c463a7b16eedb69a84c",
+      "rev_count": 816272,
+      "rev_date": "2025-06-17T04:31:58Z",
+      "scrape_date": "2025-06-18T01:32:53.589464Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.1.399",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/z0vamvqdhkg3riyq9qjhpcrxhxd1w9ph-pyright-1.1.399"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
       "attr_path": "python313",
       "broken": false,
       "derivation": "/nix/store/q7j6rfh247fr6s1rhg4wax75bc1cccv6-python3-3.13.3.drv",
@@ -37,6 +160,7 @@
       "rev_date": "2025-06-17T04:31:58Z",
       "scrape_date": "2025-06-18T00:36:33.608630Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
@@ -66,6 +190,7 @@
       "rev_date": "2025-06-17T04:31:58Z",
       "scrape_date": "2025-06-18T00:55:24.206617Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
@@ -96,6 +221,7 @@
       "rev_date": "2025-06-17T04:31:58Z",
       "scrape_date": "2025-06-18T01:12:41.267021Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
@@ -125,6 +251,7 @@
       "rev_date": "2025-06-17T04:31:58Z",
       "scrape_date": "2025-06-18T01:33:08.013695Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
@@ -155,6 +282,7 @@
       "rev_date": "2025-06-17T04:31:58Z",
       "scrape_date": "2025-06-18T00:37:13.013800Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
@@ -184,6 +312,7 @@
       "rev_date": "2025-06-17T04:31:58Z",
       "scrape_date": "2025-06-18T00:56:19.858724Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
@@ -213,6 +342,7 @@
       "rev_date": "2025-06-17T04:31:58Z",
       "scrape_date": "2025-06-18T01:13:21.804090Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
@@ -242,6 +372,7 @@
       "rev_date": "2025-06-17T04:31:58Z",
       "scrape_date": "2025-06-18T01:34:07.514180Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,

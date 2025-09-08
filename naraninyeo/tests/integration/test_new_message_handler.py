@@ -6,8 +6,8 @@ import pytest
 import pytest_asyncio
 from dishka import AsyncContainer
 
-from naraninyeo.domain.application.new_message_handler import NewMessageHandler
-from naraninyeo.domain.model.message import Author, Channel, Message, MessageContent
+from naraninyeo.core.application.new_message_handler import NewMessageHandler
+from naraninyeo.core.models.message import Author, Channel, Message, MessageContent
 
 logger = logging.getLogger(__name__)
 

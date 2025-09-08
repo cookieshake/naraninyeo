@@ -2,22 +2,30 @@ import asyncio
 import logging
 import os
 import sys
+from typing import Any, cast
 
+import opentelemetry._logs as otel_logs  # type: ignore[reportPrivateImportUsage]
+import opentelemetry.exporter.otlp.proto.http._log_exporter as otlp_log_exporter  # type: ignore[reportPrivateImportUsage]
+import opentelemetry.sdk._logs as otel_sdk_logs  # type: ignore[reportPrivateImportUsage]
+import opentelemetry.sdk._logs.export as otel_sdk_logs_export  # type: ignore[reportPrivateImportUsage]
 from openinference.instrumentation.pydantic_ai import OpenInferenceSpanProcessor
 from openinference.semconv.resource import ResourceAttributes
-from opentelemetry import _logs, metrics, trace
-from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.pymongo import PymongoInstrumentor
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler, LogRecord
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, ConsoleLogExporter
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+
+# So pyright doesn't flag private modules; treat as dynamic at type-check time
+otel_logs = cast(Any, otel_logs)
+otlp_log_exporter = cast(Any, otlp_log_exporter)
+otel_sdk_logs = cast(Any, otel_sdk_logs)
+otel_sdk_logs_export = cast(Any, otel_sdk_logs_export)
 
 ENABLE_OTLP_EXPORTER = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip() != ""
 
@@ -44,7 +52,7 @@ if __name__ == "__main__":
             parts.append(f"{duration_ms}ms")
         return " ".join(parts) + "\n"
 
-    def tiny_log(record: LogRecord) -> str:
+    def tiny_log(record: Any) -> str:
         # level = (
         #     record.severity_text
         #     if record.severity_text
@@ -97,13 +105,17 @@ if __name__ == "__main__":
         )
 
     # LOGS
-    logger_provider = LoggerProvider()
+    logger_provider = otel_sdk_logs.LoggerProvider()
     if ENABLE_OTLP_EXPORTER:
-        logger_provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter()))
-    logger_provider.add_log_record_processor(BatchLogRecordProcessor(ConsoleLogExporter(formatter=tiny_log)))
-    _logs.set_logger_provider(logger_provider)
+        logger_provider.add_log_record_processor(
+            otel_sdk_logs_export.BatchLogRecordProcessor(otlp_log_exporter.OTLPLogExporter())
+        )
+    logger_provider.add_log_record_processor(
+        otel_sdk_logs_export.BatchLogRecordProcessor(otel_sdk_logs_export.ConsoleLogExporter(formatter=tiny_log))
+    )
+    otel_logs.set_logger_provider(logger_provider)
 
-    logging_handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
+    logging_handler = otel_sdk_logs.LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
     logging.basicConfig(handlers=[logging_handler], level=logging.INFO)
 
     # INSTRUMENTATION

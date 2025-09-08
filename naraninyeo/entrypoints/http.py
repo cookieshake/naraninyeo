@@ -6,9 +6,9 @@ import uvicorn
 from fastapi import Depends, FastAPI
 from fastapi.responses import StreamingResponse
 
+from naraninyeo.core.application.new_message_handler import NewMessageHandler
+from naraninyeo.core.models.message import Message
 from naraninyeo.di import container
-from naraninyeo.domain.application.new_message_handler import NewMessageHandler
-from naraninyeo.domain.model.message import Message
 from naraninyeo.infrastructure.settings import Settings
 
 app = FastAPI()
@@ -35,6 +35,10 @@ async def get_message_handler() -> NewMessageHandler:
     return await container.get(NewMessageHandler)
 
 
+async def get_settings() -> Settings:
+    return await container.get(Settings)
+
+
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
@@ -59,3 +63,21 @@ async def handle_new_message(
 
 def main():
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+
+
+@app.get("/health")
+async def health(settings: Annotated[Settings, Depends(get_settings)]):
+    return {
+        "status": "ok",
+        "enabled_strategies": settings.ENABLED_RETRIEVAL_STRATEGIES,
+        "models": {
+            "reply": settings.REPLY_MODEL_NAME,
+            "planner": settings.PLANNER_MODEL_NAME,
+            "memory": settings.MEMORY_MODEL_NAME,
+            "extractor": settings.EXTRACTOR_MODEL_NAME,
+        },
+        "retrieval": {
+            "max_concurrency": settings.RETRIEVAL_MAX_CONCURRENCY,
+            "max_references": settings.MAX_KNOWLEDGE_REFERENCES,
+        },
+    }
