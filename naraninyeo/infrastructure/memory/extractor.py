@@ -2,9 +2,9 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import override
 
-from naraninyeo.domain.gateway.memory import MemoryExtractor
-from naraninyeo.domain.model.memory import MemoryItem
-from naraninyeo.domain.model.message import Message
+from naraninyeo.core.contracts.memory import MemoryExtractor
+from naraninyeo.core.models.memory import MemoryItem
+from naraninyeo.core.models.message import Message
 
 
 class RuleBasedMemoryExtractor(MemoryExtractor):

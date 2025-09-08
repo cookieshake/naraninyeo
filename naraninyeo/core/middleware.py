@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from naraninyeo.domain.model.message import Message
-from naraninyeo.domain.model.reply import ReplyContext
+from naraninyeo.core.models.message import Message
+from naraninyeo.core.models.reply import ReplyContext
 
 
 class ChatMiddleware:

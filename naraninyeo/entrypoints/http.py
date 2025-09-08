@@ -6,9 +6,9 @@ import uvicorn
 from fastapi import Depends, FastAPI
 from fastapi.responses import StreamingResponse
 
+from naraninyeo.core.application.new_message_handler import NewMessageHandler
+from naraninyeo.core.models.message import Message
 from naraninyeo.di import container
-from naraninyeo.domain.application.new_message_handler import NewMessageHandler
-from naraninyeo.domain.model.message import Message
 from naraninyeo.infrastructure.settings import Settings
 
 app = FastAPI()

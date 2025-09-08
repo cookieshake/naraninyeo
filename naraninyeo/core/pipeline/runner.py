@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator
-from typing import Sequence
+from typing import Awaitable, Callable, Sequence
 
 from naraninyeo.core.middleware import ChatMiddleware
+from naraninyeo.core.models.message import Message
 from naraninyeo.core.pipeline.steps import StepRegistry
 from naraninyeo.core.pipeline.types import PipelineState
-from naraninyeo.domain.gateway.message import MessageRepository
-from naraninyeo.domain.model.message import Message
 from naraninyeo.infrastructure.settings import Settings
 
 
@@ -18,16 +17,17 @@ class PipelineRunner:
     def __init__(
         self,
         settings: Settings,
-        message_repository: MessageRepository,
         step_registry: StepRegistry,
         step_order: Sequence[str],
         middlewares: list[ChatMiddleware] | None = None,
+        reply_saver: Callable[[Message], Awaitable[None]] | None = None,
     ) -> None:
         self.settings = settings
-        self.message_repository = message_repository
         self.step_registry = step_registry
         self.step_order = list(step_order)
         self._middlewares = middlewares or []
+        # decouple from repository by accepting a simple callback
+        self._save_reply: Callable[[Message], Awaitable[None]] | None = reply_saver
 
     async def run(self, message: Message) -> AsyncIterator[Message]:  # type: ignore[override]
         # Call middleware hook
@@ -66,7 +66,8 @@ class PipelineRunner:
                     # Stream to caller first (preserve original behavior)
                     yield item
                     # After yielding, persist and notify middleware
-                    await self.message_repository.save(item)
+                    if self._save_reply is not None:
+                        await self._save_reply(item)
                     for mw in self._middlewares:
                         await mw.on_reply(item)
                 except asyncio.TimeoutError:

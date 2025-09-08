@@ -4,9 +4,9 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Optional
 
-from naraninyeo.domain.model.message import Message
-from naraninyeo.domain.model.reply import ReplyContext
-from naraninyeo.domain.model.retrieval import RetrievalPlan, RetrievalResult
+from naraninyeo.core.models.message import Message
+from naraninyeo.core.models.reply import ReplyContext
+from naraninyeo.core.models.retrieval import RetrievalPlan, RetrievalResult
 
 EmitFn = Callable[[Message], Awaitable[None]]
 

@@ -3,36 +3,35 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 
+from naraninyeo.core.contracts.memory import MemoryExtractor
 from naraninyeo.core.middleware import ChatMiddleware
+from naraninyeo.core.models.reply import KnowledgeReference
+from naraninyeo.core.models.retrieval import RetrievalStatus
 from naraninyeo.core.pipeline.steps import PipelineStep
 from naraninyeo.core.pipeline.types import PipelineState
-from naraninyeo.domain.gateway.memory import MemoryExtractor, MemoryStore
-from naraninyeo.domain.gateway.message import MessageRepository
-from naraninyeo.domain.gateway.reply import ReplyGenerator
-from naraninyeo.domain.gateway.retrieval import (
-    RetrievalPlanExecutor,
-    RetrievalPlanner,
-    RetrievalResultCollectorFactory,
-)
-from naraninyeo.domain.gateway.retrieval_post import RetrievalPostProcessor
-from naraninyeo.domain.model.reply import KnowledgeReference
-from naraninyeo.domain.model.retrieval import RetrievalStatus
-from naraninyeo.domain.variable import Variables
+from naraninyeo.core.variables import Variables
+from naraninyeo.infrastructure.memory.store import MongoMemoryStore
+from naraninyeo.infrastructure.message import MongoQdrantMessageRepository
 from naraninyeo.infrastructure.pipeline.context import ReplyContextBuilder
+from naraninyeo.infrastructure.reply import ReplyGeneratorAgent
+from naraninyeo.infrastructure.retrieval.plan_executor import LocalPlanExecutor
+from naraninyeo.infrastructure.retrieval.planner import RetrievalPlannerAgent
+from naraninyeo.infrastructure.retrieval.post import DefaultRetrievalPostProcessor
+from naraninyeo.infrastructure.retrieval.result import InMemoryRetrievalResultCollectorFactory
 from naraninyeo.infrastructure.settings import Settings
 
 
 @dataclass
 class PipelineDeps:
     settings: Settings
-    message_repository: MessageRepository
-    memory_store: MemoryStore
+    message_repository: MongoQdrantMessageRepository
+    memory_store: MongoMemoryStore
     memory_extractor: MemoryExtractor
-    retrieval_planner: RetrievalPlanner
-    retrieval_executor: RetrievalPlanExecutor
-    retrieval_collector_factory: RetrievalResultCollectorFactory
-    retrieval_post_processor: RetrievalPostProcessor
-    reply_generator: ReplyGenerator
+    retrieval_planner: RetrievalPlannerAgent
+    retrieval_executor: LocalPlanExecutor
+    retrieval_collector_factory: InMemoryRetrievalResultCollectorFactory
+    retrieval_post_processor: DefaultRetrievalPostProcessor
+    reply_generator: ReplyGeneratorAgent
     context_builder: ReplyContextBuilder
     middlewares: list[ChatMiddleware]
 

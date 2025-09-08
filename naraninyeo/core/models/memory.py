@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class MemoryItem(BaseModel):
@@ -9,8 +9,7 @@ class MemoryItem(BaseModel):
     channel_id: str
     kind: Literal["ephemeral", "persona", "task"] = "ephemeral"
     content: str
-    importance: int = Field(default=1, ge=1, le=5)
+    importance: int = 1
     created_at: datetime
     expires_at: Optional[datetime] = None
-    # Optional vector for future similarity lookup
-    vector: Optional[list[float]] = None
+

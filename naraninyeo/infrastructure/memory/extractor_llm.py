@@ -7,11 +7,11 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from naraninyeo.core.contracts.memory import MemoryExtractor
 from naraninyeo.core.llm.agent import Agent
 from naraninyeo.core.llm.spec import list_of
-from naraninyeo.domain.gateway.memory import MemoryExtractor
-from naraninyeo.domain.model.memory import MemoryItem
-from naraninyeo.domain.model.message import Message
+from naraninyeo.core.models.memory import MemoryItem
+from naraninyeo.core.models.message import Message
 from naraninyeo.infrastructure.llm.factory import LLMAgentFactory
 from naraninyeo.infrastructure.settings import Settings
 

@@ -1,20 +1,17 @@
 import logging
 from textwrap import dedent
-from typing import override
 
 from opentelemetry.trace import get_tracer
 
 from naraninyeo.core.llm.agent import Agent
 from naraninyeo.core.llm.spec import list_of
-from naraninyeo.domain.gateway.retrieval import RetrievalPlanner
-from naraninyeo.domain.model.reply import ReplyContext
-from naraninyeo.domain.model.retrieval import RetrievalPlan
+from naraninyeo.core.models.reply import ReplyContext
+from naraninyeo.core.models.retrieval import RetrievalPlan
 from naraninyeo.infrastructure.llm.factory import LLMAgentFactory
 from naraninyeo.infrastructure.settings import Settings
 
 
-class RetrievalPlannerAgent(RetrievalPlanner):
-    @override
+class RetrievalPlannerAgent:
     @get_tracer(__name__).start_as_current_span("plan retrieval")
     async def plan(self, context: ReplyContext) -> list[RetrievalPlan]:
         mem_text = (

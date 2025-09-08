@@ -1,21 +1,19 @@
 from datetime import datetime
 from textwrap import dedent
-from typing import AsyncIterator, override
+from typing import AsyncIterator
 from zoneinfo import ZoneInfo
 
 from opentelemetry.trace import get_tracer
 
 from naraninyeo.core.llm.agent import Agent
 from naraninyeo.core.llm.spec import text
-from naraninyeo.domain.gateway.reply import ReplyGenerator
-from naraninyeo.domain.model.message import Author, Message, MessageContent
-from naraninyeo.domain.model.reply import ReplyContext
+from naraninyeo.core.models.message import Author, Message, MessageContent
+from naraninyeo.core.models.reply import ReplyContext
 from naraninyeo.infrastructure.llm.factory import LLMAgentFactory
 from naraninyeo.infrastructure.settings import Settings
 
 
-class ReplyGeneratorAgent(ReplyGenerator):
-    @override
+class ReplyGeneratorAgent:
     async def generate_reply(self, context: ReplyContext) -> AsyncIterator[Message]:
         with get_tracer(__name__).start_as_current_span("execute reply generation"):
             knowledge_text = []

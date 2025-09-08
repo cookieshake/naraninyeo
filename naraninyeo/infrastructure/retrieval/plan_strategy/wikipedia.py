@@ -1,17 +1,17 @@
 import asyncio
 import logging
 from textwrap import dedent
-from typing import List, Optional, override
+from typing import List, Optional
 
 import httpx
 import nanoid
 from opentelemetry.trace import get_tracer
 
+from naraninyeo.core.contracts.retrieval import PlanExecutorStrategy, RetrievalResultCollector
 from naraninyeo.core.llm.agent import Agent
 from naraninyeo.core.llm.spec import native
-from naraninyeo.domain.gateway.retrieval import PlanExecutorStrategy, RetrievalResultCollector
-from naraninyeo.domain.model.reply import ReplyContext
-from naraninyeo.domain.model.retrieval import (
+from naraninyeo.core.models.reply import ReplyContext
+from naraninyeo.core.models.retrieval import (
     RetrievalPlan,
     RetrievalResult,
     RetrievalStatus,
@@ -116,7 +116,6 @@ class WikipediaStrategy(PlanExecutorStrategy):
         self.client = WikipediaClient()
         self.extractor = WikipediaExtractor(llm_factory)
 
-    @override
     def supports(self, plan: RetrievalPlan) -> bool:
         return plan.search_type == "wikipedia"
 

@@ -3,10 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from naraninyeo.domain.gateway.memory import MemoryStore
-from naraninyeo.domain.gateway.message import MessageRepository
-from naraninyeo.domain.model.message import Message
-from naraninyeo.domain.model.reply import EnvironmentalContext, ReplyContext
+from naraninyeo.core.models.message import Message
+from naraninyeo.core.models.reply import EnvironmentalContext, ReplyContext
+from naraninyeo.infrastructure.memory.store import MongoMemoryStore
+from naraninyeo.infrastructure.message import MongoQdrantMessageRepository
 from naraninyeo.infrastructure.settings import Settings
 
 
@@ -19,8 +19,8 @@ class ReplyContextBuilder:
 
     def __init__(
         self,
-        message_repository: MessageRepository,
-        memory_store: MemoryStore,
+        message_repository: MongoQdrantMessageRepository,
+        memory_store: MongoMemoryStore,
         settings: Settings,
     ) -> None:
         self._messages = message_repository

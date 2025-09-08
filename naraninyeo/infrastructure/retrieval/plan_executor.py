@@ -1,19 +1,15 @@
 import asyncio
 import logging
-from typing import List, override
+from typing import List
 
 from pydantic import BaseModel
 
-from naraninyeo.domain.gateway.retrieval import (
-    PlanExecutorStrategy,
-    RetrievalPlanExecutor,
-    RetrievalResultCollector,
-)
-from naraninyeo.domain.model.reply import ReplyContext
-from naraninyeo.domain.model.retrieval import RetrievalPlan
+from naraninyeo.core.contracts.retrieval import PlanExecutorStrategy, RetrievalResultCollector
+from naraninyeo.core.models.reply import ReplyContext
+from naraninyeo.core.models.retrieval import RetrievalPlan
 
 
-class LocalPlanExecutor(RetrievalPlanExecutor):
+class LocalPlanExecutor:
     def __init__(self, max_concurrency: int | None = None) -> None:
         # Use instance-level strategy registry to avoid cross-instance leakage
         self._strategies: List[PlanExecutorStrategy] = []
@@ -26,7 +22,6 @@ class LocalPlanExecutor(RetrievalPlanExecutor):
     def register_strategy(self, strategy: PlanExecutorStrategy) -> None:
         self._strategies.append(strategy)
 
-    @override
     async def execute(
         self, plans: list[RetrievalPlan], context: ReplyContext, collector: RetrievalResultCollector
     ) -> None:
@@ -55,7 +50,6 @@ class LocalPlanExecutor(RetrievalPlanExecutor):
         except asyncio.CancelledError:
             logging.info("Retrieval tasks were cancelled, so some results may be missing.")
 
-    @override
     async def execute_with_timeout(
         self,
         plans: list[RetrievalPlan],

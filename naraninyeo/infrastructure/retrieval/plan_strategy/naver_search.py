@@ -4,7 +4,7 @@ import logging
 import re
 from datetime import datetime
 from textwrap import dedent
-from typing import List, Literal, Optional, override
+from typing import List, Literal, Optional
 from urllib.parse import urljoin, urlparse
 
 import dateparser
@@ -15,11 +15,11 @@ from markdownify import MarkdownConverter
 from opentelemetry.trace import get_tracer
 from pydantic import BaseModel
 
+from naraninyeo.core.contracts.retrieval import PlanExecutorStrategy, RetrievalResultCollector
 from naraninyeo.core.llm.agent import Agent
 from naraninyeo.core.llm.spec import native
-from naraninyeo.domain.gateway.retrieval import PlanExecutorStrategy, RetrievalResultCollector
-from naraninyeo.domain.model.reply import ReplyContext
-from naraninyeo.domain.model.retrieval import (
+from naraninyeo.core.models.reply import ReplyContext
+from naraninyeo.core.models.retrieval import (
     RetrievalPlan,
     RetrievalResult,
     RetrievalStatus,
@@ -263,6 +263,5 @@ class NaverSearchStrategy(PlanExecutorStrategy):
             if isinstance(result, Exception):
                 logging.info("Extraction worker failed", exc_info=result)
 
-    @override
     def supports(self, plan: RetrievalPlan) -> bool:
         return plan.search_type in ("naver_web", "naver_news", "naver_blog", "naver_doc")

@@ -1,11 +1,10 @@
 from datetime import datetime, timedelta, timezone
 
-from naraninyeo.domain.gateway.retrieval_rank import RetrievalRanker
-from naraninyeo.domain.model.retrieval import RetrievalResult
+from naraninyeo.core.models.retrieval import RetrievalResult
 from naraninyeo.infrastructure.settings import Settings
 
 
-class HeuristicRetrievalRanker(RetrievalRanker):
+class HeuristicRetrievalRanker:
     """Heuristic ranker using settings-driven weights and recency bonus."""
 
     def __init__(self, settings: Settings) -> None:

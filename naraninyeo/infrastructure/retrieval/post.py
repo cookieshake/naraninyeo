@@ -1,12 +1,11 @@
-from naraninyeo.domain.gateway.retrieval_post import RetrievalPostProcessor
-from naraninyeo.domain.gateway.retrieval_rank import RetrievalRanker
-from naraninyeo.domain.model.reply import ReplyContext
-from naraninyeo.domain.model.retrieval import RetrievalResult
+from naraninyeo.core.models.reply import ReplyContext
+from naraninyeo.core.models.retrieval import RetrievalResult
+from naraninyeo.infrastructure.retrieval.rank import HeuristicRetrievalRanker
 from naraninyeo.infrastructure.settings import Settings
 
 
-class DefaultRetrievalPostProcessor(RetrievalPostProcessor):
-    def __init__(self, settings: Settings, ranker: RetrievalRanker):
+class DefaultRetrievalPostProcessor:
+    def __init__(self, settings: Settings, ranker: HeuristicRetrievalRanker):
         self.settings = settings
         self.ranker = ranker
 

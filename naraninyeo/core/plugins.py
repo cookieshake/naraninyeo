@@ -4,10 +4,10 @@ import importlib
 from dataclasses import dataclass, field
 from typing import Callable, Iterable
 
+from naraninyeo.core.contracts.retrieval import PlanExecutorStrategy
 from naraninyeo.core.llm.providers import LLMProviderRegistry
 from naraninyeo.core.middleware import ChatMiddleware
 from naraninyeo.core.pipeline.steps import PipelineStep
-from naraninyeo.domain.gateway.retrieval import PlanExecutorStrategy
 from naraninyeo.infrastructure.llm.factory import LLMAgentFactory  # type: ignore circular import
 from naraninyeo.infrastructure.pipeline.steps import PipelineDeps
 from naraninyeo.infrastructure.settings import Settings

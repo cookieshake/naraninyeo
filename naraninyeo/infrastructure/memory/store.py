@@ -1,19 +1,16 @@
 from datetime import datetime
-from typing import override
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from naraninyeo.domain.gateway.memory import MemoryStore
-from naraninyeo.domain.model.memory import MemoryItem
+from naraninyeo.core.models.memory import MemoryItem
 
 
-class MongoMemoryStore(MemoryStore):
+class MongoMemoryStore:
     def __init__(self, mongodb: AsyncIOMotorDatabase):
         self._db = mongodb
         self._collection = mongodb["memory"]
         self._index_ready = False
 
-    @override
     async def put(self, items: list[MemoryItem]) -> None:
         if not items:
             return
@@ -33,7 +30,6 @@ class MongoMemoryStore(MemoryStore):
         for op in ops:
             await op
 
-    @override
     async def recall(self, *, channel_id: str, limit: int, now: datetime) -> list[MemoryItem]:
         cursor = (
             self._collection.find(
@@ -48,7 +44,6 @@ class MongoMemoryStore(MemoryStore):
         docs = await cursor.to_list(length=limit)
         return [MemoryItem.model_validate(doc) for doc in docs]
 
-    @override
     async def evict_expired(self, *, now: datetime) -> int:
         result = await self._collection.delete_many({"expires_at": {"$lte": now}})
         return int(result.deleted_count)

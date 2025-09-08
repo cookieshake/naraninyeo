@@ -9,21 +9,12 @@ from dishka import Provider, Scope, make_async_container, provide
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from qdrant_client import AsyncQdrantClient
 
+from naraninyeo.core.application.new_message_handler import NewMessageHandler
+from naraninyeo.core.contracts.memory import MemoryExtractor
 from naraninyeo.core.middleware import ChatMiddleware
 from naraninyeo.core.pipeline.runner import PipelineRunner
 from naraninyeo.core.pipeline.steps import StepRegistry
 from naraninyeo.core.plugins import AppRegistry, PluginManager
-from naraninyeo.domain.application.new_message_handler import NewMessageHandler
-from naraninyeo.domain.gateway.memory import MemoryExtractor, MemoryStore
-from naraninyeo.domain.gateway.message import MessageRepository
-from naraninyeo.domain.gateway.reply import ReplyGenerator
-from naraninyeo.domain.gateway.retrieval import (
-    RetrievalPlanExecutor,
-    RetrievalPlanner,
-    RetrievalResultCollectorFactory,
-)
-from naraninyeo.domain.gateway.retrieval_post import RetrievalPostProcessor
-from naraninyeo.domain.gateway.retrieval_rank import RetrievalRanker
 from naraninyeo.infrastructure.embedding import Qwen306TextEmbedder, TextEmbedder
 from naraninyeo.infrastructure.llm.factory import LLMAgentFactory
 from naraninyeo.infrastructure.memory.extractor import RuleBasedMemoryExtractor
@@ -88,23 +79,23 @@ class MainProvider(Provider):
         await client.close()
 
     text_embedder = provide(source=Qwen306TextEmbedder, provides=TextEmbedder)
-    message_repository = provide(source=MongoQdrantMessageRepository, provides=MessageRepository)
-    reply_generator = provide(source=ReplyGeneratorAgent, provides=ReplyGenerator)
+    message_repository = provide(source=MongoQdrantMessageRepository, provides=MongoQdrantMessageRepository)
+    reply_generator = provide(source=ReplyGeneratorAgent, provides=ReplyGeneratorAgent)
 
     @provide
     async def llm_agent_factory(self, settings: Settings, app_registry: AppRegistry) -> LLMAgentFactory:
         return LLMAgentFactory(settings, provider_registry=app_registry.llm_provider_registry)
 
-    retrieval_planner = provide(source=RetrievalPlannerAgent, provides=RetrievalPlanner)
+    retrieval_planner = provide(source=RetrievalPlannerAgent, provides=RetrievalPlannerAgent)
     result_collector_factory = provide(
-        source=InMemoryRetrievalResultCollectorFactory, provides=RetrievalResultCollectorFactory
+        source=InMemoryRetrievalResultCollectorFactory, provides=InMemoryRetrievalResultCollectorFactory
     )
-    retrieval_ranker = provide(source=HeuristicRetrievalRanker, provides=RetrievalRanker)
-    retrieval_post_processor = provide(source=DefaultRetrievalPostProcessor, provides=RetrievalPostProcessor)
+    retrieval_ranker = provide(source=HeuristicRetrievalRanker, provides=HeuristicRetrievalRanker)
+    retrieval_post_processor = provide(source=DefaultRetrievalPostProcessor, provides=DefaultRetrievalPostProcessor)
 
     # Memory
     @provide
-    async def memory_store(self, mongo_database: AsyncIOMotorDatabase) -> MemoryStore:
+    async def memory_store(self, mongo_database: AsyncIOMotorDatabase) -> MongoMemoryStore:
         return MongoMemoryStore(mongo_database)
 
     @provide
@@ -126,7 +117,7 @@ class MainProvider(Provider):
         wikipedia_strategy: WikipediaStrategy,
         app_registry: AppRegistry,
         llm_agent_factory: LLMAgentFactory,
-    ) -> RetrievalPlanExecutor:
+    ) -> LocalPlanExecutor:
         executor = LocalPlanExecutor(max_concurrency=settings.RETRIEVAL_MAX_CONCURRENCY)
         enabled = set(getattr(settings, "ENABLED_RETRIEVAL_STRATEGIES", []))
         if "naver_search" in enabled:
@@ -165,14 +156,14 @@ class MainProvider(Provider):
     async def pipeline_deps(
         self,
         settings: Settings,
-        message_repository: MessageRepository,
-        memory_store: MemoryStore,
+        message_repository: MongoQdrantMessageRepository,
+        memory_store: MongoMemoryStore,
         memory_extractor: MemoryExtractor,
-        retrieval_planner: RetrievalPlanner,
-        retrieval_plan_executor: RetrievalPlanExecutor,
-        result_collector_factory: RetrievalResultCollectorFactory,
-        retrieval_post_processor: RetrievalPostProcessor,
-        reply_generator: ReplyGenerator,
+        retrieval_planner: RetrievalPlannerAgent,
+        retrieval_plan_executor: LocalPlanExecutor,
+        result_collector_factory: InMemoryRetrievalResultCollectorFactory,
+        retrieval_post_processor: DefaultRetrievalPostProcessor,
+        reply_generator: ReplyGeneratorAgent,
         reply_context_builder: ReplyContextBuilder,
         middlewares: list[ChatMiddleware],
     ) -> PipelineDeps:
@@ -225,17 +216,17 @@ class MainProvider(Provider):
     async def pipeline_runner(
         self,
         settings: Settings,
-        message_repository: MessageRepository,
+        message_repository: MongoQdrantMessageRepository,
         pipeline_step_registry: StepRegistry,
         middlewares: list[ChatMiddleware],
     ) -> PipelineRunner:
         order = settings.PIPELINE or default_pipeline_order()
         return PipelineRunner(
             settings=settings,
-            message_repository=message_repository,
             step_registry=pipeline_step_registry,
             step_order=order,
             middlewares=middlewares,
+            reply_saver=message_repository.save,
         )
 
     @provide

@@ -3,20 +3,20 @@ import asyncio
 import nanoid
 from opentelemetry.trace import get_tracer
 
-from naraninyeo.domain.gateway.message import MessageRepository
-from naraninyeo.domain.gateway.retrieval import PlanExecutorStrategy, RetrievalResultCollector
-from naraninyeo.domain.model.reply import ReplyContext
-from naraninyeo.domain.model.retrieval import (
+from naraninyeo.core.contracts.retrieval import PlanExecutorStrategy, RetrievalResultCollector
+from naraninyeo.core.models.reply import ReplyContext
+from naraninyeo.core.models.retrieval import (
     ChatHistoryRef,
     RetrievalPlan,
     RetrievalResult,
     RetrievalStatus,
     RetrievalStatusReason,
 )
+from naraninyeo.infrastructure.message import MongoQdrantMessageRepository
 
 
 class ChatHistoryStrategy(PlanExecutorStrategy):
-    def __init__(self, message_repository: MessageRepository):
+    def __init__(self, message_repository: MongoQdrantMessageRepository):
         self.message_repository = message_repository
 
     def supports(self, plan: RetrievalPlan) -> bool:
@@ -41,7 +41,7 @@ class ChatHistoryStrategy(PlanExecutorStrategy):
                 RetrievalResult(
                     plan=plan,
                     result_id=nanoid.generate(),
-                    content=ref.as_text(),
+                    content=ref.as_text,
                     ref=ref,
                     status=RetrievalStatus.SUCCESS,
                     status_reason=RetrievalStatusReason.SUCCESS,
