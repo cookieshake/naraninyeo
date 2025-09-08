@@ -25,4 +25,3 @@ class PlanExecutorStrategy(ABC):
 
     @abstractmethod
     async def execute(self, plan: RetrievalPlan, context: ReplyContext, collector: RetrievalResultCollector): ...
-

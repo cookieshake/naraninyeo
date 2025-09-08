@@ -14,4 +14,3 @@ class NewMessageHandler:
         with get_tracer(__name__).start_as_current_span("handle new message"):
             async for reply in self._runner.run(message):
                 yield reply
-

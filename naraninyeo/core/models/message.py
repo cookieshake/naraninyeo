@@ -41,4 +41,3 @@ class Message(BaseModel):
     @property
     def text_repr(self) -> str:
         return f"{self.timestamp_str} {self.author.author_name} : {self.content.text[:200]}"
-

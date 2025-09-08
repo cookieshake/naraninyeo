@@ -12,4 +12,3 @@ class MemoryItem(BaseModel):
     importance: int = 1
     created_at: datetime
     expires_at: Optional[datetime] = None
-

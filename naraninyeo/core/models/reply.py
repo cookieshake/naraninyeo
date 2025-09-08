@@ -29,4 +29,3 @@ class ReplyContext:
     knowledge_references: list[KnowledgeReference]
     processing_logs: list[str]
     short_term_memory: list[MemoryItem] | None = None
-
