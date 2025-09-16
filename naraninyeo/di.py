@@ -17,7 +17,6 @@ from naraninyeo.core.pipeline.steps import StepRegistry
 from naraninyeo.core.plugins import AppRegistry, PluginManager
 from naraninyeo.infrastructure.embedding import Qwen306TextEmbedder, TextEmbedder
 from naraninyeo.infrastructure.llm.factory import LLMAgentFactory
-from naraninyeo.infrastructure.memory.extractor import RuleBasedMemoryExtractor
 from naraninyeo.infrastructure.memory.extractor_llm import LLMMemoryExtractor
 from naraninyeo.infrastructure.memory.store import MongoMemoryStore
 from naraninyeo.infrastructure.message import MongoQdrantMessageRepository
@@ -100,9 +99,7 @@ class MainProvider(Provider):
 
     @provide
     async def memory_extractor(self, settings: Settings, llm_agent_factory: LLMAgentFactory) -> MemoryExtractor:
-        if settings.ENABLE_LLM_MEMORY:
-            return LLMMemoryExtractor(settings, llm_agent_factory)
-        return RuleBasedMemoryExtractor(ttl_hours=settings.MEMORY_TTL_HOURS)
+        return LLMMemoryExtractor(settings, llm_agent_factory)
 
     naver_search_strategy = provide(source=NaverSearchStrategy, provides=NaverSearchStrategy)
     chat_history_strategy = provide(source=ChatHistoryStrategy, provides=ChatHistoryStrategy)
