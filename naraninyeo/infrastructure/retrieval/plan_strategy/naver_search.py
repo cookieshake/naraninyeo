@@ -4,7 +4,7 @@ import logging
 import re
 from datetime import datetime
 from textwrap import dedent
-from typing import List, Literal, Optional, override
+from typing import List, Literal, Optional
 from urllib.parse import urljoin, urlparse
 
 import dateparser
@@ -14,20 +14,19 @@ from bs4 import BeautifulSoup
 from markdownify import MarkdownConverter
 from opentelemetry.trace import get_tracer
 from pydantic import BaseModel
-from pydantic_ai import Agent, NativeOutput
-from pydantic_ai.models.instrumented import InstrumentationSettings
-from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
-from pydantic_ai.providers.openrouter import OpenRouterProvider
 
-from naraninyeo.domain.gateway.retrieval import PlanExecutorStrategy, RetrievalResultCollector
-from naraninyeo.domain.model.reply import ReplyContext
-from naraninyeo.domain.model.retrieval import (
+from naraninyeo.core.contracts.retrieval import PlanExecutorStrategy, RetrievalResultCollector
+from naraninyeo.core.llm.agent import Agent
+from naraninyeo.core.llm.spec import native
+from naraninyeo.core.models.reply import ReplyContext
+from naraninyeo.core.models.retrieval import (
     RetrievalPlan,
     RetrievalResult,
     RetrievalStatus,
     RetrievalStatusReason,
     UrlRef,
 )
+from naraninyeo.infrastructure.llm.factory import LLMAgentFactory
 from naraninyeo.infrastructure.settings import Settings
 
 
@@ -38,17 +37,28 @@ class Crawler:
     @get_tracer(__name__).start_as_current_span("get markdown from url")
     async def get_markdown_from_url(self, url: str) -> str:
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                url,
-                headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                },
-                follow_redirects=True,
-            )
-            response.raise_for_status()
-            html = response.text
-            soup = BeautifulSoup(html, "html.parser")
+            last_exc: Exception | None = None
+            for _ in range(3):
+                try:
+                    response = await client.get(
+                        url,
+                        headers={
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                            "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                        },
+                        follow_redirects=True,
+                        timeout=20.0,
+                    )
+                    response.raise_for_status()
+                    html = response.text
+                    soup = BeautifulSoup(html, "html.parser")
+                    break
+                except Exception as e:
+                    last_exc = e
+                    await asyncio.sleep(0.5)
+            else:
+                logging.info("Failed to fetch url after retries", exc_info=last_exc)
+                return ""
 
             # make http request to all iframes and insert html into original
             async def get_soup_from_iframe(iframe_url: str) -> BeautifulSoup:
@@ -94,32 +104,10 @@ class ExtractionResult(BaseModel):
 
 
 class Extractor:
-    def __init__(self, settings: Settings, crawler: Crawler) -> None:
+    def __init__(self, settings: Settings, crawler: Crawler, llm_factory: LLMAgentFactory) -> None:
         self.settings = settings
         self.crawler = crawler
-        self.agent = Agent(
-            model=OpenAIModel(
-                model_name="openai/gpt-4.1-nano",
-                provider=OpenRouterProvider(
-                    api_key=settings.OPENROUTER_API_KEY,
-                ),
-            ),
-            # Structured output so we can know when content is irrelevant
-            output_type=NativeOutput(ExtractionResult),
-            instrument=InstrumentationSettings(event_mode="logs"),
-            model_settings=OpenAIModelSettings(timeout=5, extra_body={"reasoning": {"effort": "minimal"}}),
-            system_prompt=dedent(
-                """
-            당신은 주어진 웹 검색 결과 마크다운 텍스트에서 쿼리와 관련된 핵심 정보를 정확하게 추출하는 AI입니다.
-
-            - 반드시 마크다운 텍스트에 있는 내용만을 기반으로 추출해야 합니다.
-            - 관련된 내용을 1~2문장으로 짧고 간결하게 요약하세요.
-            - 텍스트는 독립적이고 완전한 의미를 담고 있어야 합니다.
-            - 불필요한 설명이나 서론을 추가하지 말고, 추출된 텍스트만 제공하세요.
-            - 추출된 내용만 간결하게 반환하고, 어떤 부가적인 설명도 덧붙이지 마세요.
-            """
-            ).strip(),
-        )
+        self.agent: Agent[ExtractionResult] = llm_factory.extractor_agent(output_type=native(ExtractionResult))
 
     @get_tracer(__name__).start_as_current_span("extract from markdown")
     async def extract(self, url: str, query: str) -> ExtractionResult:
@@ -132,7 +120,7 @@ class Extractor:
                 f"""
             [마크다운 텍스트]
             ---
-            {markdown}
+            {markdown[:4000]}
             ---
 
             [쿼리]
@@ -147,7 +135,7 @@ class Extractor:
             )
         )
         # enhancement_result.output 는 ExtractionResult 타입
-        extraction: ExtractionResult = enhancement_result.output
+        extraction: ExtractionResult = enhancement_result.output  # pyright: ignore[reportAssignmentType]
         # 안전장치: 모델이 is_relevant를 누락했을 경우 content 유무로 결정
         if extraction.is_relevant is None:
             extraction.is_relevant = bool(extraction.content.strip())
@@ -204,10 +192,10 @@ class NaverSearchClient:
 
 
 class NaverSearchStrategy(PlanExecutorStrategy):
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, llm_factory: LLMAgentFactory):
         self.client = NaverSearchClient(settings=settings)
         self.crawler = Crawler()
-        self.extractor = Extractor(settings=settings, crawler=self.crawler)
+        self.extractor = Extractor(settings=settings, crawler=self.crawler, llm_factory=llm_factory)
 
     @get_tracer(__name__).start_as_current_span("execute naver search")
     async def execute(self, plan: RetrievalPlan, context: ReplyContext, collector: RetrievalResultCollector):
@@ -275,6 +263,5 @@ class NaverSearchStrategy(PlanExecutorStrategy):
             if isinstance(result, Exception):
                 logging.info("Extraction worker failed", exc_info=result)
 
-    @override
     def supports(self, plan: RetrievalPlan) -> bool:
         return plan.search_type in ("naver_web", "naver_news", "naver_blog", "naver_doc")

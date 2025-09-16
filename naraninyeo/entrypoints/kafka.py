@@ -17,8 +17,8 @@ import httpx
 from aiohttp import web
 from aiokafka import AIOKafkaConsumer, ConsumerRecord
 
+from naraninyeo.core.models.message import Attachment, Author, Channel, Message, MessageContent
 from naraninyeo.di import container
-from naraninyeo.domain.model.message import Attachment, Author, Channel, Message, MessageContent
 from naraninyeo.infrastructure.settings import Settings
 
 
@@ -72,7 +72,8 @@ class KafkaConsumer:
             message = await self.parse_message(value)
 
             async with self.client.stream(
-                "POST", f"{self.settings.NARANINYEO_NEW_MESSAGE_API}/handle_new_message",
+                "POST",
+                f"{self.settings.NARANINYEO_NEW_MESSAGE_API}/handle_new_message",
                 content=message.model_dump_json(),
                 headers={"Content-Type": "application/json"},
                 timeout=60.0,
@@ -82,19 +83,24 @@ class KafkaConsumer:
                     if not line:
                         continue
                     logging.info(f"Response from API: {line}")
-                    response = Message.model_validate_json(line)
-                    await self.api_client.send_response(response)
+                    try:
+                        response = Message.model_validate_json(line)
+                        await self.api_client.send_response(response)
+                    except Exception as e:
+                        logging.error(f"Error validating API response: {e}")
         except json.JSONDecodeError as e:
             logging.error(f"Invalid JSON message: {e}")
         except Exception as e:
             logging.error(f"Error processing message: {e}, {traceback.format_exc()}")
-            await self.api_client.send_response(Message(
-                message_id=str(uuid.uuid4()),
-                channel=message.channel, # pyright: ignore[reportPossiblyUnboundVariable]
-                author=Author(author_id="bot", author_name="bot"),
-                content=MessageContent(text=str(e)),
-                timestamp=datetime.now(tz=ZoneInfo(self.settings.TIMEZONE)),
-            ))
+            await self.api_client.send_response(
+                Message(
+                    message_id=str(uuid.uuid4()),
+                    channel=message.channel,  # pyright: ignore[reportPossiblyUnboundVariable]
+                    author=Author(author_id="bot", author_name="bot"),
+                    content=MessageContent(text=str(e)),
+                    timestamp=datetime.now(tz=ZoneInfo(self.settings.TIMEZONE)),
+                )
+            )
 
     async def parse_message(self, message_data: dict) -> Message:
         message_id = message_data["json"]["id"]

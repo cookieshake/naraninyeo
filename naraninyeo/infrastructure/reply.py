@@ -1,22 +1,19 @@
 from datetime import datetime
 from textwrap import dedent
-from typing import AsyncIterator, override
+from typing import AsyncIterator
 from zoneinfo import ZoneInfo
 
 from opentelemetry.trace import get_tracer
-from pydantic_ai import Agent
-from pydantic_ai.models.instrumented import InstrumentationSettings
-from pydantic_ai.models.openai import OpenAIModel, OpenAIModelSettings
-from pydantic_ai.providers.openrouter import OpenRouterProvider
 
-from naraninyeo.domain.gateway.reply import ReplyGenerator
-from naraninyeo.domain.model.message import Author, Message, MessageContent
-from naraninyeo.domain.model.reply import ReplyContext
+from naraninyeo.core.llm.agent import Agent
+from naraninyeo.core.llm.spec import text
+from naraninyeo.core.models.message import Author, Message, MessageContent
+from naraninyeo.core.models.reply import ReplyContext
+from naraninyeo.infrastructure.llm.factory import LLMAgentFactory
 from naraninyeo.infrastructure.settings import Settings
 
 
-class ReplyGeneratorAgent(ReplyGenerator):
-    @override
+class ReplyGeneratorAgent:
     async def generate_reply(self, context: ReplyContext) -> AsyncIterator[Message]:
         with get_tracer(__name__).start_as_current_span("execute reply generation"):
             knowledge_text = []
@@ -27,6 +24,8 @@ class ReplyGeneratorAgent(ReplyGenerator):
                 ref_text += f"]\n{ref.content}"
                 knowledge_text.append(ref_text)
 
+            memory_text = [f"- {m.content}" for m in (context.short_term_memory or [])]
+
             query = dedent(
                 f"""
                 참고할 만한 정보
@@ -35,7 +34,11 @@ class ReplyGeneratorAgent(ReplyGenerator):
                 현재 시각은 {context.environment.timestamp.strftime("%Y-%m-%d %H:%M:%S")}입니다.
                 현재 위치는 {context.environment.location}입니다.
 
-                {"\n\n".join(knowledge_text) if knowledge_text else "딱히 참고할 만한 정보가 없습니다."}
+                [단기 기억]
+                {"\n".join(memory_text) if memory_text else "(없음)"}
+
+                [검색/지식]
+                {"\n\n".join(knowledge_text) if knowledge_text else "(없음)"}
                 ---
 
                 직전 대화 기록:
@@ -63,7 +66,7 @@ class ReplyGeneratorAgent(ReplyGenerator):
             )
 
             async with self.agent.run_stream(query) as stream:
-                last_text = ""
+                last_text = self.settings.REPLY_TEXT_PREFIX
                 async for message in stream.stream_text(delta=True):
                     last_text += message
                     while "\n\n" in last_text:
@@ -72,43 +75,9 @@ class ReplyGeneratorAgent(ReplyGenerator):
                 if last_text:
                     yield self._create_new_message(context, last_text)
 
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, llm_factory: LLMAgentFactory):
         self.settings = settings
-        self.agent = Agent(
-            model=OpenAIModel(
-                model_name="deepseek/deepseek-chat-v3.1",
-                provider=OpenRouterProvider(api_key=settings.OPENROUTER_API_KEY),
-            ),
-            instrument=InstrumentationSettings(event_mode="logs"),
-            output_type=str,
-            model_settings=OpenAIModelSettings(
-                timeout=20,
-                extra_body={
-                    "reasoning": {
-                        # "effort": "minimal",
-                        "enabled": False
-                    }
-                },
-            ),
-            system_prompt=dedent(
-                f"""
-                [정체성]
-                - 이름: {self.settings.BOT_AUTHOR_NAME}
-                - 역할: 생각을 넓혀주는 대화 파트너
-                - 성격: 중립적이고 친근함
-
-                [답변 규칙]
-                - 간결하고 핵심만 말함
-                - 한쪽에 치우치지 않고 다양한 관점 제시
-                - 무조건 한국어 반말 사용
-                - "검색 결과에 따르면" 같은 표현 절대 사용 금지
-                - "시간 이름: 메시지" 형식 사용 금지
-                - 대화 맥락 우선: 직전 대화의 흐름과 톤을 최우선으로 맞출 것
-                - 참고 정보는 보조자료: 대화 맥락과 충돌하면 참고 정보를 과감히 무시할 것
-                - 주제 일탈 금지: 사용자가 원치 않으면 새로운 화제를 열지 말 것
-                """.strip()
-            ),
-        )
+        self.agent: Agent[str] = llm_factory.reply_agent(output_type=text())
 
     def _create_new_message(self, context: ReplyContext, text: str) -> Message:
         now = datetime.now(ZoneInfo(self.settings.TIMEZONE))

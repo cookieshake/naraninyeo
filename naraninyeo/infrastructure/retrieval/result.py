@@ -1,8 +1,5 @@
-from naraninyeo.domain.gateway.retrieval import (
-    RetrievalResultCollector,
-    RetrievalResultCollectorFactory,
-)
-from naraninyeo.domain.model.retrieval import RetrievalResult
+from naraninyeo.core.contracts.retrieval import RetrievalResultCollector, RetrievalResultCollectorFactory
+from naraninyeo.core.models.retrieval import RetrievalResult
 
 
 class InMemoryRetrievalResultCollector(RetrievalResultCollector):
