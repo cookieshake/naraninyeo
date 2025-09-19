@@ -1,10 +1,13 @@
+"""Text embedding helpers."""
+
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import override
 
 import httpx
 from opentelemetry.trace import get_tracer
 
-from naraninyeo.infrastructure.settings import Settings
+from naraninyeo.settings import Settings
 
 
 class TextEmbedder(ABC):
@@ -17,7 +20,6 @@ class Qwen306TextEmbedder(TextEmbedder):
         self.api_url = settings.LLAMA_CPP_EMBEDDINGS_URL
         self.model = "qwen3-embedding-0.6b"
 
-    @override
     @get_tracer(__name__).start_as_current_span("embed texts")
     async def embed(self, texts: list[str]) -> list[list[float]]:
         async with httpx.AsyncClient() as client:

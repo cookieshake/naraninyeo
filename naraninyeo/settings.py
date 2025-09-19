@@ -1,3 +1,7 @@
+"""Application configuration powered by pydantic settings."""
+
+from __future__ import annotations
+
 import dotenv
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
@@ -6,6 +10,8 @@ dotenv.load_dotenv()
 
 
 class Settings(BaseSettings):
+    """Runtime configuration with sensible defaults for local development."""
+
     # MongoDB settings
     MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "naraninyeo"
@@ -35,7 +41,7 @@ class Settings(BaseSettings):
     TIMEZONE: str = "Asia/Seoul"
     LOCATION: str = "Seoul, South Korea"
 
-    # 봇 정보
+    # Bot info
     BOT_AUTHOR_ID: str = "bot-naraninyeo"
     BOT_AUTHOR_NAME: str = "나란잉여"
 
@@ -93,17 +99,17 @@ class Settings(BaseSettings):
 
     @field_validator("ENABLED_RETRIEVAL_STRATEGIES")
     @classmethod
-    def _validate_strategies(cls, v: list[str]) -> list[str]:
+    def _validate_strategies(cls, value: list[str]) -> list[str]:
         allowed = {"naver_search", "wikipedia", "chat_history"}
-        invalid = [s for s in v if s not in allowed]
+        invalid = [item for item in value if item not in allowed]
         if invalid:
             raise ValueError(f"Unknown strategies in ENABLED_RETRIEVAL_STRATEGIES: {invalid}")
-        return v
+        return value
 
     @field_validator("RANK_WEIGHTS")
     @classmethod
-    def _validate_weights(cls, v: dict[str, float]) -> dict[str, float]:
-        for k, val in v.items():
+    def _validate_weights(cls, value: dict[str, float]) -> dict[str, float]:
+        for key, val in value.items():
             if not isinstance(val, (int, float)) or not (-1.0 <= float(val) <= 5.0):
-                raise ValueError(f"RANK_WEIGHTS[{k}] must be between -1.0 and 5.0")
-        return v
+                raise ValueError(f"RANK_WEIGHTS[{key}] must be between -1.0 and 5.0")
+        return value
