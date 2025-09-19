@@ -127,8 +127,12 @@ class MongoQdrantMessageRepository:
             limit=limit,
         )
         message_ids = [point.payload["message_id"] for point in qdrant_result.points if point.payload is not None]
-        loaded = await asyncio.gather(*(self.load(mid) for mid in message_ids))
-        return [msg for msg in loaded if msg is not None]
+        if not message_ids:
+            return []
+        cursor = self._collection.find({"message_id": {"$in": message_ids}})
+        docs = await cursor.to_list(length=len(message_ids))
+        messages_map = {doc["message_id"]: Message.model_validate(doc) for doc in docs}
+        return [messages_map[mid] for mid in message_ids if mid in messages_map]
 
     def _str_to_64bit(self, value: str) -> int:
         return int(hashlib.sha256(value.encode("utf-8")).hexdigest()[:16], 16)
