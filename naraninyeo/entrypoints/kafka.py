@@ -17,8 +17,8 @@ import httpx
 from aiohttp import web
 from aiokafka import AIOKafkaConsumer, ConsumerRecord
 
+from naraninyeo.assistant.models import Attachment, Author, Channel, Message, MessageContent
 from naraninyeo.container import container
-from naraninyeo.core.models import Attachment, Author, Channel, Message, MessageContent
 from naraninyeo.settings import Settings
 
 

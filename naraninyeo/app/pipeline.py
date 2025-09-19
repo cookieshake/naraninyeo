@@ -11,7 +11,13 @@ from zoneinfo import ZoneInfo
 
 from opentelemetry.trace import get_tracer
 
-from naraninyeo.core.models import (
+from naraninyeo.assistant.llm_toolkit import LLMToolFactory
+from naraninyeo.assistant.memory_management import (
+    ConversationMemoryExtractor,
+    MemoryStore,
+)
+from naraninyeo.assistant.message_repository import MessageRepository
+from naraninyeo.assistant.models import (
     Author,
     EnvironmentalContext,
     KnowledgeReference,
@@ -22,12 +28,8 @@ from naraninyeo.core.models import (
     RetrievalResult,
     RetrievalStatus,
 )
-from naraninyeo.core.services import (
-    LLMAgentFactory,
-    LLMMemoryExtractor,
-    MemoryStore,
-    MessageRepository,
-    ReplyPrompt,
+from naraninyeo.assistant.prompts import ReplyPrompt
+from naraninyeo.assistant.retrieval_workflow import (
     RetrievalExecutor,
     RetrievalPlanner,
     RetrievalPostProcessor,
@@ -102,7 +104,7 @@ class PipelineTools:
     settings: Settings
     message_repository: MessageRepository
     memory_store: MemoryStore
-    memory_extractor: LLMMemoryExtractor
+    memory_extractor: ConversationMemoryExtractor
     retrieval_planner: RetrievalPlanner
     retrieval_executor: RetrievalExecutor
     retrieval_collector_factory: RetrievalResultCollectorFactory
@@ -321,7 +323,7 @@ class ChatPipeline:
 
 
 class ReplyGenerator:
-    def __init__(self, settings: Settings, llm_factory: LLMAgentFactory):
+    def __init__(self, settings: Settings, llm_factory: LLMToolFactory):
         self.settings = settings
         self.tool = llm_factory.reply_tool()
 

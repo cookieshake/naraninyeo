@@ -7,8 +7,8 @@ from fastapi import Depends, FastAPI
 from fastapi.responses import StreamingResponse
 
 from naraninyeo.app.pipeline import NewMessageHandler
+from naraninyeo.assistant.models import Message
 from naraninyeo.container import container
-from naraninyeo.core.models import Message
 from naraninyeo.settings import Settings
 
 app = FastAPI()
