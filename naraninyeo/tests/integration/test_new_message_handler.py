@@ -15,7 +15,9 @@ from naraninyeo.app.pipeline import (
     StepRegistry,
     default_step_order,
 )
-from naraninyeo.core.models import (
+from naraninyeo.assistant.memory_management import ConversationMemoryExtractor, MemoryStore
+from naraninyeo.assistant.message_repository import MessageRepository
+from naraninyeo.assistant.models import (
     Author,
     Channel,
     MemoryItem,
@@ -27,10 +29,7 @@ from naraninyeo.core.models import (
     RetrievalStatusReason,
     UrlRef,
 )
-from naraninyeo.core.services import (
-    LLMMemoryExtractor,
-    MemoryStore,
-    MessageRepository,
+from naraninyeo.assistant.retrieval_workflow import (
     RetrievalExecutor,
     RetrievalPlanLog,
     RetrievalPlanner,
@@ -182,7 +181,7 @@ async def test_handle_new_message_generates_streaming_reply():
         settings=settings,
         message_repository=cast(MessageRepository, repository),
         memory_store=cast(MemoryStore, memory_store),
-        memory_extractor=cast(LLMMemoryExtractor, memory_extractor),
+        memory_extractor=cast(ConversationMemoryExtractor, memory_extractor),
         retrieval_planner=cast(RetrievalPlanner, retrieval_planner),
         retrieval_executor=cast(RetrievalExecutor, retrieval_executor),
         retrieval_collector_factory=cast(RetrievalResultCollectorFactory, collector_factory),

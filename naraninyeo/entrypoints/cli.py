@@ -10,8 +10,8 @@ from zoneinfo import ZoneInfo
 from dishka import AsyncContainer
 
 from naraninyeo.app.pipeline import NewMessageHandler
+from naraninyeo.assistant.models import Author, Channel, Message, MessageContent
 from naraninyeo.container import make_test_container
-from naraninyeo.core.models import Author, Channel, Message, MessageContent
 from naraninyeo.settings import Settings
 
 

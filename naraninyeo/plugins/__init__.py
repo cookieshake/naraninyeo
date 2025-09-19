@@ -6,13 +6,14 @@ import importlib
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Iterable
 
-from naraninyeo.core.services import LLMProviderRegistry
+from naraninyeo.assistant.llm_toolkit import LLMProviderRegistry
 from naraninyeo.settings import Settings
 
 if TYPE_CHECKING:
     from naraninyeo.app.pipeline import PipelineStep, PipelineTools
-    from naraninyeo.core.models import Message, ReplyContext
-    from naraninyeo.core.services import LLMAgentFactory, LLMProvider, RetrievalStrategy
+    from naraninyeo.assistant.llm_toolkit import LLMProvider, LLMToolFactory
+    from naraninyeo.assistant.models import Message, ReplyContext
+    from naraninyeo.assistant.retrieval_workflow import RetrievalStrategy
 
 
 class ChatMiddleware:
@@ -31,7 +32,7 @@ class ChatMiddleware:
     async def after_reply_stream(self) -> None: ...
 
 
-RetrievalStrategyBuilder = Callable[[Settings, "LLMAgentFactory"], "RetrievalStrategy"]
+RetrievalStrategyBuilder = Callable[[Settings, "LLMToolFactory"], "RetrievalStrategy"]
 ChatMiddlewareBuilder = Callable[[Settings], ChatMiddleware]
 PipelineStepBuilder = Callable[["PipelineTools"], "PipelineStep"]
 

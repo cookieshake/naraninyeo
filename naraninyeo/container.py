@@ -27,15 +27,19 @@ from naraninyeo.app.pipeline import (
     StepRegistry,
     default_step_order,
 )
-from naraninyeo.core.services import (
+from naraninyeo.assistant.llm_toolkit import LLMToolFactory
+from naraninyeo.assistant.memory_management import (
+    ConversationMemoryExtractor,
+    MemoryStore,
+    MongoMemoryStore,
+)
+from naraninyeo.assistant.message_repository import (
+    MessageRepository,
+    MongoQdrantMessageRepository,
+)
+from naraninyeo.assistant.retrieval_workflow import (
     ChatHistoryStrategy,
     HeuristicRetrievalRanker,
-    LLMAgentFactory,
-    LLMMemoryExtractor,
-    MemoryStore,
-    MessageRepository,
-    MongoMemoryStore,
-    MongoQdrantMessageRepository,
     NaverSearchStrategy,
     RetrievalExecutor,
     RetrievalPlanner,
@@ -91,8 +95,8 @@ class MainProvider(Provider):
         return mongo_message_repository
 
     @provide
-    async def llm_agent_factory(self, settings: Settings, app_registry: AppRegistry) -> LLMAgentFactory:
-        return LLMAgentFactory(settings, provider_registry=app_registry.llm_provider_registry)
+    async def llm_tool_factory(self, settings: Settings, app_registry: AppRegistry) -> LLMToolFactory:
+        return LLMToolFactory(settings, provider_registry=app_registry.llm_provider_registry)
 
     retrieval_planner = provide(source=RetrievalPlanner, provides=RetrievalPlanner)
     result_collector_factory = provide(source=RetrievalResultCollectorFactory, provides=RetrievalResultCollectorFactory)
@@ -108,8 +112,12 @@ class MainProvider(Provider):
         return mongo_memory_store
 
     @provide
-    async def memory_extractor(self, settings: Settings, llm_agent_factory: LLMAgentFactory) -> LLMMemoryExtractor:
-        return LLMMemoryExtractor(settings, llm_agent_factory)
+    async def memory_extractor(
+        self,
+        settings: Settings,
+        llm_tool_factory: LLMToolFactory,
+    ) -> ConversationMemoryExtractor:
+        return ConversationMemoryExtractor(settings, llm_tool_factory)
 
     naver_search_strategy = provide(source=NaverSearchStrategy, provides=NaverSearchStrategy)
     chat_history_strategy = provide(source=ChatHistoryStrategy, provides=ChatHistoryStrategy)
@@ -123,7 +131,7 @@ class MainProvider(Provider):
         chat_history_strategy: ChatHistoryStrategy,
         wikipedia_strategy: WikipediaStrategy,
         app_registry: AppRegistry,
-        llm_agent_factory: LLMAgentFactory,
+        llm_tool_factory: LLMToolFactory,
     ) -> RetrievalExecutor:
         executor = RetrievalExecutor(max_concurrency=settings.RETRIEVAL_MAX_CONCURRENCY)
         enabled = set(getattr(settings, "ENABLED_RETRIEVAL_STRATEGIES", []))
@@ -135,7 +143,7 @@ class MainProvider(Provider):
             executor.register(wikipedia_strategy)
         for builder in app_registry.retrieval_strategy_builders:
             try:
-                strategy = builder(settings, llm_agent_factory)
+                strategy = builder(settings, llm_tool_factory)
                 executor.register(strategy)
             except Exception as exc:
                 logging.warning("Failed to initialize a plugin retrieval strategy", exc_info=exc)
@@ -159,7 +167,7 @@ class MainProvider(Provider):
         settings: Settings,
         message_repository: MessageRepository,
         memory_store: MemoryStore,
-        memory_extractor: LLMMemoryExtractor,
+        memory_extractor: ConversationMemoryExtractor,
         retrieval_planner: RetrievalPlanner,
         retrieval_executor: RetrievalExecutor,
         result_collector_factory: RetrievalResultCollectorFactory,
