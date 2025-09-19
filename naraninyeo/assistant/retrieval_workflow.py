@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import html
 import logging
-import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Iterable, Protocol, runtime_checkable
