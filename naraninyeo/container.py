@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
+import time
+from collections.abc import AsyncIterator, Iterator
 
+import httpx
 from dishka import Provider, Scope, make_async_container, provide
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from qdrant_client import AsyncQdrantClient
+from qdrant_client.http.models import Distance, VectorParams
+from testcontainers.core.container import DockerContainer
+from testcontainers.mongodb import MongoDbContainer
+from testcontainers.qdrant import QdrantContainer
 
 from naraninyeo.app.pipeline import (
     DEFAULT_RETRIEVAL_TIMEOUT,
@@ -81,9 +87,7 @@ class MainProvider(Provider):
         return MongoQdrantMessageRepository(mongo_database, qdrant_client, text_embedder)
 
     @provide
-    async def message_repository(
-        self, mongo_message_repository: MongoQdrantMessageRepository
-    ) -> MessageRepository:
+    async def message_repository(self, mongo_message_repository: MongoQdrantMessageRepository) -> MessageRepository:
         return mongo_message_repository
 
     @provide
@@ -91,13 +95,9 @@ class MainProvider(Provider):
         return LLMAgentFactory(settings, provider_registry=app_registry.llm_provider_registry)
 
     retrieval_planner = provide(source=RetrievalPlanner, provides=RetrievalPlanner)
-    result_collector_factory = provide(
-        source=RetrievalResultCollectorFactory, provides=RetrievalResultCollectorFactory
-    )
+    result_collector_factory = provide(source=RetrievalResultCollectorFactory, provides=RetrievalResultCollectorFactory)
     retrieval_ranker = provide(source=HeuristicRetrievalRanker, provides=HeuristicRetrievalRanker)
-    retrieval_post_processor = provide(
-        source=RetrievalPostProcessor, provides=RetrievalPostProcessor
-    )
+    retrieval_post_processor = provide(source=RetrievalPostProcessor, provides=RetrievalPostProcessor)
 
     @provide
     async def mongo_memory_store(self, mongo_database: AsyncIOMotorDatabase) -> MongoMemoryStore:
@@ -108,9 +108,7 @@ class MainProvider(Provider):
         return mongo_memory_store
 
     @provide
-    async def memory_extractor(
-        self, settings: Settings, llm_agent_factory: LLMAgentFactory
-    ) -> LLMMemoryExtractor:
+    async def memory_extractor(self, settings: Settings, llm_agent_factory: LLMAgentFactory) -> LLMMemoryExtractor:
         return LLMMemoryExtractor(settings, llm_agent_factory)
 
     naver_search_strategy = provide(source=NaverSearchStrategy, provides=NaverSearchStrategy)
@@ -225,3 +223,100 @@ class MainProvider(Provider):
 
 
 container = make_async_container(MainProvider())
+
+
+# ----------------------------------------------------------------------------
+# Local test container support (testcontainers-based)
+# ----------------------------------------------------------------------------
+
+
+class LlamaCppContainer(DockerContainer):
+    """Llama.cpp embedding server test container (embeddings only)."""
+
+    def __init__(self) -> None:  # pragma: no cover - infra bootstrap
+        super().__init__(
+            image="ghcr.io/ggml-org/llama.cpp:server",
+            command=" ".join(
+                [
+                    "--host 0.0.0.0",
+                    "--port 8080",
+                    "--hf-repo Qwen/Qwen3-Embedding-0.6B-GGUF:Q8_0",
+                    "--embedding",
+                    "--pooling last",
+                    "--ubatch-size 8192",
+                    "--parallel 5",
+                    "--verbose-prompt",
+                ]
+            ),
+            env={"LLAMA_CACHE": "/tmp/llamacpp/cache"},
+        )
+        self.with_exposed_ports(8080)
+        self.with_volume_mapping("/tmp/llamacpp/cache", "/tmp/llamacpp/cache", mode="rw")
+
+    def get_connection_url(self) -> str:  # pragma: no cover
+        return f"http://{self.get_container_host_ip()}:{self.get_exposed_port(8080)}"
+
+
+class TestProvider(Provider):
+    scope = Scope.APP
+
+    @provide
+    def mongodb_container(self) -> Iterator[MongoDbContainer]:  # pragma: no cover
+        mongo = MongoDbContainer()
+        mongo.start()
+        try:
+            yield mongo
+        finally:
+            mongo.stop()
+
+    @provide
+    def qdrant_container(self) -> Iterator[QdrantContainer]:  # pragma: no cover
+        qdrant = QdrantContainer(image="qdrant/qdrant:v1.15.1")
+        qdrant.start()
+        try:
+            client = qdrant.get_client()
+            client.create_collection(
+                collection_name="naraninyeo-messages",
+                vectors_config=VectorParams(size=1024, distance=Distance.COSINE),
+            )
+            yield qdrant
+        finally:
+            qdrant.stop()
+
+    @provide
+    def llamacpp_container(self) -> Iterator[LlamaCppContainer]:  # pragma: no cover
+        llamacpp = LlamaCppContainer()
+        llamacpp.start()
+        try:
+            for _ in range(50):
+                try:
+                    with httpx.Client() as sync_client:
+                        resp = sync_client.get(f"{llamacpp.get_connection_url()}/health")
+                        if resp.status_code == 200:
+                            break
+                except httpx.RequestError:
+                    pass
+                time.sleep(2)
+            yield llamacpp
+        finally:
+            llamacpp.stop()
+
+    @provide(override=True)
+    async def settings(
+        self,
+        mongodb_container: MongoDbContainer,
+        llamacpp_container: LlamaCppContainer,
+        qdrant_container: QdrantContainer,
+    ) -> Settings:  # pragma: no cover
+        base = Settings()
+        return base.model_copy(
+            update={
+                "MONGODB_URL": mongodb_container.get_connection_url(),
+                "LLAMA_CPP_EMBEDDINGS_URL": llamacpp_container.get_connection_url(),
+                "QDRANT_URL": f"http://{qdrant_container.rest_host_address}",
+            }
+        )
+
+
+async def make_test_container():  # pragma: no cover - helper
+    return make_async_container(MainProvider(), TestProvider())

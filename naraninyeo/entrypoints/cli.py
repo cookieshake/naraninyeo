@@ -7,10 +7,10 @@ import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from dishka import AsyncContainer, make_async_container
+from dishka import AsyncContainer
 
 from naraninyeo.app.pipeline import NewMessageHandler
-from naraninyeo.container import MainProvider
+from naraninyeo.container import make_test_container
 from naraninyeo.core.models import Author, Channel, Message, MessageContent
 from naraninyeo.settings import Settings
 
@@ -92,8 +92,13 @@ class LocalClient:
 
 
 async def main():
-    """메인 함수"""
-    container = make_async_container(MainProvider())
+    """메인 함수
+
+    개발 로컬 환경에서 별도 Mongo / Qdrant / llama.cpp 서버를 띄우지 않고도
+    대화를 테스트할 수 있도록 testcontainers 기반 임시 컨테이너를 사용한다.
+    (종료 시 모두 정리됨)
+    """
+    container = await make_test_container()
     client = LocalClient(container)
 
     try:

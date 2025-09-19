@@ -143,7 +143,7 @@ class ReplyPrompt(PromptPayload):
             참고할 만한 정보
             ---
             [상황]
-            현재 시각은 {self.context.environment.timestamp.strftime('%Y-%m-%d %H:%M:%S')}입니다.
+            현재 시각은 {self.context.environment.timestamp.strftime("%Y-%m-%d %H:%M:%S")}입니다.
             현재 위치는 {self.context.environment.location}입니다.
 
             [단기 기억]
@@ -399,9 +399,7 @@ class LLMAgentFactory:
             model=model,
             output_type=output_spec,
             instrument=InstrumentationSettings(event_mode="logs"),
-            model_settings=OpenAIModelSettings(
-                timeout=int(timeout), extra_body={"reasoning": {"effort": "minimal"}}
-            ),
+            model_settings=OpenAIModelSettings(timeout=int(timeout), extra_body={"reasoning": {"effort": "minimal"}}),
             system_prompt=dedent(script.prompt.system_prompt(self.settings)).strip(),
         )
 
@@ -508,9 +506,7 @@ EXTRACTOR_SCRIPT = LLMScript[Any, Any](
 class MemoryStore(Protocol):
     async def put(self, items: list[MemoryItem]) -> None: ...
 
-    async def recall(
-        self, *, channel_id: str, limit: int, now: datetime
-    ) -> list[MemoryItem]: ...
+    async def recall(self, *, channel_id: str, limit: int, now: datetime) -> list[MemoryItem]: ...
 
 
 class MongoMemoryStore:
@@ -606,13 +602,9 @@ class LLMMemoryExtractor:
 class MessageRepository(Protocol):
     async def save(self, message: Message) -> None: ...
 
-    async def get_surrounding_messages(
-        self, message: Message, before: int, after: int
-    ) -> list[Message]: ...
+    async def get_surrounding_messages(self, message: Message, before: int, after: int) -> list[Message]: ...
 
-    async def search_similar_messages(
-        self, channel_id: str, keyword: str, limit: int
-    ) -> list[Message]: ...
+    async def search_similar_messages(self, channel_id: str, keyword: str, limit: int) -> list[Message]: ...
 
 
 class MongoQdrantMessageRepository:
@@ -672,8 +664,7 @@ class MongoQdrantMessageRepository:
         tasks = []
         if before > 0:
             tasks.append(
-                self._collection
-                .find(
+                self._collection.find(
                     {
                         "channel.channel_id": message.channel.channel_id,
                         "message_id": {"$lt": message.message_id},
@@ -685,8 +676,7 @@ class MongoQdrantMessageRepository:
             )
         if after > 0:
             tasks.append(
-                self._collection
-                .find(
+                self._collection.find(
                     {
                         "channel.channel_id": message.channel.channel_id,
                         "message_id": {"$gt": message.message_id},
@@ -719,11 +709,7 @@ class MongoQdrantMessageRepository:
             ),
             limit=limit,
         )
-        message_ids = [
-            point.payload["message_id"]
-            for point in qdrant_result.points
-            if point.payload is not None
-        ]
+        message_ids = [point.payload["message_id"] for point in qdrant_result.points if point.payload is not None]
         loaded = await asyncio.gather(*(self.load(mid) for mid in message_ids))
         return [msg for msg in loaded if msg is not None]
 
@@ -922,8 +908,7 @@ class ChatHistoryStrategy:
             limit=3,
         )
         chunks = [
-            self.message_repository.get_surrounding_messages(message=message, before=3, after=3)
-            for message in messages
+            self.message_repository.get_surrounding_messages(message=message, before=3, after=3) for message in messages
         ]
         for task in asyncio.as_completed(chunks):
             chunk = await task
@@ -974,10 +959,10 @@ class Crawler:
                 logging.info("Failed to fetch url after retries", exc_info=last_exc)
                 return ""
 
-            iframes = [iframe for iframe in soup.find_all("iframe") if isinstance(iframe.get("src"), str)]
+            iframes = [iframe for iframe in soup.find_all("iframe") if isinstance(iframe.get("src"), str)]  # pyright: ignore[reportAttributeAccessIssue]
             if iframes:
                 async with httpx.AsyncClient() as iframe_client:
-                    iframe_links = [urljoin(url, iframe.get("src")) for iframe in iframes]
+                    iframe_links = [urljoin(url, iframe.get("src")) for iframe in iframes]  # pyright: ignore[reportArgumentType, reportAttributeAccessIssue]
                     iframe_htmls = await asyncio.gather(
                         *(iframe_client.get(link) for link in iframe_links),
                         return_exceptions=True,
@@ -985,7 +970,9 @@ class Crawler:
                 for iframe, iframe_resp in zip(iframes, iframe_htmls, strict=False):
                     if isinstance(iframe_resp, BaseException):
                         logging.warning(
-                            "Failed to retrieve iframe %s: %s", iframe.get("src"), iframe_resp
+                            "Failed to retrieve iframe %s: %s",
+                            iframe.get("src"),
+                            iframe_resp,  # pyright: ignore[reportAttributeAccessIssue]
                         )
                         continue
                     iframe_soup = BeautifulSoup(iframe_resp.text, "html.parser")
@@ -1046,7 +1033,17 @@ class NaverSearchStrategy:
 
     async def _search(self, plan: RetrievalPlan) -> list[dict[str, str]]:
         base_url = "https://openapi.naver.com/v1/search/"
-        endpoint = plan.search_type.replace("naver_", "")
+        match plan.search_type:
+            case "naver_news":
+                endpoint = "news.json"
+            case "naver_blog":
+                endpoint = "blog.json"
+            case "naver_web":
+                endpoint = "webkr.json"
+            case "naver_doc":
+                endpoint = "doc.json"
+            case _:
+                raise ValueError(f"Unsupported search type: {plan.search_type}")
         url = f"{base_url}{endpoint}"
         headers = {
             "X-Naver-Client-Id": self.settings.NAVER_CLIENT_ID,

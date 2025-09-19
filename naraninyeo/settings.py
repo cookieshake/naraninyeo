@@ -103,9 +103,7 @@ class Settings(BaseSettings):
         allowed = {"naver_search", "wikipedia", "chat_history"}
         invalid = [item for item in value if item not in allowed]
         if invalid:
-            raise ValueError(
-                f"Unknown strategies in ENABLED_RETRIEVAL_STRATEGIES: {invalid}"
-            )
+            raise ValueError(f"Unknown strategies in ENABLED_RETRIEVAL_STRATEGIES: {invalid}")
         return value
 
     @field_validator("RANK_WEIGHTS")

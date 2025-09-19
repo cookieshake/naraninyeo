@@ -57,9 +57,7 @@ class InMemoryMessageRepository(MessageRepository):
         history.sort(key=lambda item: item.timestamp)
         return history
 
-    async def search_similar_messages(
-        self, channel_id: str, keyword: str, limit: int
-    ) -> list[Message]:
+    async def search_similar_messages(self, channel_id: str, keyword: str, limit: int) -> list[Message]:
         matches = [msg for msg in self.saved if msg.channel.channel_id == channel_id]
         return matches[-limit:]
 
@@ -187,9 +185,7 @@ async def test_handle_new_message_generates_streaming_reply():
         memory_extractor=cast(LLMMemoryExtractor, memory_extractor),
         retrieval_planner=cast(RetrievalPlanner, retrieval_planner),
         retrieval_executor=cast(RetrievalExecutor, retrieval_executor),
-        retrieval_collector_factory=cast(
-            RetrievalResultCollectorFactory, collector_factory
-        ),
+        retrieval_collector_factory=cast(RetrievalResultCollectorFactory, collector_factory),
         retrieval_post_processor=cast(RetrievalPostProcessor, retrieval_post_processor),
         reply_generator=cast(ReplyGenerator, reply_generator),
         context_builder=context_builder,

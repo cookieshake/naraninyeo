@@ -43,9 +43,7 @@ class AppRegistry:
     chat_middleware_builders: list[ChatMiddlewareBuilder] = field(default_factory=list)
     pipeline_step_builders: dict[str, PipelineStepBuilder] = field(default_factory=dict)
 
-    def register_llm_provider(
-        self, name: str, factory: Callable[[Settings], "LLMProvider"]
-    ) -> None:
+    def register_llm_provider(self, name: str, factory: Callable[[Settings], "LLMProvider"]) -> None:
         self.llm_provider_registry.register(name, factory)
 
     def register_retrieval_strategy(self, builder: RetrievalStrategyBuilder) -> None:
