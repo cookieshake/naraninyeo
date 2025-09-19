@@ -379,8 +379,8 @@ class NaverSearchStrategy:
         link = item.get("link") or item.get("originallink")
         if not link:
             return
-        cleaned_title = html.unescape(re.sub("<.*?>", "", item.get("title", "")).strip())
-        summary = html.unescape(re.sub("<.*?>", "", item.get("description", "")).strip())
+        cleaned_title = BeautifulSoup(item.get("title", ""), "html.parser").get_text().strip()
+        summary = BeautifulSoup(item.get("description", ""), "html.parser").get_text().strip()
         extraction = await self.extractor.extract(link, plan)
         if not extraction or extraction.is_relevant is False:
             return
