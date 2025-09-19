@@ -272,10 +272,10 @@ class MarkdownCrawler:
                 logging.info("Failed to fetch url after retries", exc_info=last_exc)
                 return ""
 
-        iframes = [iframe for iframe in soup.find_all("iframe") if isinstance(iframe.get("src"), str)]
+        iframes = [iframe for iframe in soup.find_all("iframe") if isinstance(iframe.get("src"), str)]  # pyright: ignore[reportAttributeAccessIssue]
         if iframes:
             async with httpx.AsyncClient() as iframe_client:
-                iframe_links = [urljoin(url, iframe.get("src")) for iframe in iframes]
+                iframe_links = [urljoin(url, iframe.get("src")) for iframe in iframes]  # pyright: ignore[reportArgumentType, reportAttributeAccessIssue]
                 iframe_htmls = await asyncio.gather(
                     *(iframe_client.get(link) for link in iframe_links),
                     return_exceptions=True,
@@ -284,7 +284,7 @@ class MarkdownCrawler:
                 if isinstance(iframe_resp, BaseException):
                     logging.warning(
                         "Failed to retrieve iframe %s: %s",
-                        iframe.get("src"),
+                        iframe.get("src"),  # pyright: ignore[reportAttributeAccessIssue]
                         iframe_resp,
                     )
                     continue
