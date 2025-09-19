@@ -48,7 +48,7 @@ class MongoQdrantMessageRepository:
                 collection_name=self._qdrant_collection,
                 points=[
                     qmodels.PointStruct(
-                        id=self._str_to_64bit(message.message_id),
+                        id=message.message_id,
                         vector=(await self._text_embedder.embed([message.content.text]))[0],
                         payload={
                             "message_id": message.message_id,
