@@ -971,7 +971,7 @@ class Crawler:
                     if isinstance(iframe_resp, BaseException):
                         logging.warning(
                             "Failed to retrieve iframe %s: %s",
-                            iframe.get("src"), # pyright: ignore[reportAttributeAccessIssue]
+                            iframe.get("src"),  # pyright: ignore[reportAttributeAccessIssue]
                             iframe_resp,  # pyright: ignore[reportAttributeAccessIssue]
                         )
                         continue
