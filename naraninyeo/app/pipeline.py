@@ -21,6 +21,7 @@ from naraninyeo.assistant.models import (
     Author,
     EnvironmentalContext,
     KnowledgeReference,
+    MemoryItem,
     Message,
     MessageContent,
     ReplyContext,
@@ -56,28 +57,43 @@ class ReplyContextBuilder:
         self._memory = memory_store
         self._settings = settings
 
-    async def build(self, message: Message) -> ReplyContext:
-        history = await self._messages.get_surrounding_messages(
-            message=message,
-            before=self._settings.HISTORY_LIMIT,
-            after=0,
+    async def build(
+        self,
+        message: Message,
+        *,
+        history: list[Message] | None = None,
+        short_term_memory: list[MemoryItem] | None = None,
+    ) -> ReplyContext:
+        resolved_history = (
+            history
+            if history is not None
+            else await self._messages.get_surrounding_messages(
+                message=message,
+                before=self._settings.HISTORY_LIMIT,
+                after=0,
+            )
         )
-        short_term_memory = await self._memory.recall(
-            channel_id=message.channel.channel_id,
-            limit=5,
-            now=datetime.now(tz=ZoneInfo(self._settings.TIMEZONE)),
+        current_time = datetime.now(tz=ZoneInfo(self._settings.TIMEZONE))
+        resolved_memory = (
+            short_term_memory
+            if short_term_memory is not None
+            else await self._memory.recall(
+                channel_id=message.channel.channel_id,
+                limit=5,
+                now=current_time,
+            )
         )
         environment = EnvironmentalContext(
-            timestamp=datetime.now(tz=ZoneInfo(self._settings.TIMEZONE)),
+            timestamp=current_time,
             location=self._settings.LOCATION,
         )
         return ReplyContext(
             environment=environment,
             last_message=message,
-            latest_history=history,
+            latest_history=resolved_history,
             knowledge_references=[],
             processing_logs=[],
-            short_term_memory=short_term_memory,
+            short_term_memory=resolved_memory,
         )
 
 
@@ -85,10 +101,10 @@ class ReplyContextBuilder:
 class PipelineState:
     incoming: Message
     history: list[Message] | None = None
-    reply_needed: bool | None = None
     reply_context: ReplyContext | None = None
     plans: list[RetrievalPlan] | None = None
     retrieval_results: list[RetrievalResult] | None = None
+    short_term_memory: list[MemoryItem] | None = None
     stop: bool = False
     finalizers: list[asyncio.Task[object]] = field(default_factory=list)
 
@@ -148,6 +164,12 @@ async def ingest_memory(state: PipelineState, tools: PipelineTools, _: EmitFn) -
         after=0,
     )
     state.history = history
+    now = datetime.now(tz=ZoneInfo(tools.settings.TIMEZONE))
+    state.short_term_memory = await tools.memory_store.recall(
+        channel_id=state.incoming.channel.channel_id,
+        limit=5,
+        now=now,
+    )
 
     async def ingest() -> None:
         items = await tools.memory_extractor.extract_from_message(state.incoming, history)
@@ -158,13 +180,17 @@ async def ingest_memory(state: PipelineState, tools: PipelineTools, _: EmitFn) -
 
 
 async def should_reply(state: PipelineState, _tools: PipelineTools, _: EmitFn) -> None:
-    state.reply_needed = state.incoming.content.text.startswith("/")
-    if not state.reply_needed:
+    text = (state.incoming.content.text or "").strip()
+    if not text.startswith("/"):
         state.stop = True
 
 
 async def build_context(state: PipelineState, tools: PipelineTools, _: EmitFn) -> None:
-    state.reply_context = await tools.context_builder.build(state.incoming)
+    state.reply_context = await tools.context_builder.build(
+        state.incoming,
+        history=state.history,
+        short_term_memory=state.short_term_memory,
+    )
 
 
 async def before_retrieval(state: PipelineState, tools: PipelineTools, _: EmitFn) -> None:
@@ -243,6 +269,7 @@ async def after_reply_stream(state: PipelineState, tools: PipelineTools, _: Emit
 async def finalize_background(state: PipelineState, _tools: PipelineTools, _: EmitFn) -> None:
     if state.finalizers:
         await asyncio.gather(*state.finalizers, return_exceptions=True)
+        state.finalizers.clear()
 
 
 DEFAULT_STEPS: list[PipelineStep] = [
