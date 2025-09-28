@@ -5,15 +5,13 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import AsyncIterator, Iterator
+from typing import TYPE_CHECKING
 
 import httpx
 from dishka import Provider, Scope, make_async_container, provide
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.models import Distance, VectorParams
-from testcontainers.core.container import DockerContainer
-from testcontainers.mongodb import MongoDbContainer
-from testcontainers.qdrant import QdrantContainer
 
 from naraninyeo.app.pipeline import (
     DEFAULT_RETRIEVAL_TIMEOUT,
@@ -50,6 +48,78 @@ from naraninyeo.assistant.retrieval_workflow import (
 from naraninyeo.embeddings import Qwen306TextEmbedder, TextEmbedder
 from naraninyeo.plugins import AppRegistry, ChatMiddleware, PluginManager
 from naraninyeo.settings import Settings
+
+TESTCONTAINERS_AVAILABLE = False
+
+if TYPE_CHECKING:  # pragma: no cover - typing helpers
+    from testcontainers.core.container import DockerContainer
+    from testcontainers.mongodb import MongoDbContainer
+    from testcontainers.qdrant import QdrantContainer
+else:  # pragma: no cover - optional dependency wiring
+    try:
+        from testcontainers.core.container import DockerContainer
+        from testcontainers.mongodb import MongoDbContainer
+        from testcontainers.qdrant import QdrantContainer
+    except ModuleNotFoundError:
+        def _missing_testcontainers(feature: str) -> RuntimeError:
+            return RuntimeError(
+                "testcontainers package is required for local integration testing. "
+                "Install it via `pip install 'testcontainers>=4.12.0'` or include the 'dev' dependency group."
+            )
+
+        class DockerContainer:  # type: ignore[no-redef]
+            def __init__(self, *args, **kwargs) -> None:
+                raise _missing_testcontainers("DockerContainer")
+
+            def with_exposed_ports(self, *args, **kwargs):
+                raise _missing_testcontainers("DockerContainer.with_exposed_ports")
+
+            def with_volume_mapping(self, *args, **kwargs):
+                raise _missing_testcontainers("DockerContainer.with_volume_mapping")
+
+            def start(self, *args, **kwargs):
+                raise _missing_testcontainers("DockerContainer.start")
+
+            def stop(self, *args, **kwargs):
+                raise _missing_testcontainers("DockerContainer.stop")
+
+            def get_container_host_ip(self, *args, **kwargs):
+                raise _missing_testcontainers("DockerContainer.get_container_host_ip")
+
+            def get_exposed_port(self, *args, **kwargs):
+                raise _missing_testcontainers("DockerContainer.get_exposed_port")
+
+        class MongoDbContainer:  # type: ignore[no-redef]
+            def __init__(self, *args, **kwargs) -> None:
+                raise _missing_testcontainers("MongoDbContainer")
+
+            def start(self, *args, **kwargs):
+                raise _missing_testcontainers("MongoDbContainer.start")
+
+            def stop(self, *args, **kwargs):
+                raise _missing_testcontainers("MongoDbContainer.stop")
+
+            def get_connection_url(self, *args, **kwargs):
+                raise _missing_testcontainers("MongoDbContainer.get_connection_url")
+
+        class QdrantContainer:  # type: ignore[no-redef]
+            def __init__(self, *args, **kwargs) -> None:
+                raise _missing_testcontainers("QdrantContainer")
+
+            def start(self, *args, **kwargs):
+                raise _missing_testcontainers("QdrantContainer.start")
+
+            def stop(self, *args, **kwargs):
+                raise _missing_testcontainers("QdrantContainer.stop")
+
+            def get_client(self, *args, **kwargs):
+                raise _missing_testcontainers("QdrantContainer.get_client")
+
+            @property
+            def rest_host_address(self):
+                raise _missing_testcontainers("QdrantContainer.rest_host_address")
+    else:
+        TESTCONTAINERS_AVAILABLE = True
 
 
 class MainProvider(Provider):
@@ -327,4 +397,9 @@ class TestProvider(Provider):
 
 
 async def make_test_container():  # pragma: no cover - helper
+    if not TESTCONTAINERS_AVAILABLE:
+        raise RuntimeError(
+            "testcontainers package is required to build the test dependency container. "
+            "Install it via `pip install 'testcontainers>=4.12.0'` or include the 'dev' dependency group."
+        )
     return make_async_container(MainProvider(), TestProvider())
