@@ -64,10 +64,10 @@ class Settings(BaseSettings):
     MAX_KNOWLEDGE_REFERENCES: int = 8
 
     # LLM model names and timeouts
-    REPLY_MODEL_NAME: str = "anthropic/claude-sonnet-4"
-    PLANNER_MODEL_NAME: str = "openai/gpt-4.1-mini"
+    REPLY_MODEL_NAME: str = "anthropic/claude-sonnet-4.5"
+    PLANNER_MODEL_NAME: str = "openai/gpt-4.1"
     MEMORY_MODEL_NAME: str = "openai/gpt-5-nano"
-    EXTRACTOR_MODEL_NAME: str = "openai/gpt-4.1-nano"
+    EXTRACTOR_MODEL_NAME: str = "google/gemini-2.5-flash-lite-preview-09-2025"
     LLM_TIMEOUT_SECONDS_REPLY: int = 20
     LLM_TIMEOUT_SECONDS_PLANNER: int = 20
     LLM_TIMEOUT_SECONDS_MEMORY: int = 8

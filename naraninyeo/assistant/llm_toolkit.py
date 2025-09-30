@@ -167,7 +167,7 @@ PLANNER_TASK = LLMTask[Any, list[RetrievalPlan]](
     model_setting="PLANNER_MODEL_NAME",
     timeout_setting="LLM_TIMEOUT_SECONDS_PLANNER",
     prompt=PLANNER_PROMPT,
-    output=NativeOutput(list[RetrievalPlan]),
+    output=list[RetrievalPlan],
 )
 
 MEMORY_TASK = LLMTask[Any, Any](

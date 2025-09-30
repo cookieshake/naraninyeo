@@ -15,6 +15,15 @@ from naraninyeo.assistant.models import Message
 from naraninyeo.embeddings import TextEmbedder
 
 
+def _hash_to_u64(value: str) -> int:
+    """Deterministically map an arbitrary string to an unsigned 64-bit int.
+
+    We take the first 16 hex chars (64 bits) of a SHA-256 digest to minimize collisions
+    while keeping Qdrant's integer ID requirement. This is stable across runs.
+    """
+    return int(hashlib.sha256(value.encode("utf-8")).hexdigest()[:16], 16)
+
+
 @runtime_checkable
 class MessageRepository(Protocol):
     async def save(self, message: Message) -> None: ...
@@ -48,7 +57,10 @@ class MongoQdrantMessageRepository:
                 collection_name=self._qdrant_collection,
                 points=[
                     qmodels.PointStruct(
-                        id=message.message_id,
+                        # Qdrant requires point ids to be unsigned integers or UUIDs.
+                        # We deterministically hash the original message_id into a 64-bit unsigned int
+                        # to satisfy the requirement while preserving stable idempotent upserts.
+                        id=_hash_to_u64(message.message_id),
                         vector=(await self._text_embedder.embed([message.content.text]))[0],
                         payload={
                             "message_id": message.message_id,
@@ -134,5 +146,4 @@ class MongoQdrantMessageRepository:
         messages_map = {doc["message_id"]: Message.model_validate(doc) for doc in docs}
         return [messages_map[mid] for mid in message_ids if mid in messages_map]
 
-    def _str_to_64bit(self, value: str) -> int:
-        return int(hashlib.sha256(value.encode("utf-8")).hexdigest()[:16], 16)
+    # (Previously had _str_to_64bit; superseded by module-level _hash_to_u64 for reuse/testing.)
