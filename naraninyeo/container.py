@@ -61,6 +61,7 @@ else:  # pragma: no cover - optional dependency wiring
         from testcontainers.mongodb import MongoDbContainer
         from testcontainers.qdrant import QdrantContainer
     except ModuleNotFoundError:
+
         def _missing_testcontainers(feature: str) -> RuntimeError:
             return RuntimeError(
                 "testcontainers package is required for local integration testing. "
