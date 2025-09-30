@@ -1,13 +1,27 @@
+"""Message persistence backed by MongoDB and Qdrant."""
+
+from __future__ import annotations
+
 import asyncio
 import hashlib
+from typing import Protocol, runtime_checkable
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from opentelemetry.trace import get_tracer
 from qdrant_client import AsyncQdrantClient
 from qdrant_client import models as qmodels
 
-from naraninyeo.core.models.message import Message
-from naraninyeo.infrastructure.embedding import TextEmbedder
+from naraninyeo.assistant.models import Message
+from naraninyeo.embeddings import TextEmbedder
+
+
+@runtime_checkable
+class MessageRepository(Protocol):
+    async def save(self, message: Message) -> None: ...
+
+    async def get_surrounding_messages(self, message: Message, before: int, after: int) -> list[Message]: ...
+
+    async def search_similar_messages(self, channel_id: str, keyword: str, limit: int) -> list[Message]: ...
 
 
 class MongoQdrantMessageRepository:
@@ -16,8 +30,7 @@ class MongoQdrantMessageRepository:
         mongodb: AsyncIOMotorDatabase,
         qdrant_client: AsyncQdrantClient,
         text_embedder: TextEmbedder,
-    ):
-        self._db = mongodb
+    ) -> None:
         self._collection = mongodb["messages"]
         self._qdrant_client = qdrant_client
         self._qdrant_collection = "naraninyeo-messages"
@@ -25,16 +38,17 @@ class MongoQdrantMessageRepository:
 
     @get_tracer(__name__).start_as_current_span("save message")
     async def save(self, message: Message) -> None:
-        tasks = []
-        tasks.append(
-            self._collection.update_one({"message_id": message.message_id}, {"$set": message.model_dump()}, upsert=True)
-        )
-        tasks.append(
+        tasks = [
+            self._collection.update_one(
+                {"message_id": message.message_id},
+                {"$set": message.model_dump()},
+                upsert=True,
+            ),
             self._qdrant_client.upsert(
                 collection_name=self._qdrant_collection,
                 points=[
                     qmodels.PointStruct(
-                        id=self._str_to_64bit(message.message_id),
+                        id=message.message_id,
                         vector=(await self._text_embedder.embed([message.content.text]))[0],
                         payload={
                             "message_id": message.message_id,
@@ -45,25 +59,22 @@ class MongoQdrantMessageRepository:
                         },
                     )
                 ],
-            )
-        )
+            ),
+        ]
         await asyncio.gather(*tasks)
 
     @get_tracer(__name__).start_as_current_span("load message")
     async def load(self, message_id: str) -> Message | None:
         document = await self._collection.find_one({"message_id": message_id})
-        if document:
-            return Message.model_validate(document)
-        return None
+        return Message.model_validate(document) if document else None
 
     @get_tracer(__name__).start_as_current_span("get closest message by timestamp")
     async def get_closest_by_timestamp(self, channel_id: str, timestamp: float) -> Message | None:
         document = await self._collection.find_one(
-            {"channel.channel_id": channel_id, "timestamp": {"$lte": timestamp}}, sort=[("timestamp", -1)]
+            {"channel.channel_id": channel_id, "timestamp": {"$lte": timestamp}},
+            sort=[("timestamp", -1)],
         )
-        if document:
-            return Message.model_validate(document)
-        return None
+        return Message.model_validate(document) if document else None
 
     @get_tracer(__name__).start_as_current_span("get surrounding messages")
     async def get_surrounding_messages(self, message: Message, before: int = 5, after: int = 5) -> list[Message]:
@@ -96,24 +107,32 @@ class MongoQdrantMessageRepository:
         results = await asyncio.gather(*tasks)
         messages = [message]
         for result in results:
-            result = [Message.model_validate(doc) for doc in result if doc]
-            messages.extend(result)
+            messages.extend(Message.model_validate(doc) for doc in result if doc)
         messages.sort(key=lambda m: m.timestamp)
         return messages
 
     @get_tracer(__name__).start_as_current_span("search similar messages")
     async def search_similar_messages(self, channel_id: str, keyword: str, limit: int) -> list[Message]:
-        result = await self._qdrant_client.query_points(
+        qdrant_result = await self._qdrant_client.query_points(
             collection_name=self._qdrant_collection,
             query=(await self._text_embedder.embed([keyword]))[0],
             query_filter=qmodels.Filter(
-                must=[qmodels.FieldCondition(key="channel_id", match=qmodels.MatchValue(value=channel_id))]
+                must=[
+                    qmodels.FieldCondition(
+                        key="channel_id",
+                        match=qmodels.MatchValue(value=channel_id),
+                    )
+                ]
             ),
             limit=limit,
         )
-        message_ids = [point.payload["message_id"] for point in result.points if point.payload is not None]
-        loaded_messages = await asyncio.gather(*[self.load(message_id) for message_id in message_ids])
-        return [msg for msg in loaded_messages if msg is not None]
+        message_ids = [point.payload["message_id"] for point in qdrant_result.points if point.payload is not None]
+        if not message_ids:
+            return []
+        cursor = self._collection.find({"message_id": {"$in": message_ids}})
+        docs = await cursor.to_list(length=len(message_ids))
+        messages_map = {doc["message_id"]: Message.model_validate(doc) for doc in docs}
+        return [messages_map[mid] for mid in message_ids if mid in messages_map]
 
-    def _str_to_64bit(self, s: str) -> int:
-        return int(hashlib.sha256(s.encode("utf-8")).hexdigest()[:16], 16)
+    def _str_to_64bit(self, value: str) -> int:
+        return int(hashlib.sha256(value.encode("utf-8")).hexdigest()[:16], 16)

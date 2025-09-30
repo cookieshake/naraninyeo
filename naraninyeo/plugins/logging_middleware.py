@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import logging
 
-from naraninyeo.core.middleware import ChatMiddleware
-from naraninyeo.core.plugins import AppRegistry
-from naraninyeo.infrastructure.settings import Settings
+from naraninyeo.plugins import AppRegistry, ChatMiddleware
+from naraninyeo.settings import Settings
 
 
 class LoggingMiddleware(ChatMiddleware):
