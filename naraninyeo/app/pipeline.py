@@ -6,31 +6,25 @@ import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 from zoneinfo import ZoneInfo
 
-from opentelemetry.trace import get_tracer
-
-from naraninyeo.assistant.llm_toolkit import LLMToolFactory
+from naraninyeo.app.context import ReplyContextBuilder
 from naraninyeo.assistant.memory_management import (
     ConversationMemoryExtractor,
     MemoryStore,
 )
 from naraninyeo.assistant.message_repository import MessageRepository
 from naraninyeo.assistant.models import (
-    Author,
-    EnvironmentalContext,
     KnowledgeReference,
     MemoryItem,
     Message,
-    MessageContent,
     ReplyContext,
     RetrievalPlan,
     RetrievalResult,
     RetrievalStatus,
 )
-from naraninyeo.assistant.prompts import ReplyPrompt
-from naraninyeo.assistant.retrieval_workflow import (
+from naraninyeo.assistant.retrieval import (
     RetrievalExecutor,
     RetrievalPlanner,
     RetrievalPostProcessor,
@@ -39,62 +33,12 @@ from naraninyeo.assistant.retrieval_workflow import (
 from naraninyeo.plugins import ChatMiddleware
 from naraninyeo.settings import Settings
 
+if TYPE_CHECKING:  # pragma: no cover
+    from naraninyeo.app.reply import ReplyGenerator
+
 EmitFn = Callable[[Message], Awaitable[None]]
 StepFn = Callable[["PipelineState", "PipelineTools", EmitFn], Awaitable[None]]
 DEFAULT_RETRIEVAL_TIMEOUT = 10.0
-
-
-class ReplyContextBuilder:
-    """Gather message history and memory to form the reply context."""
-
-    def __init__(
-        self,
-        message_repository: MessageRepository,
-        memory_store: MemoryStore,
-        settings: Settings,
-    ) -> None:
-        self._messages = message_repository
-        self._memory = memory_store
-        self._settings = settings
-
-    async def build(
-        self,
-        message: Message,
-        *,
-        history: list[Message] | None = None,
-        short_term_memory: list[MemoryItem] | None = None,
-    ) -> ReplyContext:
-        resolved_history = (
-            history
-            if history is not None
-            else await self._messages.get_surrounding_messages(
-                message=message,
-                before=self._settings.HISTORY_LIMIT,
-                after=0,
-            )
-        )
-        current_time = datetime.now(tz=ZoneInfo(self._settings.TIMEZONE))
-        resolved_memory = (
-            short_term_memory
-            if short_term_memory is not None
-            else await self._memory.recall(
-                channel_id=message.channel.channel_id,
-                limit=5,
-                now=current_time,
-            )
-        )
-        environment = EnvironmentalContext(
-            timestamp=current_time,
-            location=self._settings.LOCATION,
-        )
-        return ReplyContext(
-            environment=environment,
-            last_message=message,
-            latest_history=resolved_history,
-            knowledge_references=[],
-            processing_logs=[],
-            short_term_memory=resolved_memory,
-        )
 
 
 @dataclass
@@ -153,6 +97,7 @@ class StepRegistry:
 
 
 async def save_incoming(state: PipelineState, tools: PipelineTools, _: EmitFn) -> None:
+    # 원본 메시지를 즉시 저장하고, 완료 여부는 파이프라인 마지막에서 확인한다.
     task = asyncio.create_task(tools.message_repository.save(state.incoming))
     state.finalizers.append(task)
 
@@ -172,6 +117,7 @@ async def ingest_memory(state: PipelineState, tools: PipelineTools, _: EmitFn) -
     )
 
     async def ingest() -> None:
+        # 새 메시지를 분석해 기억이 생기면 비동기적으로 저장한다.
         items = await tools.memory_extractor.extract_from_message(state.incoming, history)
         if items:
             await tools.memory_store.put(items)
@@ -182,6 +128,7 @@ async def ingest_memory(state: PipelineState, tools: PipelineTools, _: EmitFn) -
 async def should_reply(state: PipelineState, _tools: PipelineTools, _: EmitFn) -> None:
     text = (state.incoming.content.text or "").strip()
     if not text.startswith("/"):
+        # 슬래시가 없는 일반 메시지는 사용자 간 대화로 간주해 봇이 응답하지 않는다.
         state.stop = True
 
 
@@ -221,6 +168,7 @@ async def execute_retrieval(state: PipelineState, tools: PipelineTools, _: EmitF
     state.reply_context.processing_logs.extend(
         [f"plan={entry.plan.model_dump()} matched={entry.matched}" for entry in logs]
     )
+    # 처리 결과는 후속 단계에서 참고하도록 상태에 저장한다.
     state.retrieval_results = tools.retrieval_post_processor.process(results, state.reply_context)
 
 
@@ -258,6 +206,7 @@ async def stream_reply(state: PipelineState, tools: PipelineTools, emit: EmitFn)
     if state.reply_context is None:
         return
     async for reply in tools.reply_generator.stream(state.reply_context):
+        # 스트리밍으로 생성된 메시지를 소비자에게 즉시 전달한다.
         await emit(reply)
 
 
@@ -324,6 +273,7 @@ class ChatPipeline:
                     step = self.step_registry.get(name)
                     await step(state, self.tools, emit)
                     if state.stop:
+                        # stop 플래그가 서면 이후 단계는 건너뛰고 종료한다.
                         break
             finally:
                 producer_done.set()
@@ -347,44 +297,3 @@ class ChatPipeline:
             await producer_task
             if state.finalizers:
                 await asyncio.gather(*state.finalizers, return_exceptions=True)
-
-
-class ReplyGenerator:
-    def __init__(self, settings: Settings, llm_factory: LLMToolFactory):
-        self.settings = settings
-        self.tool = llm_factory.reply_tool()
-
-    def _create_message(self, context: ReplyContext, text: str) -> Message:
-        now = datetime.now(ZoneInfo(self.settings.TIMEZONE))
-        timestamp_millis = int(now.timestamp() * 1000)
-        return Message(
-            message_id=f"{context.last_message.message_id}-reply-{timestamp_millis}",
-            channel=context.last_message.channel,
-            author=Author(
-                author_id=self.settings.BOT_AUTHOR_ID,
-                author_name=self.settings.BOT_AUTHOR_NAME,
-            ),
-            content=MessageContent(text=text, attachments=[]),
-            timestamp=now,
-        )
-
-    async def stream(self, context: ReplyContext) -> AsyncIterator[Message]:
-        prompt = ReplyPrompt(context=context, bot_name=self.settings.BOT_AUTHOR_NAME)
-        buffer = self.settings.REPLY_TEXT_PREFIX
-        async for chunk in self.tool.stream_text(prompt, delta=True):
-            buffer += chunk
-            while "\n\n" in buffer:
-                text_to_send, buffer = buffer.split("\n\n", 1)
-                yield self._create_message(context, text_to_send)
-        if buffer:
-            yield self._create_message(context, buffer)
-
-
-class NewMessageHandler:
-    def __init__(self, pipeline: ChatPipeline):
-        self._pipeline = pipeline
-
-    async def handle(self, message: Message) -> AsyncIterator[Message]:
-        with get_tracer(__name__).start_as_current_span("handle new message"):
-            async for reply in self._pipeline.run(message):
-                yield reply

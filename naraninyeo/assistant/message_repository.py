@@ -21,11 +21,13 @@ def _hash_to_u64(value: str) -> int:
     We take the first 16 hex chars (64 bits) of a SHA-256 digest to minimize collisions
     while keeping Qdrant's integer ID requirement. This is stable across runs.
     """
+    # 메시지 식별자를 해시해 Qdrant가 요구하는 64비트 정수 ID로 만들다.
     return int(hashlib.sha256(value.encode("utf-8")).hexdigest()[:16], 16)
 
 
 @runtime_checkable
 class MessageRepository(Protocol):
+    # 저장소 구현체가 제공해야 하는 최소 동작을 정의한다.
     async def save(self, message: Message) -> None: ...
 
     async def get_surrounding_messages(self, message: Message, before: int, after: int) -> list[Message]: ...
@@ -44,9 +46,11 @@ class MongoQdrantMessageRepository:
         self._qdrant_client = qdrant_client
         self._qdrant_collection = "naraninyeo-messages"
         self._text_embedder = text_embedder
+        # MongoDB와 Qdrant에 동시에 접근해야 하므로 의존성을 주입받는다.
 
     @get_tracer(__name__).start_as_current_span("save message")
     async def save(self, message: Message) -> None:
+        # DB와 벡터 스토어에 동시에 저장해 이후 검색·유사도 조회가 가능하도록 한다.
         tasks = [
             self._collection.update_one(
                 {"message_id": message.message_id},
@@ -121,10 +125,12 @@ class MongoQdrantMessageRepository:
         for result in results:
             messages.extend(Message.model_validate(doc) for doc in result if doc)
         messages.sort(key=lambda m: m.timestamp)
+        # 시점 기준으로 정렬해 대화 흐름 그대로 반환한다.
         return messages
 
     @get_tracer(__name__).start_as_current_span("search similar messages")
     async def search_similar_messages(self, channel_id: str, keyword: str, limit: int) -> list[Message]:
+        # 키워드를 임베딩한 뒤 같은 채널 범위에서 코사인 유사도로 메시지를 찾는다.
         qdrant_result = await self._qdrant_client.query_points(
             collection_name=self._qdrant_collection,
             query=(await self._text_embedder.embed([keyword]))[0],

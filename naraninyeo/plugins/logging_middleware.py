@@ -12,6 +12,7 @@ class LoggingMiddleware(ChatMiddleware):
         self._prefix = "[chat]"
 
     async def before_handle(self, message):
+        # 파이프라인에 메시지가 들어올 때마다 로그로 남겨 추적한다.
         if self._enabled:
             logging.info(f"{self._prefix} incoming: {message.text_repr}")
 

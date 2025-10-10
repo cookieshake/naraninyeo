@@ -5,16 +5,15 @@ from typing import cast
 
 import pytest
 
+from naraninyeo.app.context import ReplyContextBuilder
 from naraninyeo.app.pipeline import (
     DEFAULT_STEPS,
     ChatPipeline,
-    NewMessageHandler,
     PipelineTools,
-    ReplyContextBuilder,
-    ReplyGenerator,
     StepRegistry,
     default_step_order,
 )
+from naraninyeo.app.reply import NewMessageHandler, ReplyGenerator
 from naraninyeo.assistant.memory_management import ConversationMemoryExtractor, MemoryStore
 from naraninyeo.assistant.message_repository import MessageRepository
 from naraninyeo.assistant.models import (
@@ -29,7 +28,7 @@ from naraninyeo.assistant.models import (
     RetrievalStatusReason,
     UrlRef,
 )
-from naraninyeo.assistant.retrieval_workflow import (
+from naraninyeo.assistant.retrieval import (
     RetrievalExecutor,
     RetrievalPlanLog,
     RetrievalPlanner,
@@ -156,6 +155,7 @@ class StaticReplyGenerator:
 
 @pytest.mark.asyncio
 async def test_handle_new_message_generates_streaming_reply():
+    # 실제 파이프라인 구성 요소를 흉내 내어 응답이 스트림으로 생성되는지 검증한다.
     settings = Settings()
     seed_memory = MemoryItem(
         memory_id="seed-memory",

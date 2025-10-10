@@ -236,4 +236,5 @@ async def main():
         logging.info("Shutting down application...")
         await kafka_consumer.stop()
         await health_server.cleanup()
+        # 소비자와 헬스 서버를 모두 종료해 리소스 누수를 방지한다.
         logging.info("Application shutdown complete")

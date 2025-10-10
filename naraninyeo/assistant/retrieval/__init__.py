@@ -1,24 +1,21 @@
-"""Compatibility layer re-exporting retrieval helpers.
+"""Retrieval planning, execution, and strategy helpers."""
 
-The retrieval utilities now live under ``naraninyeo.assistant.retrieval``.
-Existing imports can continue to use this module for the time being.
-"""
-
-from naraninyeo.assistant.retrieval import (
-    ChatHistoryStrategy,
-    DocumentExtractionResult,
-    DocumentExtractor,
+from naraninyeo.assistant.retrieval.execution import (
     HeuristicRetrievalRanker,
-    MarkdownCrawler,
-    NaverSearchStrategy,
     RetrievalExecutor,
     RetrievalLogger,
-    RetrievalPlanLog,
-    RetrievalPlanner,
     RetrievalPostProcessor,
     RetrievalResultCollector,
     RetrievalResultCollectorFactory,
     RetrievalStrategy,
+)
+from naraninyeo.assistant.retrieval.planner import RetrievalPlanLog, RetrievalPlanner
+from naraninyeo.assistant.retrieval.strategies import (
+    ChatHistoryStrategy,
+    DocumentExtractionResult,
+    DocumentExtractor,
+    MarkdownCrawler,
+    NaverSearchStrategy,
     WikipediaStrategy,
 )
 

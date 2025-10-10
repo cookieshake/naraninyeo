@@ -7,6 +7,7 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 dotenv.load_dotenv()
+# .env 파일을 자동으로 불러와 로컬 개발 환경에서 값이 채워지도록 한다.
 
 
 class Settings(BaseSettings):
@@ -100,6 +101,7 @@ class Settings(BaseSettings):
     @field_validator("ENABLED_RETRIEVAL_STRATEGIES")
     @classmethod
     def _validate_strategies(cls, value: list[str]) -> list[str]:
+        # 허용되지 않은 전략 이름이 들어오면 즉시 예외를 던져 잘못된 설정을 잡아낸다.
         allowed = {"naver_search", "wikipedia", "chat_history"}
         invalid = [item for item in value if item not in allowed]
         if invalid:
@@ -109,6 +111,7 @@ class Settings(BaseSettings):
     @field_validator("RANK_WEIGHTS")
     @classmethod
     def _validate_weights(cls, value: dict[str, float]) -> dict[str, float]:
+        # 가중치 값이 지정 범위를 벗어나면 모델 점수 계산이 무너질 수 있으므로 범위 검사를 강제한다.
         for key, val in value.items():
             if not isinstance(val, (int, float)) or not (-1.0 <= float(val) <= 5.0):
                 raise ValueError(f"RANK_WEIGHTS[{key}] must be between -1.0 and 5.0")

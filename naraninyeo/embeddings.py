@@ -30,4 +30,5 @@ class Qwen306TextEmbedder(TextEmbedder):
             )
             response.raise_for_status()
             data = response.json().get("data", [])
+            # llama.cpp 서버에서 돌려준 벡터 배열만 추려서 반환한다.
             return [item.get("embedding", []) for item in data]

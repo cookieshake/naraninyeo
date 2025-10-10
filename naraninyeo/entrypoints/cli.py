@@ -7,12 +7,22 @@ import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from dishka import AsyncContainer
+from dishka import AsyncContainer, make_async_container
 
-from naraninyeo.app.pipeline import NewMessageHandler
+from naraninyeo.app.reply import NewMessageHandler
 from naraninyeo.assistant.models import Author, Channel, Message, MessageContent
-from naraninyeo.container import make_test_container
+from naraninyeo.container import MainProvider
 from naraninyeo.settings import Settings
+
+try:  # pragma: no cover - optional dependency
+    from naraninyeo.container_test import make_test_container
+    _TEST_CONTAINER_ERROR: str | None = None
+except RuntimeError as exc:  # pragma: no cover
+    make_test_container = None
+    _TEST_CONTAINER_ERROR = str(exc)
+except ModuleNotFoundError:
+    make_test_container = None
+    _TEST_CONTAINER_ERROR = "testcontainers support is not installed."
 
 
 class LocalClient:
@@ -92,13 +102,17 @@ class LocalClient:
 
 
 async def main():
-    """메인 함수
+    """CLI entrypoint for chatting with the assistant locally."""
 
-    개발 로컬 환경에서 별도 Mongo / Qdrant / llama.cpp 서버를 띄우지 않고도
-    대화를 테스트할 수 있도록 testcontainers 기반 임시 컨테이너를 사용한다.
-    (종료 시 모두 정리됨)
-    """
-    container = await make_test_container()
+    if make_test_container is not None:
+        container = await make_test_container()
+    else:
+        if _TEST_CONTAINER_ERROR:
+            print(f"⚠️ testcontainers 비활성화: {_TEST_CONTAINER_ERROR}")
+        else:
+            print("⚠️ testcontainers를 찾을 수 없어 기본 컨테이너를 사용합니다.")
+        container = make_async_container(MainProvider())
+
     client = LocalClient(container)
 
     try:

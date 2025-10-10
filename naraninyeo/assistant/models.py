@@ -42,10 +42,12 @@ class Message(BaseModel):
 
     @property
     def timestamp_str(self) -> str:
+        # UI 노출용으로 서울 타임존 기준 시간을 문자열로 만든다.
         return self.timestamp.astimezone(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
 
     @property
     def text_repr(self) -> str:
+        # 프롬프트에 쓰기 위한 간단한 미리보기 문자열.
         preview = self.content.text[:200]
         return f"{self.timestamp_str} {self.author.author_name} : {preview}"
 

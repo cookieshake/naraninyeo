@@ -28,6 +28,7 @@ class PromptTemplate(Generic[T]):
     user_builder: Callable[[T], str]
 
     def system_prompt(self, settings: Settings) -> str:
+        # 설정값을 반영해 시스템 프롬프트를 생성한다.
         return dedent(self.system_builder(settings)).strip()
 
     def user_prompt(self, payload: T) -> str:
@@ -44,6 +45,7 @@ class PlannerPrompt(PromptPayload):
             else "(없음)"
         )
         history = "\n".join([msg.text_repr for msg in self.context.latest_history])
+        # LLM이 읽기 쉬운 문자열로 바꿔 반환한다.
         return dedent(
             f"""
             직전 대화 기록:
@@ -80,6 +82,7 @@ class ReplyPrompt(PromptPayload):
 
         memory_text = [f"- {m.content}" for m in (self.context.short_term_memory or [])]
         history = "\n".join([msg.text_repr for msg in self.context.latest_history])
+        # 응답 생성에 필요한 모든 요소를 하나의 텍스트로 모은다.
         return dedent(
             f"""
             참고할 만한 정보
@@ -126,6 +129,7 @@ class MemoryPrompt(PromptPayload):
 
     def render(self) -> str:
         recent = "\n".join([m.text_repr for m in self.history[-10:]])
+        # 최근 대화 요약과 새 메시지를 묶어 기억 추출에 사용한다.
         return dedent(
             f"""
             최근 대화 기록:
@@ -144,6 +148,7 @@ class ExtractorPrompt(PromptPayload):
     query: str
 
     def render(self) -> str:
+        # 검색 결과 문서를 요약 모델이 참고하도록 구조화된 텍스트를 돌려준다.
         return dedent(
             f"""
             [검색 쿼리]

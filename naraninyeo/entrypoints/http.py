@@ -6,7 +6,7 @@ import uvicorn
 from fastapi import Depends, FastAPI
 from fastapi.responses import StreamingResponse
 
-from naraninyeo.app.pipeline import NewMessageHandler
+from naraninyeo.app.reply import NewMessageHandler
 from naraninyeo.assistant.models import Message
 from naraninyeo.container import container
 from naraninyeo.settings import Settings
@@ -19,6 +19,7 @@ class APIClient:
         self.api_url = settings.NARANINYEO_API_URL
 
     async def send_response(self, message: Message):
+        # 내부에서 생성한 봇 응답을 본 서비스 API로 전달한다.
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.api_url}/reply",
@@ -56,6 +57,7 @@ async def handle_new_message(
                 yield "\n"
             else:
                 is_first = False
+            # 파이프라인이 내놓는 응답을 JSON 문자열로 스트리밍한다.
             yield reply.model_dump_json()
 
     return StreamingResponse(make_reply(), media_type="application/ld+json")

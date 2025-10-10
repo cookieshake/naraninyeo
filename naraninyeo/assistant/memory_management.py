@@ -33,6 +33,7 @@ class MongoMemoryStore:
             return
         if not self._index_ready:
             try:
+                # TTL 인덱스를 한 번만 만들어 만료된 기억이 자동으로 정리되게 한다.
                 await self._collection.create_index("expires_at", expireAfterSeconds=0)
             except Exception:
                 pass
@@ -84,6 +85,7 @@ class ConversationMemoryExtractor:
         prompt = MemoryPrompt(message=message, history=history)
 
         try:
+            # LLM으로부터 기억 후보를 추출할 때 예외가 나면 조용히 빈 결과를 반환한다.
             items = await self.tool.run(prompt)
         except Exception:
             return []

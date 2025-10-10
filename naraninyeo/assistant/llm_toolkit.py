@@ -29,6 +29,7 @@ TOverride = TypeVar("TOverride")
 class LLMProvider:
     """Simple interface so plugins can supply custom providers."""
 
+    # 플러그인에서 공통 인터페이스만 맞추면 새로운 모델 제공자를 쉽게 연결할 수 있다.
     def create_model(self, model_name: str) -> OpenAIModel:  # pragma: no cover
         raise NotImplementedError
 
@@ -49,6 +50,7 @@ class LLMProviderRegistry:
 
     def __init__(self) -> None:
         self._providers: dict[str, ProviderFactory] = {}
+        # 기본값으로 OpenRouter 제공자를 등록해 두어 설정이 비어 있어도 동작한다.
         self.register("openrouter", lambda settings: OpenRouterLLMProvider(settings))
 
     def register(self, name: str, factory: ProviderFactory) -> None:
@@ -67,6 +69,7 @@ class LLMTask(Generic[TIn, TOut]):
     timeout_setting: str
     prompt: PromptTemplate[TIn]
     output: OutputSpec[TOut] | None = None
+    # Settings에서 모델 이름·타임아웃을 읽어와 어떤 작업을 수행할지 정의한다.
 
 
 class LLMTool(Generic[TIn, TOut]):
@@ -77,6 +80,7 @@ class LLMTool(Generic[TIn, TOut]):
         self._prompt = prompt
 
     async def run(self, payload: TIn) -> TOut:
+        # 사용자 입력을 템플릿에 맞춰 프롬프트로 변환한 뒤 에이전트를 실행한다.
         prompt = self._prompt.user_prompt(payload)
         result = await self._agent.run(prompt)
         return result.output
@@ -99,6 +103,7 @@ class LLMToolFactory:
         except KeyError:
             self._provider = OpenRouterLLMProvider(settings)
         self.settings = settings
+        # 환경설정에 지정된 제공자가 없으면 OpenRouter를 안전장치로 사용한다.
 
     def _select_output_spec(self, output_spec: OutputSpec[TOut], model: OpenAIModel) -> OutputSpec[TOut]:
         if output_spec is str:
@@ -128,6 +133,7 @@ class LLMToolFactory:
             ),
             "system_prompt": dedent(task.prompt.system_prompt(self.settings)).strip(),
         }
+        # 출력 스펙을 지정하면 JSON 구조 등을 강제할 수 있다.
         if desired_output is not None:
             output_spec = self._select_output_spec(desired_output, model)
             agent_kwargs["output_type"] = output_spec

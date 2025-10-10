@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from naraninyeo.app.pipeline import PipelineStep, PipelineTools
     from naraninyeo.assistant.llm_toolkit import LLMProvider, LLMToolFactory
     from naraninyeo.assistant.models import Message, ReplyContext
-    from naraninyeo.assistant.retrieval_workflow import RetrievalStrategy
+    from naraninyeo.assistant.retrieval import RetrievalStrategy
 
 
 class ChatMiddleware:
@@ -66,6 +66,7 @@ class PluginManager:
     def load_plugins(self, registry: AppRegistry) -> None:
         plugin_modules: Iterable[str] = getattr(self.settings, "PLUGINS", []) or []
         for module_name in plugin_modules:
+            # 모듈마다 register() 또는 상수 기반 후크를 찾아 순서대로 적용한다.
             module = importlib.import_module(module_name)
             register_fn = getattr(module, "register", None)
             if callable(register_fn):
