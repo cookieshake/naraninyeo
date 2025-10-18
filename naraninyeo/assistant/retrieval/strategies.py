@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Literal
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin, urlparse
 
 import dateparser
@@ -31,6 +31,9 @@ from naraninyeo.assistant.models import (
 from naraninyeo.assistant.prompts import ExtractorPrompt
 from naraninyeo.settings import Settings
 
+if TYPE_CHECKING:
+    from naraninyeo.assistant.retrieval.execution import RetrievalResultCollector
+
 
 class ChatHistoryStrategy:
     def __init__(self, message_repository: MongoQdrantMessageRepository):
@@ -44,7 +47,7 @@ class ChatHistoryStrategy:
         self,
         plan: RetrievalPlan,
         context: ReplyContext,
-        collector: "RetrievalResultCollector",
+        collector: RetrievalResultCollector,
     ) -> None:
         from naraninyeo.assistant.retrieval.execution import RetrievalResultCollector
 
@@ -178,7 +181,7 @@ class NaverSearchStrategy:
         self,
         plan: RetrievalPlan,
         context: ReplyContext,
-        collector: "RetrievalResultCollector",
+        collector: RetrievalResultCollector,
     ) -> None:
         from naraninyeo.assistant.retrieval.execution import RetrievalResultCollector
 
@@ -218,7 +221,7 @@ class NaverSearchStrategy:
     async def _handle_result(
         self,
         plan: RetrievalPlan,
-        collector: "RetrievalResultCollector",
+        collector: RetrievalResultCollector,
         item: dict[str, str],
     ) -> None:
         from naraninyeo.assistant.retrieval.execution import RetrievalResultCollector
@@ -269,7 +272,7 @@ class WikipediaStrategy:
         self,
         plan: RetrievalPlan,
         context: ReplyContext,
-        collector: "RetrievalResultCollector",
+        collector: RetrievalResultCollector,
     ) -> None:
         from naraninyeo.assistant.retrieval.execution import RetrievalResultCollector
 

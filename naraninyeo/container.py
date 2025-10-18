@@ -128,14 +128,10 @@ class MainProvider(Provider):
         llm_tool_factory: LLMToolFactory,
     ) -> RetrievalExecutor:
         executor = RetrievalExecutor(max_concurrency=settings.RETRIEVAL_MAX_CONCURRENCY)
-        enabled = set(getattr(settings, "ENABLED_RETRIEVAL_STRATEGIES", []))
-        # 설정으로 켜둔 전략만 등록하고, 나머지는 비활성화 상태로 둔다.
-        if "naver_search" in enabled:
-            executor.register(naver_search_strategy)
-        if "chat_history" in enabled:
-            executor.register(chat_history_strategy)
-        if "wikipedia" in enabled:
-            executor.register(wikipedia_strategy)
+        # 기본 검색 전략은 코드에서 고정으로 등록한다.
+        executor.register(naver_search_strategy)
+        executor.register(chat_history_strategy)
+        executor.register(wikipedia_strategy)
         for builder in app_registry.retrieval_strategy_builders:
             try:
                 strategy = builder(settings, llm_tool_factory)
@@ -211,12 +207,10 @@ class MainProvider(Provider):
         pipeline_tools: PipelineTools,
         step_registry: StepRegistry,
     ) -> ChatPipeline:
-        settings = pipeline_tools.settings
-        order = settings.PIPELINE or default_step_order()
         return ChatPipeline(
             tools=pipeline_tools,
             step_registry=step_registry,
-            step_order=order,
+            step_order=default_step_order(),
             reply_saver=pipeline_tools.message_repository.save,
         )
 

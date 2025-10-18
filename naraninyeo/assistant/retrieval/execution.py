@@ -5,16 +5,17 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Iterable, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Iterable, Protocol, runtime_checkable
 
 from naraninyeo.assistant.models import (
     ReplyContext,
     RetrievalPlan,
     RetrievalResult,
-    RetrievalStatus,
-    RetrievalStatusReason,
 )
 from naraninyeo.settings import Settings
+
+if TYPE_CHECKING:
+    from naraninyeo.assistant.retrieval.planner import RetrievalPlanLog
 
 
 class RetrievalResultCollector:
@@ -68,7 +69,7 @@ class RetrievalExecutor:
         plans: list[RetrievalPlan],
         context: ReplyContext,
         collector: RetrievalResultCollector,
-    ) -> list["RetrievalPlanLog"]:
+    ) -> list[RetrievalPlanLog]:
         from naraninyeo.assistant.retrieval.planner import RetrievalPlanLog
 
         tasks: list[asyncio.Task[None]] = []
@@ -104,9 +105,7 @@ class RetrievalExecutor:
         context: ReplyContext,
         timeout_seconds: float,
         collector: RetrievalResultCollector,
-    ) -> list["RetrievalPlanLog"]:
-        from naraninyeo.assistant.retrieval.planner import RetrievalPlanLog
-
+    ) -> list[RetrievalPlanLog]:
         try:
             return await asyncio.wait_for(
                 self.execute(plans, context, collector),
@@ -179,9 +178,7 @@ class RetrievalLogger:
     """Simple observer that records which plans were matched."""
 
     def __init__(self) -> None:
-        self.entries: list["RetrievalPlanLog"] = []
+        self.entries: list[RetrievalPlanLog] = []
 
-    def record(self, entries: Iterable["RetrievalPlanLog"]) -> None:
-        from naraninyeo.assistant.retrieval.planner import RetrievalPlanLog
-
+    def record(self, entries: Iterable[RetrievalPlanLog]) -> None:
         self.entries.extend(entries)

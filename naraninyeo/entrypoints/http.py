@@ -71,7 +71,6 @@ def main():
 async def health(settings: Annotated[Settings, Depends(get_settings)]):
     return {
         "status": "ok",
-        "enabled_strategies": settings.ENABLED_RETRIEVAL_STRATEGIES,
         "models": {
             "reply": settings.REPLY_MODEL_NAME,
             "planner": settings.PLANNER_MODEL_NAME,

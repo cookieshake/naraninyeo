@@ -77,9 +77,6 @@ class Settings(BaseSettings):
     # Retrieval executor behavior
     RETRIEVAL_MAX_CONCURRENCY: int = 8
 
-    # Retrieval strategy toggles
-    ENABLED_RETRIEVAL_STRATEGIES: list[str] = ["naver_search", "wikipedia", "chat_history"]
-
     # Ranking weights per search_type
     RANK_WEIGHTS: dict[str, float] = {
         "naver_news": 0.6,
@@ -91,22 +88,6 @@ class Settings(BaseSettings):
     }
     RECENCY_WINDOW_HOURS: int = 24
     RECENCY_BONUS_MAX: float = 0.5
-
-    # Plugin modules to auto-load at startup (e.g., ["my_pkg.plugins.search_bing"])
-    PLUGINS: list[str] = []
-
-    # Pipeline order (override to customize flow). If empty, uses built-in default.
-    PIPELINE: list[str] = []
-
-    @field_validator("ENABLED_RETRIEVAL_STRATEGIES")
-    @classmethod
-    def _validate_strategies(cls, value: list[str]) -> list[str]:
-        # 허용되지 않은 전략 이름이 들어오면 즉시 예외를 던져 잘못된 설정을 잡아낸다.
-        allowed = {"naver_search", "wikipedia", "chat_history"}
-        invalid = [item for item in value if item not in allowed]
-        if invalid:
-            raise ValueError(f"Unknown strategies in ENABLED_RETRIEVAL_STRATEGIES: {invalid}")
-        return value
 
     @field_validator("RANK_WEIGHTS")
     @classmethod

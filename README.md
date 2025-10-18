@@ -23,8 +23,8 @@
    `message_repository.py`에서 MongoDB 쿼리나 Qdrant 연동을 손본다.
 2. **LLM 스펙 변경**  
    `settings.py`에서 모델 이름·타임아웃을 바꾼 뒤 `llm_toolkit.py`가 해당 값을 읽어 사용한다.
-3. **새로운 플러그인/전략 추가**  
-   `settings.py`의 `PLUGINS`, `ENABLED_RETRIEVAL_STRATEGIES`에 모듈 경로나 이름을 추가하고 관련 모듈을 `naraninyeo/assistant`에 배치한다.
+3. **새로운 검색/파이프라인 로직 추가**  
+   `naraninyeo/container.py`나 관련 모듈을 직접 수정해 필요한 전략이나 스텝을 등록한다.
 
 ## 로컬 테스트 빠른 흐름
 - 테스트: `flox activate -- uv run pytest`

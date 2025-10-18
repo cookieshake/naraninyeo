@@ -21,9 +21,8 @@ except ModuleNotFoundError as exc:  # pragma: no cover
         "Install it via `pip install 'testcontainers>=4.12.0'` or include the 'dev' dependency group."
     ) from exc
 
-from qdrant_client.http.models import Distance, VectorParams
-
 from dishka import Provider
+from qdrant_client.http.models import Distance, VectorParams
 
 
 class LlamaCppContainer(DockerContainer):

@@ -16,6 +16,7 @@ from naraninyeo.settings import Settings
 
 try:  # pragma: no cover - optional dependency
     from naraninyeo.container_test import make_test_container
+
     _TEST_CONTAINER_ERROR: str | None = None
 except RuntimeError as exc:  # pragma: no cover
     make_test_container = None
