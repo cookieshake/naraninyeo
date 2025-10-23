@@ -1,3 +1,5 @@
-"""Core package for the NaraninYeo assistant."""
+"""Public entrypoints for the NaraninYeo assistant runtime."""
 
-# 서브패키지들이 프로젝트 전반에서 사용되도록 네임스페이스를 묶어준다.
+from naraninyeo.api import create_app
+
+__all__ = ["create_app"]

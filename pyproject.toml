@@ -36,7 +36,7 @@ dependencies = [
 ]
 
 [project.scripts]
-naraninyeo = "naraninyeo.entrypoints.__main__:main"
+naraninyeo = "naraninyeo.__main__:main"
 
 [dependency-groups]
 dev = [
