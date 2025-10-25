@@ -44,7 +44,7 @@ class RouterDependencies:
     reply_bot_resolver: ReplyBotResolver | None = None
 
 
-def build_router(deps: RouterDependencies) -> APIRouter:
+def build_message_flow(deps: RouterDependencies) -> MessageProcessingFlow:
     store_message = StoreMessageTask(deps.message_repository)
     get_history = GetHistoryTask(deps.message_repository)
     search_history = SearchHistoryTask(deps.message_repository)
@@ -55,7 +55,7 @@ def build_router(deps: RouterDependencies) -> APIRouter:
     web_search = SearchWebTask(deps.web_client)
     generate_reply = GenerateReplyTask(deps.reply_generator, deps.dispatcher)
 
-    message_flow_tasks = (
+    tasks = (
         store_message,
         get_history,
         search_history,
@@ -66,16 +66,29 @@ def build_router(deps: RouterDependencies) -> APIRouter:
         web_search,
         generate_reply,
     )
-    reply_flow_tasks = (
+    return MessageProcessingFlow(tasks)
+
+
+def build_reply_flow(deps: RouterDependencies) -> ReplyGenerationFlow:
+    get_history = GetHistoryTask(deps.message_repository)
+    search_history = SearchHistoryTask(deps.message_repository)
+    retrieve_memory = RetrieveMemoryTask(deps.memory_repository)
+    web_search = SearchWebTask(deps.web_client)
+    generate_reply = GenerateReplyTask(deps.reply_generator, deps.dispatcher)
+
+    tasks = (
         get_history,
         search_history,
         retrieve_memory,
         web_search,
         generate_reply,
     )
+    return ReplyGenerationFlow(tasks)
 
-    message_flow = MessageProcessingFlow(message_flow_tasks)
-    reply_flow = ReplyGenerationFlow(reply_flow_tasks)
+
+def build_router(deps: RouterDependencies) -> APIRouter:
+    message_flow = build_message_flow(deps)
+    reply_flow = build_reply_flow(deps)
 
     message_handler = MessageHandler(message_flow, resolve_bot=deps.message_bot_resolver)
     reply_handler = ReplyHandler(reply_flow, deps.message_repository, resolve_bot=deps.reply_bot_resolver)

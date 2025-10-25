@@ -13,6 +13,8 @@ from naraninyeo.router.router import KafkaMessageRouter
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_DEPS_MODULE = "naraninyeo.api.dependencies"
+
 
 def _load_module(path: str):
     try:
@@ -61,13 +63,23 @@ def main(argv: list[str] | None = None) -> None:
     sub = parser.add_subparsers(dest="command", required=True)
 
     api_parser = sub.add_parser("api", help="Run the FastAPI application")
-    api_parser.add_argument("--deps", dest="deps", required=True, help="Module path providing router dependencies")
+    api_parser.add_argument(
+        "--deps",
+        dest="deps",
+        default=DEFAULT_DEPS_MODULE,
+        help=f"Module path providing router dependencies (default: {DEFAULT_DEPS_MODULE})",
+    )
     api_parser.add_argument("--host", default="0.0.0.0")
     api_parser.add_argument("--port", type=int, default=8080)
     api_parser.add_argument("--reload", action="store_true")
 
     router_parser = sub.add_parser("router", help="Run the Kafka message router")
-    router_parser.add_argument("--deps", dest="deps", required=True, help="Module path providing router dependencies")
+    router_parser.add_argument(
+        "--deps",
+        dest="deps",
+        default=DEFAULT_DEPS_MODULE,
+        help=f"Module path providing router dependencies (default: {DEFAULT_DEPS_MODULE})",
+    )
 
     args = parser.parse_args(argv)
 
