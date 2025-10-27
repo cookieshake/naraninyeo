@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from naraninyeo.api.interfaces import OutboundDispatcher, ReplyGenerator
+from naraninyeo.api.infrastructure.interfaces import OutboundDispatcher, ReplyGenerator
 from naraninyeo.api.models import MessageProcessingState
 from naraninyeo.core import Author, AuthorRole, FlowContext, Message, MessageContent
 from naraninyeo.core.task import TaskBase, TaskResult

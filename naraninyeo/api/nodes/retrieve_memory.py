@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from naraninyeo.api.interfaces import MemoryRepository
+from naraninyeo.api.infrastructure.interfaces import MemoryRepository
 from naraninyeo.api.models import MessageProcessingState
 from naraninyeo.core import FlowContext
 from naraninyeo.core.task import TaskBase, TaskResult

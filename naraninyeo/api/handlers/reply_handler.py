@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Awaitable, Callable, Sequence
 
-from naraninyeo.api.interfaces import MessageRepository
+from naraninyeo.api.infrastructure.interfaces import MessageRepository
 from naraninyeo.api.models import FlowResponse, MessageProcessingState, MessageResponse, ReplyRequest
 from naraninyeo.core import BotReference, FlowBase, FlowContext, FlowExecutionResult, TaskBase, TenantReference
 

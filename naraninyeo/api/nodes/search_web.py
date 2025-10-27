@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from naraninyeo.api.interfaces import WebSearchClient
+from naraninyeo.api.infrastructure.interfaces import WebSearchClient
 from naraninyeo.api.models import MessageProcessingState
 from naraninyeo.core import FlowContext, RetrievalPlan
 from naraninyeo.core.task import TaskBase, TaskResult
