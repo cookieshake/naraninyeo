@@ -1,86 +1,57 @@
-"""Domain models shared across flows and tasks."""
-
-from __future__ import annotations
-
 from datetime import UTC, datetime
+import os
+from zoneinfo import ZoneInfo
 from enum import Enum
 from typing import Iterable, Literal
 
+import pytz
 from pydantic import BaseModel, Field, computed_field, field_validator
 
 
-class TenantReference(BaseModel):
-    """Identifies the tenant and bot handling a conversation."""
-
+class Tenant(BaseModel):
     tenant_id: str = Field(min_length=1)
-    bot_id: str = Field(min_length=1)
-
-    def as_key(self) -> str:
-        return f"{self.tenant_id}:{self.bot_id}"
-
-
-class BotReference(BaseModel):
-    """Describes a bot that belongs to a tenant."""
-
-    tenant: TenantReference
-    display_name: str = Field(min_length=1)
-    description: str | None = None
-    model_hint: str | None = None
-
-
-class AuthorRole(str, Enum):
-    USER = "user"
-    BOT = "bot"
-    SYSTEM = "system"
-
 
 class Author(BaseModel):
     author_id: str = Field(min_length=1)
-    display_name: str = Field(min_length=1)
-    role: AuthorRole = AuthorRole.USER
-    locale: str | None = None
+    author_name: str = Field(min_length=1)
 
+class Bot(Author):
+    tenant: Tenant
 
 class Attachment(BaseModel):
     attachment_id: str = Field(min_length=1)
-    attachment_type: Literal["image", "video", "file", "link"]
+    attachment_type: Literal["image", "video", "file", "audio"]
     content_type: str | None = None
     content_length: int | None = None
     url: str | None = None
-
 
 class MessageContent(BaseModel):
     text: str = Field(min_length=1)
     attachments: list[Attachment] = Field(default_factory=list)
 
-
 class Channel(BaseModel):
     channel_id: str = Field(min_length=1)
     channel_name: str
-    slug: str | None = None
-
 
 class Message(BaseModel):
-    """Represents an inbound or outbound conversation message."""
-
-    tenant: TenantReference
+    tenant: Tenant
     message_id: str = Field(min_length=1)
     channel: Channel
     author: Author
     content: MessageContent
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    reply_to_id: str | None = None
 
     @computed_field  # type: ignore[misc]
     @property
     def timestamp_iso(self) -> str:
-        return self.timestamp.astimezone(UTC).isoformat()
+        tz = os.getenv("TZ", "UTC")
+        return self.timestamp.astimezone(tz=ZoneInfo(tz)).isoformat()
 
     @computed_field  # type: ignore[misc]
     @property
     def preview(self) -> str:
         snippet = self.content.text[:200]
-        return f"[{self.timestamp_iso}] {self.author.display_name}: {snippet}"
+        return f"[{self.timestamp_iso}] {self.author.author_name}({self.author.author_id}): {snippet}"
 
     @field_validator("timestamp", mode="before")
     @classmethod
@@ -90,18 +61,9 @@ class Message(BaseModel):
         return value.astimezone(UTC)
 
 
-class MemoryImportance(int, Enum):
-    LOW = 1
-    MEDIUM = 5
-    HIGH = 9
-
-
 class MemoryItem(BaseModel):
-    """Represents knowledge derived from conversations."""
-
     memory_id: str = Field(min_length=1)
-    tenant: TenantReference
-    channel_id: str = Field(min_length=1)
+    bot: Bot
     kind: Literal["short_term", "long_term", "persona", "task"] = "short_term"
     content: str = Field(min_length=1)
     importance: MemoryImportance = MemoryImportance.LOW
