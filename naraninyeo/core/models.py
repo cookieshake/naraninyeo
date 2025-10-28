@@ -1,10 +1,9 @@
-from datetime import UTC, datetime
 import os
-from zoneinfo import ZoneInfo
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Iterable, Literal
+from typing import Literal, Optional
+from zoneinfo import ZoneInfo
 
-import pytz
 from pydantic import BaseModel, Field, computed_field, field_validator
 
 
@@ -60,15 +59,20 @@ class Message(BaseModel):
             return value.replace(tzinfo=UTC)
         return value.astimezone(UTC)
 
+class BotMessage(BaseModel):
+    bot: Bot
+    channel: Channel
+    content: MessageContent
 
 class MemoryItem(BaseModel):
     memory_id: str = Field(min_length=1)
     bot: Bot
-    kind: Literal["short_term", "long_term", "persona", "task"] = "short_term"
+    kind: Literal["short_term", "long_term"] = "short_term"
     content: str = Field(min_length=1)
-    importance: MemoryImportance = MemoryImportance.LOW
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    expires_at: datetime | None = None
+    created_at: datetime
+    expires_at: Optional[datetime] = None
+    access_count: int = 0
+    last_accessed_at: Optional[datetime] = None
 
     @computed_field  # type: ignore[misc]
     @property
@@ -91,50 +95,24 @@ class KnowledgeReference(BaseModel):
     url: str | None = None
     timestamp: datetime | None = None
 
+class ActionType(str, Enum):
+    SEARCH_WEB_GENERAL = "SEARCH_WEB_GENERAL"
+    SEARCH_WEB_NEWS = "SEARCH_WEB_NEWS"
+    SEARCH_WEB_BLOG = "SEARCH_WEB_BLOG"
+    SEARCH_WEB_SCHOLAR = "SEARCH_WEB_SCHOLAR"
+    SEARCH_CHAT_HISTORY = "SEARCH_CHAT_HISTORY"
 
-class RetrievalPlan(BaseModel):
-    search_type: Literal["web", "memory", "history", "hybrid"]
-    query: str
-    max_results: int = Field(default=5, ge=1)
+class PlanAction(BaseModel):
+    action_type: ActionType
+    description: str
+    query: Optional[str] = None
 
+class ResponsePlan(BaseModel):
+    actions: list[PlanAction]
+    generation_instructions: Optional[str]
 
-class RetrievalStatus(str, Enum):
-    SUCCESS = "SUCCESS"
-    FAILED = "FAILED"
-    TIMEOUT = "TIMEOUT"
-
-
-class RetrievalStatusReason(str, Enum):
-    SUCCESS = "SUCCESS"
-    TIMEOUT = "TIMEOUT"
-    ERROR = "ERROR"
-    EMPTY = "EMPTY"
-
-
-class RetrievalResult(BaseModel):
-    plan: RetrievalPlan
-    result_id: str
-    content: str
-    references: list[KnowledgeReference] = Field(default_factory=list)
-    status: RetrievalStatus
-    status_reason: RetrievalStatusReason
-    source_name: str
-    source_timestamp: datetime | None = None
-
-
-class ReplyContext(BaseModel):
-    tenant: TenantReference
-    bot: BotReference | None
-    environment: EnvironmentalContext
-    incoming: Message
-    history: list[Message] = Field(default_factory=list)
-    knowledge_references: list[KnowledgeReference] = Field(default_factory=list)
-    retrievals: list[RetrievalResult] = Field(default_factory=list)
-    short_term_memory: list[MemoryItem] | None = None
-    long_term_memory: list[MemoryItem] | None = None
-
-    def iter_all_memory(self) -> Iterable[MemoryItem]:
-        for item in self.short_term_memory or []:
-            yield item
-        for item in self.long_term_memory or []:
-            yield item
+class PlanActionResult(BaseModel):
+    action: PlanAction
+    status: Literal["PENDING", "IN_PROGRESS", "COMPLETED", "FAILED", "ABORTED"]
+    result: Optional[str] = None
+    error: Optional[str] = None

@@ -1,47 +1,36 @@
 from datetime import datetime
 from typing import Protocol, Sequence
 
-from naraninyeo.core import (
-    KnowledgeReference,
-    MemoryItem,
-    Message,
-    MessageContent,
-    ReplyContext,
-    RetrievalPlan
-)
-from naraninyeo.core.models import Bot, Channel
+from naraninyeo.core.models import Bot, Channel, PlanAction, Message, MemoryItem, PlanActionResult
+
 
 class ChannelRepository(Protocol):
     async def exists(self, channel_id: str) -> bool: ...
-    async def save(self, channel: Channel) -> None: ...
+    async def create(self, channel: Channel) -> None: ...
 
 class MessageRepository(Protocol):
-    async def save(self, message: Message) -> None: ...
+    async def create(self, message: Message) -> None: ...
 
 class BotRepository(Protocol):
     async def exists(self, bot_id: str) -> bool: ...
-    async def save(self, bot: Bot) -> None: ...
+    async def create(self, bot: Bot) -> None: ...
 
 class MemoryRepository(Protocol):
-    async def save_many(self, items: Sequence[MemoryItem]) -> None: ...
-
-    async def search(
+    async def create_many(self, memory_items: Sequence[MemoryItem]) -> None: ...
+    async def delete_many(self, memory_item_ids: Sequence[str]) -> int: ...
+    async def delete_expired(self, current_time: datetime) -> int: ...
+    async def get_channel_memory_items(
         self,
-        tenant: TenantReference,
-        query: str,
-        *,
-        limit: int,
-    ) -> Sequence[MemoryItem]: ...
-
-    async def recent(
-        self,
-        tenant: TenantReference,
+        bot_id: str,
         channel_id: str,
-        *,
-        limit: int,
+        limit: int = 100
     ) -> Sequence[MemoryItem]: ...
-
-    async def prune(self, tenant: TenantReference) -> None: ...
 
 class Clock(Protocol):
     def now(self) -> datetime: ...
+
+class PlanActionExecutor(Protocol):
+    async def execute_actions(
+        self,
+        actions: list[PlanAction]
+    ) -> list[PlanActionResult]: ...
