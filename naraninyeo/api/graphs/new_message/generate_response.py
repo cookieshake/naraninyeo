@@ -3,7 +3,10 @@ import re
 from langgraph.runtime import Runtime
 
 from naraninyeo.api.agents.response_generator import ResponseGeneratorDeps, response_generator
-from naraninyeo.api.graphs.new_message import NewMessageGraphContext, NewMessageGraphState
+from naraninyeo.api.graphs.new_message.models import (
+    NewMessageGraphContext,
+    NewMessageGraphState,
+)
 from naraninyeo.core.models import BotMessage, MessageContent
 
 

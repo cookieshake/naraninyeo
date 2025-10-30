@@ -9,7 +9,9 @@ from naraninyeo.core.settings import Settings
 class LlamaCppGemmaEmbedder:
     def __init__(self, settings: Settings) -> None:
         self.api_url = settings.LLAMA_CPP_EMBEDDINGS_URI
-        self.model = "qwen3-embedding-0.6b"
+        self.model = httpx.get(
+            f"{self.api_url}/v1/models"
+        ).json()["data"][0]["id"]
 
     async def embed_docs(self, docs: list[str]) -> list[list[float]]:
         async with httpx.AsyncClient() as client:
@@ -21,7 +23,7 @@ class LlamaCppGemmaEmbedder:
                 f"{self.api_url}/v1/embeddings",
                 json={
                     "model": self.model,
-                    "inputs": transformed
+                    "input": transformed
                 },
                 timeout=60.0
             )
@@ -40,7 +42,7 @@ class LlamaCppGemmaEmbedder:
                 f"{self.api_url}/v1/embeddings",
                 json={
                     "model": self.model,
-                    "inputs": transformed
+                    "input": transformed
                 },
                 timeout=60.0
             )

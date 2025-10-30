@@ -4,7 +4,7 @@ from typing import Literal
 from langgraph.runtime import Runtime
 
 from naraninyeo.api.agents.memory_pruner import MemoryPrunerDeps, memory_pruner
-from naraninyeo.api.graphs.manage_memory import ManageMemoryGraphContext, ManageMemoryGraphState
+from naraninyeo.api.graphs.manage_memory.models import ManageMemoryGraphContext, ManageMemoryGraphState
 from naraninyeo.core.models import MemoryItem
 
 

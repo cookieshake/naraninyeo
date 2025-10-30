@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from pydantic_ai import RunContext
 
 from naraninyeo.api.agents.base import StructuredAgent
@@ -7,6 +7,8 @@ from naraninyeo.core.models import Bot, EvaluationFeedback, MemoryItem, Message,
 
 
 class ResponseGeneratorDeps(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     clock: Clock
     bot: Bot
     plan: ResponsePlan

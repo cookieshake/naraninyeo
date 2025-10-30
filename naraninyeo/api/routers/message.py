@@ -1,9 +1,10 @@
 import asyncio
+from datetime import datetime
 from typing import Literal
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Response
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from naraninyeo.api.infrastructure.interfaces import BotRepository, Clock, IdGenerator, MemoryRepository, MessageRepository
 from naraninyeo.core.models import Bot, Message, TenancyContext, BotMessage

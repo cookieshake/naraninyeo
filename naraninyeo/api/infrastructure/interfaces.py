@@ -1,9 +1,9 @@
 from datetime import datetime
-from typing import Protocol, Sequence
+from typing import Protocol, Sequence, runtime_checkable
 
 from naraninyeo.core.models import Bot, MemoryItem, Message, PlanAction, PlanActionResult, TenancyContext
 
-
+@runtime_checkable
 class MessageRepository(Protocol):
     async def upsert(self, tctx: TenancyContext, message: Message) -> None: ...
     async def get_channel_messages_before(
@@ -28,11 +28,13 @@ class MessageRepository(Protocol):
         limit: int = 10
     ) -> Sequence[Message]: ...
 
+@runtime_checkable
 class BotRepository(Protocol):
     async def get(self, tctx: TenancyContext, bot_id: str) -> Bot | None: ...
     async def list_all(self, tctx: TenancyContext) -> Sequence[Bot]: ...
     async def create(self, tctx: TenancyContext, bot: Bot) -> None: ...
 
+@runtime_checkable
 class MemoryRepository(Protocol):
     async def upsert_many(self, tctx: TenancyContext, memory_items: Sequence[MemoryItem]) -> None: ...
     async def delete_many(self, tctx: TenancyContext, memory_item_ids: Sequence[str]) -> int: ...
@@ -45,19 +47,22 @@ class MemoryRepository(Protocol):
         limit: int = 100
     ) -> Sequence[MemoryItem]: ...
 
+@runtime_checkable
 class Clock(Protocol):
     def now(self) -> datetime: ...
 
+@runtime_checkable
 class PlanActionExecutor(Protocol):
     async def execute_actions(
         self,
         actions: list[PlanAction]
     ) -> list[PlanActionResult]: ...
 
+@runtime_checkable
 class IdGenerator(Protocol):
     def generate_id(self) -> str: ...
 
+@runtime_checkable
 class TextEmbedder(Protocol):
     async def embed_docs(self, docs: list[str]) -> list[list[float]]: ...
     async def embed_queries(self, queries: list[str]) -> list[list[float]]: ...
-

@@ -24,7 +24,9 @@ from naraninyeo.api.infrastructure.util.nanoid_generator import NanoidGenerator
 class CoreProvider(Provider):
     scope = Scope.APP
 
-    settings = provide(Settings)
+    @provide
+    def settings(self) -> Settings:
+        return Settings()
 
 class ConnectionProvider(Provider):
     scope = Scope.APP

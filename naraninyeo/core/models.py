@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Literal, Optional
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, Field, computed_field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 
 class TenancyContext(BaseModel):
@@ -37,16 +37,20 @@ class Channel(BaseModel):
     channel_name: str
 
 class Message(BaseModel):
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()}
+    )
+
     message_id: str = Field(min_length=1)
     channel: Channel
     author: Author
     content: MessageContent
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    timestamp: datetime
 
     @computed_field  # type: ignore[misc]
     @property
     def timestamp_iso(self) -> str:
-        tz = os.getenv("TZ", "UTC")
+        tz = os.getenv("TZ", "Asia/Seoul")
         return self.timestamp.astimezone(tz=ZoneInfo(tz)).isoformat()
 
     @computed_field  # type: ignore[misc]
@@ -55,7 +59,7 @@ class Message(BaseModel):
         snippet = textwrap.shorten(self.content.text.replace("\n", " "), width=100)
         return f"[{self.timestamp_iso}] {self.author.author_name}({self.author.author_id}): {snippet}"
 
-    @field_validator("timestamp", mode="before")
+    @field_validator("timestamp", mode="after")
     @classmethod
     def ensure_timezone(cls, value: datetime) -> datetime:
         if value.tzinfo is None:

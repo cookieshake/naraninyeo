@@ -1,8 +1,10 @@
 from langgraph.runtime import Runtime
 
 from naraninyeo.api.agents.response_planner import ResponsePlannerDeps, response_planner
-from naraninyeo.api.graphs.new_message import NewMessageGraphContext, NewMessageGraphState
-
+from naraninyeo.api.graphs.new_message.models import (
+    NewMessageGraphContext,
+    NewMessageGraphState,
+)
 
 async def plan(
     state: NewMessageGraphState,

@@ -23,7 +23,7 @@ class VchordMessageRepository:
                     INSERT INTO naraninyeo.messages (
                         tenant_id, message_id, channel_id, channel_name,
                         author_id, author_name,
-                        content_text, content_text_gvec, content_text_bvec
+                        content_text, content_text_gvec, content_text_bvec,
                         timestamp
                     )
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, tokenize($8, 'solar-pro-tokenizer'), $9)

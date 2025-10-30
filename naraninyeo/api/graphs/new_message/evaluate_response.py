@@ -1,8 +1,10 @@
 from langgraph.runtime import Runtime
 
 from naraninyeo.api.agents.response_evaluator import ResponseEvaluatorDeps, response_evaluator
-from naraninyeo.api.graphs.new_message import NewMessageGraphContext, NewMessageGraphState
-
+from naraninyeo.api.graphs.new_message.models import (
+    NewMessageGraphContext,
+    NewMessageGraphState,
+)
 
 async def evaluate_response(
     state: NewMessageGraphState,

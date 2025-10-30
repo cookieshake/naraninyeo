@@ -1,6 +1,9 @@
 from langgraph.runtime import Runtime
 
-from naraninyeo.api.graphs.new_message import NewMessageGraphContext, NewMessageGraphState
+from naraninyeo.api.graphs.new_message.models import (
+    NewMessageGraphContext,
+    NewMessageGraphState,
+)
 
 
 async def execute_plan(
