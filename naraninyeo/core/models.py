@@ -1,4 +1,5 @@
 import os
+import textwrap
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Literal, Optional
@@ -7,15 +8,18 @@ from zoneinfo import ZoneInfo
 from pydantic import BaseModel, Field, computed_field, field_validator
 
 
-class Tenant(BaseModel):
+class TenancyContext(BaseModel):
     tenant_id: str = Field(min_length=1)
 
 class Author(BaseModel):
     author_id: str = Field(min_length=1)
     author_name: str = Field(min_length=1)
 
-class Bot(Author):
-    tenant: Tenant
+class Bot(BaseModel):
+    bot_id: str = Field(min_length=1)
+    bot_name: str = Field(min_length=1)
+    author_id: str = Field(min_length=1)
+    created_at: datetime
 
 class Attachment(BaseModel):
     attachment_id: str = Field(min_length=1)
@@ -33,7 +37,6 @@ class Channel(BaseModel):
     channel_name: str
 
 class Message(BaseModel):
-    tenant: Tenant
     message_id: str = Field(min_length=1)
     channel: Channel
     author: Author
@@ -49,7 +52,7 @@ class Message(BaseModel):
     @computed_field  # type: ignore[misc]
     @property
     def preview(self) -> str:
-        snippet = self.content.text[:200]
+        snippet = textwrap.shorten(self.content.text.replace("\n", " "), width=100)
         return f"[{self.timestamp_iso}] {self.author.author_name}({self.author.author_id}): {snippet}"
 
     @field_validator("timestamp", mode="before")
@@ -66,21 +69,13 @@ class BotMessage(BaseModel):
 
 class MemoryItem(BaseModel):
     memory_id: str = Field(min_length=1)
-    bot: Bot
+    bot_id: str = Field(min_length=1)
+    channel_id: str = Field(min_length=1)
     kind: Literal["short_term", "long_term"] = "short_term"
     content: str = Field(min_length=1)
     created_at: datetime
+    updated_at: datetime
     expires_at: Optional[datetime] = None
-    access_count: int = 0
-    last_accessed_at: Optional[datetime] = None
-
-    @computed_field  # type: ignore[misc]
-    @property
-    def is_expired(self) -> bool:
-        if self.expires_at is None:
-            return False
-        return datetime.now(UTC) > self.expires_at
-
 
 class EnvironmentalContext(BaseModel):
     timestamp: datetime
@@ -111,8 +106,27 @@ class ResponsePlan(BaseModel):
     actions: list[PlanAction]
     generation_instructions: Optional[str]
 
+    @computed_field  # type: ignore[misc]
+    @property
+    def summary(self) -> str:
+        action_summaries = [
+            f"- {action.action_type}: {textwrap.shorten(action.description, width=50)} (query: {action.query})"
+            for action in self.actions
+        ]
+        return (
+            "Actions:\n" +
+            "\n".join(action_summaries) +
+            (f"\nGeneration Instructions: {self.generation_instructions}")
+        )
+
 class PlanActionResult(BaseModel):
     action: PlanAction
     status: Literal["PENDING", "IN_PROGRESS", "COMPLETED", "FAILED", "ABORTED"]
-    result: Optional[str] = None
+    content: Optional[str] = None
     error: Optional[str] = None
+
+class EvaluationFeedback(str, Enum):
+    PLAN_AGAIN = "plan_again"
+    EXECUTE_AGAIN = "execute_again"
+    GENERATE_AGAIN = "generate_again"
+    FINALIZE = "finalize"

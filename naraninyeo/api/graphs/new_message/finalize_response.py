@@ -3,11 +3,15 @@ from langgraph.runtime import Runtime
 from naraninyeo.api.graphs.new_message import NewMessageGraphContext, NewMessageGraphState
 
 
-async def save_message(
+async def finalize_response(
     state: NewMessageGraphState,
     runtime: Runtime[NewMessageGraphContext]
 ) -> NewMessageGraphState:
-    repo = runtime.context.message_repository
-    if state.incoming_message is not None:
-        await repo.create(state.incoming_message)
+    if state.draft_messages is None:
+        return state
+    if state.outgoing_messages is None:
+        state.outgoing_messages = []
+    state.outgoing_messages.extend(state.draft_messages)
+    state.draft_messages = []
+
     return state
