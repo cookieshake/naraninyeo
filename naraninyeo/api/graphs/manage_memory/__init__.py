@@ -22,13 +22,15 @@ class ManageMemoryGraphContext(BaseModel):
     id_generator: IdGenerator
     memory_repository: MemoryRepository
 
-manage_memory_graph = StateGraph(
+_manage_memory_graph = StateGraph(
     state_schema=ManageMemoryGraphState, context_schema=ManageMemoryGraphContext
 )
 
-manage_memory_graph.add_node("add_memory", add_memory)
-manage_memory_graph.add_node("manage_memory", manage_memory)
+_manage_memory_graph.add_node("add_memory", add_memory)
+_manage_memory_graph.add_node("manage_memory", manage_memory)
 
-manage_memory_graph.add_edge(START, "add_memory")
-manage_memory_graph.add_edge("add_memory", "manage_memory")
-manage_memory_graph.add_edge("manage_memory", END)
+_manage_memory_graph.add_edge(START, "add_memory")
+_manage_memory_graph.add_edge("add_memory", "manage_memory")
+_manage_memory_graph.add_edge("manage_memory", END)
+
+manage_memory_graph = _manage_memory_graph.compile()

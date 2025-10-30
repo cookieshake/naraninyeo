@@ -1,5 +1,5 @@
 
-from dishka.integrations.fastapi import FromDishka
+from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -9,6 +9,7 @@ from naraninyeo.core.models import Bot, TenancyContext
 bot_router = APIRouter()
 
 @bot_router.get("/bots")
+@inject
 async def list_bots(bot_repo: FromDishka[BotRepository]):
     tctx = TenancyContext(tenant_id="default")
     return await bot_repo.list_all(tctx)
@@ -19,6 +20,7 @@ class CreateBotRequest(BaseModel):
     author_id: str
 
 @bot_router.post("/bots")
+@inject
 async def create_bot(
     request: CreateBotRequest,
     bot_repo: FromDishka[BotRepository],

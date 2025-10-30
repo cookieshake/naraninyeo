@@ -5,8 +5,13 @@ class VchordInit:
     def __init__(self, pool: Pool):
         self.pool = pool
 
-    CREATE_SCHEMA = """
+    DATABASE_INIT = """
         CREATE SCHEMA IF NOT EXISTS naraninyeo;
+        CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
+        CREATE EXTENSION IF NOT EXISTS pg_tokenizer CASCADE;
+        CREATE EXTENSION IF NOT EXISTS vchord_bm25 CASCADE;
+        \\set content `wget -q -O - https://huggingface.co/upstage/solar-pro-tokenizer/raw/main/tokenizer.json`
+        SELECT create_huggingface_model('solar-pro-tokenizer', :'content');
     """
 
     CREATE_TABLE_BOT = """
@@ -43,11 +48,16 @@ class VchordInit:
             author_id VARCHAR(255) NOT NULL,
             author_name VARCHAR(255) NOT NULL,
             content_text TEXT NOT NULL,
+            content_text_gvec embedding vector(768),
+            content_text_bbec bm25vector, 
             attachment_ids VARCHAR(255)[],
             timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
             PRIMARY KEY (tenant_id, message_id);
         )
+        CREATE INDEX IF NOT EXISTS naraninyeo_messages_content_text_bvec_bm25_idx
+        ON naraninyeo.messages
+        USING bm25 (content_text_bvec bm25_ops);
     """
 
     async def run(self):

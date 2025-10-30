@@ -1,5 +1,5 @@
 
-
+import math
 from typing import Sequence
 
 from asyncpg import Pool
@@ -7,36 +7,6 @@ from asyncpg import Pool
 from naraninyeo.api.infrastructure.interfaces import TextEmbedder
 from naraninyeo.core.models import Attachment, Author, Channel, Message, MessageContent, TenancyContext
 
-# CREATE_TABLE_MESSAGE = """
-#     CREATE TABLE IF NOT EXISTS naraninyeo.messages (
-#         tenant_id VARCHAR(255) NOT NULL,
-#         message_id VARCHAR(255) NOT NULL,
-#         channel_id VARCHAR(255) NOT NULL,
-#         channel_name VARCHAR(255) NOT NULL,
-#         author_id VARCHAR(255) NOT NULL,
-#         author_name VARCHAR(255) NOT NULL,
-#         content_text TEXT NOT NULL,
-#         content_text_embeddings embedding vector(768),
-#         timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-#
-#         PRIMARY KEY (tenant_id, message_id);
-#     )
-# """
-
-# CREATE_TABLE_ATTACHMENT = """
-#     CREATE TABLE IF NOT EXISTS naraninyeo.attachments (
-#         tenant_id VARCHAR(255) NOT NULL,
-#         message_id VARCHAR(255) NOT NULL,
-#         attachment_id VARCHAR(255) NOT NULL,
-#
-#         attachment_type VARCHAR(255) NOT NULL,
-#         content_type VARCHAR(255),
-#         content_length BIGINT,
-#         url TEXT,
-#
-#         PRIMARY KEY (tenant_id, message_id, attachment_id);
-#     );
-# """
 
 class VchordMessageRepository:
     def __init__(self, pool: Pool, text_embedder: TextEmbedder):
@@ -52,16 +22,18 @@ class VchordMessageRepository:
                     """
                     INSERT INTO naraninyeo.messages (
                         tenant_id, message_id, channel_id, channel_name,
-                        author_id, author_name, content_text, content_text_embeddings, timestamp
+                        author_id, author_name,
+                        content_text, content_text_gvec, content_text_bvec
+                        timestamp
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, tokenize($8, 'solar-pro-tokenizer'), $9)
                     ON CONFLICT (tenant_id, message_id) DO UPDATE SET
                         channel_id = EXCLUDED.channel_id,
                         channel_name = EXCLUDED.channel_name,
                         author_id = EXCLUDED.author_id,
                         author_name = EXCLUDED.author_name,
                         content_text = EXCLUDED.content_text,
-                        content_text_embeddings = EXCLUDED.content_text_embeddings,
+                        content_text_gvec = EXCLUDED.content_text_gvec,
                         timestamp = EXCLUDED.timestamp
                     """,
                     tctx.tenant_id,
@@ -206,29 +178,104 @@ class VchordMessageRepository:
     ) -> Sequence[Message]:
         query_embedding = await self.text_embedder.embed_queries([query])
         query_embedding = query_embedding[0]
+        vlimit = math.ceil(limit / 2.0)
+        blimit = limit - vlimit
         async with self.pool.acquire() as conn:
             rows = await conn.fetch(
                 """
-                SELECT m.message_id, m.channel_id, m.channel_name,
-                       m.author_id, m.author_name, m.content_text,
-                       m.timestamp,
-                       m.content_text_embeddings <-> $3 AS similarity,
-                       ARRAY_AGG(a.attachment_id) FILTER (WHERE a.attachment_id IS NOT NULL) AS attachment_ids_result,
-                       ARRAY_AGG(a.attachment_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS attachment_types,
-                       ARRAY_AGG(a.content_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_types,
-                       ARRAY_AGG(a.content_length) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_lengths,
-                       ARRAY_AGG(a.url) FILTER (WHERE a.attachment_id IS NOT NULL) AS urls
-                FROM naraninyeo.messages m
-                LEFT JOIN naraninyeo.attachments a
-                    ON a.tenant_id = m.tenant_id AND a.message_id = m.message_id
-                WHERE m.tenant_id = $1 AND m.channel_id = $2
-                ORDER BY similarity DESC
-                LIMIT $4
+                WITH vector_results AS (
+                    SELECT m.message_id,
+                           m.channel_id,
+                           m.channel_name,
+                           m.author_id,
+                           m.author_name,
+                           m.content_text,
+                           m.timestamp,
+                           ARRAY_AGG(a.attachment_id) FILTER (WHERE a.attachment_id IS NOT NULL) AS attachment_ids_result,
+                           ARRAY_AGG(a.attachment_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS attachment_types,
+                           ARRAY_AGG(a.content_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_types,
+                           ARRAY_AGG(a.content_length) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_lengths,
+                           ARRAY_AGG(a.url) FILTER (WHERE a.attachment_id IS NOT NULL) AS urls,
+                           m.content_text_gvec <-> $3 AS score,
+                           'vector'::TEXT AS search_method
+                    FROM naraninyeo.messages m
+                    LEFT JOIN naraninyeo.attachments a
+                        ON a.tenant_id = m.tenant_id AND a.message_id = m.message_id
+                    WHERE m.tenant_id = $1
+                      AND m.channel_id = $2
+                    GROUP BY m.tenant_id,
+                             m.message_id,
+                             m.channel_id,
+                             m.channel_name,
+                             m.author_id,
+                             m.author_name,
+                             m.content_text,
+                             m.timestamp,
+                             m.content_text_gvec
+                    ORDER BY score DESC
+                    LIMIT $5
+                ),
+                bm25_results AS (
+                    SELECT m.message_id,
+                           m.channel_id,
+                           m.channel_name,
+                           m.author_id,
+                           m.author_name,
+                           m.content_text,
+                           m.timestamp,
+                           ARRAY_AGG(a.attachment_id) FILTER (WHERE a.attachment_id IS NOT NULL) AS attachment_ids_result,
+                           ARRAY_AGG(a.attachment_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS attachment_types,
+                           ARRAY_AGG(a.content_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_types,
+                           ARRAY_AGG(a.content_length) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_lengths,
+                           ARRAY_AGG(a.url) FILTER (WHERE a.attachment_id IS NOT NULL) AS urls,
+                           m.content_text_bvec <&> to_bm25query(
+                               'naraninyeo_messages_content_text_bvec_bm25_idx',
+                               tokenize($4, 'solar-pro-tokenizer')
+                           ) AS score,
+                           'bm25'::TEXT AS search_method
+                    FROM naraninyeo.messages m
+                    LEFT JOIN naraninyeo.attachments a
+                        ON a.tenant_id = m.tenant_id AND a.message_id = m.message_id
+                    WHERE m.tenant_id = $1
+                      AND m.channel_id = $2
+                    GROUP BY m.tenant_id,
+                             m.message_id,
+                             m.channel_id,
+                             m.channel_name,
+                             m.author_id,
+                             m.author_name,
+                             m.content_text,
+                             m.timestamp,
+                             m.content_text_bvec
+                    ORDER BY score
+                    LIMIT $6
+                )
+                SELECT message_id,
+                       channel_id,
+                       channel_name,
+                       author_id,
+                       author_name,
+                       content_text,
+                       timestamp,
+                       attachment_ids_result,
+                       attachment_types,
+                       content_types,
+                       content_lengths,
+                       urls,
+                       score,
+                       search_method
+                FROM (
+                    SELECT * FROM vector_results
+                    UNION ALL
+                    SELECT * FROM bm25_results
+                ) AS combined
                 """,
                 tctx.tenant_id,
                 channel_id,
                 query_embedding,
-                limit
+                query,
+                vlimit,
+                blimit
             )
 
             messages = []

@@ -41,17 +41,17 @@ class NewMessageGraphContext(BaseModel):
     memory_repository: MemoryRepository
     plan_action_executor: PlanActionExecutor
 
-new_message_graph = StateGraph(
+_new_message_graph = StateGraph(
     state_schema=NewMessageGraphState, context_schema=NewMessageGraphContext
 )
 
-new_message_graph.add_node("plan", plan)
-new_message_graph.add_node("execute_plan", execute_plan)
-new_message_graph.add_node("generate_response", generate_response)
-new_message_graph.add_node("evaluate_response", evaluate_response)
-new_message_graph.add_node("finalize_response", finalize_response)
+_new_message_graph.add_node("plan", plan)
+_new_message_graph.add_node("execute_plan", execute_plan)
+_new_message_graph.add_node("generate_response", generate_response)
+_new_message_graph.add_node("evaluate_response", evaluate_response)
+_new_message_graph.add_node("finalize_response", finalize_response)
 
-new_message_graph.add_edge(START, "plan")
+_new_message_graph.add_edge(START, "plan")
 
 def response_or_not(state: NewMessageGraphState) -> str:
     if state.incoming_message and state.incoming_message.content.text.strip():
@@ -59,10 +59,10 @@ def response_or_not(state: NewMessageGraphState) -> str:
     else:
         return END
 
-new_message_graph.add_conditional_edges("save_message", response_or_not)
-new_message_graph.add_edge("plan", "execute_plans")
-new_message_graph.add_edge("execute_plans", "generate_response")
-new_message_graph.add_edge("generate_response", "evaluate_response")
+_new_message_graph.add_conditional_edges("save_message", response_or_not)
+_new_message_graph.add_edge("plan", "execute_plans")
+_new_message_graph.add_edge("execute_plans", "generate_response")
+_new_message_graph.add_edge("generate_response", "evaluate_response")
 
 def route_based_on_evaluation(state: NewMessageGraphState) -> str:
     if state.latest_evaluation_feedback == EvaluationFeedback.PLAN_AGAIN:
@@ -76,4 +76,6 @@ def route_based_on_evaluation(state: NewMessageGraphState) -> str:
     else:
         return START
 
-new_message_graph.add_conditional_edges("evaluate_response", route_based_on_evaluation)
+_new_message_graph.add_conditional_edges("evaluate_response", route_based_on_evaluation)
+
+new_message_graph = _new_message_graph.compile()
