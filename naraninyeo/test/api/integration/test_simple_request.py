@@ -3,17 +3,20 @@ from datetime import UTC, datetime
 
 from dishka import AsyncContainer
 from fastapi.testclient import TestClient
+import pytest
 
 from naraninyeo.api.routers.message import NewMessageRequest
 from naraninyeo.core.models import Author, Channel, Message, MessageContent
 
 
-def test_simple_request(test_client: TestClient) -> None:
+@pytest.mark.anyio
+async def test_simple_request(test_client: TestClient) -> None:
     response = test_client.get("/")
     assert response.status_code == 200
     assert response.text == "Naraninyeo API is running."
 
-def test_new_message_simple(test_client: TestClient) -> None:
+@pytest.mark.anyio
+async def test_new_message_simple(test_client: TestClient) -> None:
     new_message_payload = NewMessageRequest(
         bot_id="bot_123",
         message=Message(

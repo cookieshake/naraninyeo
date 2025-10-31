@@ -8,7 +8,6 @@ from fastapi import FastAPI
 from naraninyeo.api.routers.bot import bot_router
 from naraninyeo.api.routers.core import core_router
 from naraninyeo.api.routers.message import message_router
-from naraninyeo.core.container import container
 
 
 def create_app() -> FastAPI:

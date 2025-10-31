@@ -1,11 +1,11 @@
 
+import asyncio
 from collections.abc import AsyncIterable
-from dishka import Provider, Scope, make_async_container, provide
 
 from asyncpg import Pool, create_pool
+from dishka import Provider, Scope, make_async_container, provide
 
-from naraninyeo.core.settings import Settings
-
+from naraninyeo.api.infrastructure.adapter.llamacpp_gemma_embedder import LlamaCppGemmaEmbedder
 from naraninyeo.api.infrastructure.interfaces import (
     BotRepository,
     Clock,
@@ -14,12 +14,13 @@ from naraninyeo.api.infrastructure.interfaces import (
     MessageRepository,
     TextEmbedder,
 )
-from naraninyeo.api.infrastructure.adapter.llamacpp_gemma_embedder import LlamaCppGemmaEmbedder
 from naraninyeo.api.infrastructure.repository.vchord_bot import VchordBotRepository
 from naraninyeo.api.infrastructure.repository.vchord_memory import VchordMemoryRepository
 from naraninyeo.api.infrastructure.repository.vchord_message import VchordMessageRepository
-from naraninyeo.api.infrastructure.util.simple_clock import SimpleClock
 from naraninyeo.api.infrastructure.util.nanoid_generator import NanoidGenerator
+from naraninyeo.api.infrastructure.util.simple_clock import SimpleClock
+from naraninyeo.core.settings import Settings
+
 
 class CoreProvider(Provider):
     scope = Scope.APP
@@ -33,7 +34,7 @@ class ConnectionProvider(Provider):
 
     @provide
     async def database_pool(self, settings: Settings) -> AsyncIterable[Pool]:
-        pool = await create_pool(dsn=settings.VCHORD_URI)
+        pool = await create_pool(dsn=settings.VCHORD_URI, loop=asyncio.get_running_loop())
         yield pool
         await pool.close()
 

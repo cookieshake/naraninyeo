@@ -14,12 +14,13 @@ from naraninyeo.core.container import (
 )
 from naraninyeo.core.settings import Settings
 
+
 class LlamaCppContainer(DockerContainer):
     """Llama.cpp embedding server test container (embeddings only)."""
 
     def __init__(self) -> None:  # pragma: no cover - infra bootstrap
         super().__init__(
-            image="ghcr.io/ggml-org/llama.cpp:server",
+            image="ghcr.io/ggml-org/llama.cpp:server-b6881",
             command=" ".join(
                 [
                     "--host 0.0.0.0",
@@ -85,8 +86,12 @@ class TestProvider(Provider):
         copy.VCHORD_URI = vchord_container.get_connection_url()
         return copy
 
-@pytest.fixture(scope="session")
-async def test_container() -> AsyncIterable[AsyncContainer]:
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
+
+@pytest.fixture
+async def test_container(anyio_backend) -> AsyncIterable[AsyncContainer]:
     container = make_async_container(
         TestProvider(),
         ConnectionProvider(),
