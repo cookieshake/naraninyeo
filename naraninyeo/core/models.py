@@ -16,6 +16,10 @@ class Author(BaseModel):
     author_name: str = Field(min_length=1)
 
 class Bot(BaseModel):
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()}
+    )
+
     bot_id: str = Field(min_length=1)
     bot_name: str = Field(min_length=1)
     author_id: str = Field(min_length=1)

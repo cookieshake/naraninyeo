@@ -1,15 +1,22 @@
 import asyncio
 from datetime import datetime
 from typing import Literal
+
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
-from naraninyeo.api.infrastructure.interfaces import BotRepository, Clock, IdGenerator, MemoryRepository, MessageRepository
-from naraninyeo.core.models import Bot, Message, TenancyContext, BotMessage
-from naraninyeo.api.graphs.manage_memory import manage_memory_graph, ManageMemoryGraphState, ManageMemoryGraphContext
-from naraninyeo.api.graphs.new_message import new_message_graph, NewMessageGraphState, NewMessageGraphContext
+from naraninyeo.api.graphs.manage_memory import ManageMemoryGraphContext, ManageMemoryGraphState, manage_memory_graph
+from naraninyeo.api.graphs.new_message import NewMessageGraphContext, NewMessageGraphState, new_message_graph
+from naraninyeo.api.infrastructure.interfaces import (
+    BotRepository,
+    Clock,
+    IdGenerator,
+    MemoryRepository,
+    MessageRepository,
+)
+from naraninyeo.core.models import Bot, BotMessage, Message, TenancyContext
 
 message_router = APIRouter()
 
@@ -102,7 +109,7 @@ async def new_message(
         latest_history=list(latest_message),
         memories=list(channel_memory)
     )
-            
+
     async def message_stream_generator():
         async for chunk in new_message_graph.astream(init_state):
             updates = chunk.values()

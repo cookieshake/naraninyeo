@@ -26,14 +26,13 @@ async def create_bot(
     bot_repo: FromDishka[BotRepository],
     clock: FromDishka[Clock],
     id_generator: FromDishka[IdGenerator]
-):
+) -> Bot:
     tctx = TenancyContext(tenant_id="default")
-    return await bot_repo.create(
-        tctx,
-        Bot(
-            bot_id=id_generator.generate_id(),
-            bot_name=request.name,
-            author_id=request.author_id,
-            created_at=clock.now()
-        )
+    bot = Bot(
+        bot_id=id_generator.generate_id(),
+        bot_name=request.name,
+        author_id=request.author_id,
+        created_at=clock.now()
     )
+    await bot_repo.create(tctx, bot)
+    return bot

@@ -1,17 +1,15 @@
 import time
-from typing import AsyncIterable, Iterator, Iterator
-from asyncpg import Pool
-from dishka import AsyncContainer, make_async_container, Provider, Scope, provide
+from typing import AsyncIterable, Iterator
+
 import httpx
 import pytest
-
+from asyncpg import Pool, create_pool
+from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
 from testcontainers.core.container import DockerContainer
 from testcontainers.postgres import PostgresContainer
 
 from naraninyeo.api.infrastructure.repository.vchord_init import VchordInit
-from naraninyeo.core.container import (
-    ConnectionProvider, RepositoryProvider, UtilProvider
-)
+from naraninyeo.core.container import ConnectionProvider, RepositoryProvider, UtilProvider
 from naraninyeo.core.settings import Settings
 
 
@@ -86,19 +84,20 @@ class TestProvider(Provider):
         copy.VCHORD_URI = vchord_container.get_connection_url()
         return copy
 
-@pytest.fixture
-def anyio_backend():
-    return "asyncio"
 
 @pytest.fixture
-async def test_container(anyio_backend) -> AsyncIterable[AsyncContainer]:
+async def test_container() -> AsyncIterable[AsyncContainer]:
     container = make_async_container(
         TestProvider(),
         ConnectionProvider(),
         RepositoryProvider(),
         UtilProvider(),
     )
-    pool = await container.get(Pool)
-    await VchordInit(pool).run()
+    settings = await container.get(Settings)
+    temp_pool = await create_pool(dsn=settings.VCHORD_URI)
+    try:
+        await VchordInit(temp_pool).run()
+    finally:
+        await temp_pool.close()
     yield container
     await container.close()
