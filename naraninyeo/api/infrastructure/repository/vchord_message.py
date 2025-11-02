@@ -119,6 +119,7 @@ class VchordMessageRepository:
         before: bool
     ) -> Sequence[Message]:
         operator = "<" if before else ">"
+        order = "DESC" if before else "ASC"
 
         async with self.pool.acquire() as conn:
             rows = await conn.fetch(
@@ -141,7 +142,7 @@ class VchordMessageRepository:
                   )
                 GROUP BY m.tenant_id, m.message_id, m.channel_id, m.channel_name,
                          m.author_id, m.author_name, m.content_text, m.timestamp
-                ORDER BY m.timestamp ASC
+                ORDER BY m.timestamp {order}
                 LIMIT $4
                 """,
                 tctx.tenant_id,
@@ -154,6 +155,8 @@ class VchordMessageRepository:
             for row in rows:
                 message = await self._parse_message_row(row)
                 messages.append(message)
+            if before:
+                messages.reverse()
             return messages
 
     async def get_channel_messages_before(

@@ -11,13 +11,14 @@ from naraninyeo.core.settings import Settings
 
 class ActionResultCollector:
     def __init__(self) -> None:
-        self.results: Dict[PlanAction, PlanActionResult] = {}
+        self.results: Dict[str, PlanActionResult] = {}
 
     def add_result(self, action: PlanAction, result: PlanActionResult) -> None:
-        self.results[action] = result
+        action_id = f"{action.action_type.value}_{action.query or ''}_{action.description}"
+        self.results[action_id] = result
 
-    def get_results(self) -> Dict[PlanAction, PlanActionResult]:
-        return deepcopy(self.results)
+    def get_results(self) -> List[PlanActionResult]:
+        return list(self.results.values())
 
 
 class DefaultPlanActionExecutor(PlanActionExecutor):
@@ -124,12 +125,13 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                 before = await asyncio.gather(*before)
                 after = await asyncio.gather(*after)
 
-                result = [
-                    f"{'\n'.join(m.preview for m in before)}\n"
-                    f"{message.preview}\n"
-                    f"{'\n'.join(m.preview for m in after)}"
-                    for message in messages
-                ]
+                result = []
+                for b, c, a in zip(before, messages, after, strict=False):
+                    result.append(
+                        f"{'\n'.join(m.preview for m in b)}\n"
+                        f"{c.preview}\n"
+                        f"{'\n'.join(m.preview for m in a)}"
+                    )
                 collector.add_result(
                     action=action,
                     result=PlanActionResult(
@@ -162,6 +164,6 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                     )
                     tasks.append(task)
                 await asyncio.wait_for(asyncio.gather(*tasks), timeout=10)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
-        return list(collector.get_results().values())
+        return collector.get_results()

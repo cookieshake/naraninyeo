@@ -1,8 +1,4 @@
-
-from typing import List, Literal, Optional
-
 from langgraph.graph import END, START, StateGraph
-from pydantic import BaseModel
 
 from naraninyeo.api.graphs.new_message.evaluate_response import evaluate_response
 from naraninyeo.api.graphs.new_message.execute_plan import execute_plan
@@ -38,7 +34,7 @@ def route_based_on_evaluation(state: NewMessageGraphState) -> str:
     elif state.latest_evaluation_feedback == EvaluationFeedback.GENERATE_AGAIN:
         return "generate_response"
     elif state.latest_evaluation_feedback == EvaluationFeedback.FINALIZE:
-        return END
+        return "finalize_response"
     else:
         return END
 

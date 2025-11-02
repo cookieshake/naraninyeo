@@ -19,9 +19,9 @@ class ResponseGeneratorDeps(BaseModel):
 
 response_generator = StructuredAgent(
     name="Response Generator",
-    model="openrouter:openai/gpt-5-nano",
+    model="openrouter:openai/gpt-4.1-nano",
     deps_type=ResponseGeneratorDeps,
-    output_type=EvaluationFeedback,
+    output_type=str
 )
 
 @response_generator.instructions

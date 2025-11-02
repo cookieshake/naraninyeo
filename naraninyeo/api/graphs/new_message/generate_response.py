@@ -1,6 +1,7 @@
 import re
 
 from langgraph.runtime import Runtime
+from loguru import logger
 
 from naraninyeo.api.agents.response_generator import ResponseGeneratorDeps, response_generator
 from naraninyeo.api.graphs.new_message.models import (
@@ -14,6 +15,7 @@ async def generate_response(
     state: NewMessageGraphState,
     runtime: Runtime[NewMessageGraphContext]
 ) -> NewMessageGraphState:
+    logger.info("Generating response with state: {}", state.model_dump_json())
     if (
         state.response_plan is None
         or state.incoming_message is None
@@ -39,4 +41,5 @@ async def generate_response(
             channel=state.incoming_message.channel,
             content=MessageContent(text=part)
         ))
+    logger.info("Generated response with state: {}", state.model_dump_json())
     return state

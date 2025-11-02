@@ -36,7 +36,12 @@ class ConnectionProvider(Provider):
     @provide
     async def database_pool(self, settings: Settings) -> AsyncIterable[Pool]:
         # Rely on asyncpg choosing the active loop so the pool stays usable across drivers like AnyIO.
-        pool = await create_pool(dsn=settings.VCHORD_URI)
+        pool = await create_pool(
+            dsn=settings.VCHORD_URI,
+            min_size=5,
+            max_size=20,
+            command_timeout=30.0
+        )
         yield pool
         await pool.close()
 

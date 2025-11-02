@@ -1,4 +1,5 @@
 from langgraph.runtime import Runtime
+from loguru import logger
 
 from naraninyeo.api.agents.response_evaluator import ResponseEvaluatorDeps, response_evaluator
 from naraninyeo.api.graphs.new_message.models import (
@@ -7,10 +8,12 @@ from naraninyeo.api.graphs.new_message.models import (
 )
 from naraninyeo.core.models import EvaluationFeedback
 
+
 async def evaluate_response(
     state: NewMessageGraphState,
     runtime: Runtime[NewMessageGraphContext]
 ) -> NewMessageGraphState:
+    logger.info("Evaluating response with state: {}", state.model_dump_json())
     if (
         state.draft_messages is None
         or state.response_plan is None
@@ -36,4 +39,5 @@ async def evaluate_response(
 
     state.latest_evaluation_feedback = evaluation_feedback.output
     state.evaluation_count += 1
+    logger.info("Evaluated response with state: {}", state.model_dump_json())
     return state

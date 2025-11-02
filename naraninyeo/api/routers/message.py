@@ -17,7 +17,7 @@ from naraninyeo.api.infrastructure.interfaces import (
     MessageRepository,
     PlanActionExecutor,
 )
-from naraninyeo.core.models import Bot, BotMessage, Message, TenancyContext
+from naraninyeo.core.models import Bot, BotMessage, Message, MessageContent, TenancyContext
 
 message_router = APIRouter()
 
@@ -76,7 +76,7 @@ async def new_message(
                 tctx,
                 channel_id=new_message_request.message.channel.channel_id,
                 before_message_id=new_message_request.message.message_id,
-                limit=1
+                limit=20
             )
         )
         channel_memory_task = tg.create_task(
@@ -119,16 +119,19 @@ async def new_message(
     )
 
     async def message_stream_generator():
+        message_sent = 0
         async for chunk in new_message_graph.astream(init_state, context=graph_context):
             updates = chunk.values()
             for state_update in updates:
                 if "outgoing_messages" in state_update:
-                    generated_message = state_update.outgoing_messages[-1]
-                    yield NewMessageResponseChunk(
-                        is_final=False,
-                        generated_message=generated_message
-                    ).model_dump_json() + "\n"
-        yield NewMessageResponseChunk(is_final=True).model_dump_json() + "\n"
+                    generated_message = state_update["outgoing_messages"][message_sent:]
+                    message_sent += len(generated_message)
+                    for msg in generated_message:
+                        yield NewMessageResponseChunk(
+                            is_final=False,
+                            generated_message=msg
+                        ).model_dump_json() + "\n"
+        yield NewMessageResponseChunk(is_final=True).model_dump_json()
 
     return StreamingResponse(
         content=message_stream_generator(),
