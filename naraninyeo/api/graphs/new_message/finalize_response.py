@@ -5,6 +5,7 @@ from naraninyeo.api.graphs.new_message.models import (
     NewMessageGraphState,
 )
 
+
 async def finalize_response(
     state: NewMessageGraphState,
     runtime: Runtime[NewMessageGraphContext]

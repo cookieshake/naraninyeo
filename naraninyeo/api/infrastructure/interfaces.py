@@ -55,6 +55,10 @@ class Clock(Protocol):
 class PlanActionExecutor(Protocol):
     async def execute_actions(
         self,
+        tctx: TenancyContext,
+        incoming_message: Message,
+        latest_history: list[Message],
+        memories: list[MemoryItem],
         actions: list[PlanAction]
     ) -> list[PlanActionResult]: ...
 

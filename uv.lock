@@ -1137,6 +1137,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-ai" },
     { name = "pydantic-settings" },
+    { name = "python-dotenv" },
     { name = "qdrant-client" },
     { name = "uvicorn" },
 ]
@@ -1174,6 +1175,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.6.0" },
     { name = "pydantic-ai", specifier = ">=0.3.6" },
     { name = "pydantic-settings", specifier = ">=2.1.0" },
+    { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "qdrant-client", specifier = ">=1.15.0" },
     { name = "uvicorn", specifier = ">=0.35.0" },
 ]

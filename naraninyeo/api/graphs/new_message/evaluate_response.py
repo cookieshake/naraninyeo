@@ -5,6 +5,7 @@ from naraninyeo.api.graphs.new_message.models import (
     NewMessageGraphContext,
     NewMessageGraphState,
 )
+from naraninyeo.core.models import EvaluationFeedback
 
 async def evaluate_response(
     state: NewMessageGraphState,
@@ -15,6 +16,10 @@ async def evaluate_response(
         or state.response_plan is None
         or state.latest_history is None
     ):
+        return state
+
+    if state.evaluation_count > 1:
+        state.latest_evaluation_feedback = EvaluationFeedback.FINALIZE
         return state
 
     evaluator_deps = ResponseEvaluatorDeps(
@@ -30,4 +35,5 @@ async def evaluate_response(
     )
 
     state.latest_evaluation_feedback = evaluation_feedback.output
+    state.evaluation_count += 1
     return state

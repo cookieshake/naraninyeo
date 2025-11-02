@@ -103,6 +103,7 @@ class ActionType(str, Enum):
     SEARCH_WEB_NEWS = "SEARCH_WEB_NEWS"
     SEARCH_WEB_BLOG = "SEARCH_WEB_BLOG"
     SEARCH_WEB_SCHOLAR = "SEARCH_WEB_SCHOLAR"
+    SEARCH_WEB_ENCYCLOPEDIA = "SEARCH_WEB_ENCYCLOPEDIA"
     SEARCH_CHAT_HISTORY = "SEARCH_CHAT_HISTORY"
 
 class PlanAction(BaseModel):
@@ -130,6 +131,8 @@ class ResponsePlan(BaseModel):
 class PlanActionResult(BaseModel):
     action: PlanAction
     status: Literal["PENDING", "IN_PROGRESS", "COMPLETED", "FAILED", "ABORTED"]
+    link: Optional[str] = None
+    source: Optional[str] = None
     content: Optional[str] = None
     error: Optional[str] = None
 

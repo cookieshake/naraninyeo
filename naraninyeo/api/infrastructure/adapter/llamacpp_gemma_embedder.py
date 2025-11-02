@@ -1,6 +1,5 @@
 
 
-from typing import Any
 import httpx
 
 from naraninyeo.core.settings import Settings

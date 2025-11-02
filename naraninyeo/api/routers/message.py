@@ -15,6 +15,7 @@ from naraninyeo.api.infrastructure.interfaces import (
     IdGenerator,
     MemoryRepository,
     MessageRepository,
+    PlanActionExecutor,
 )
 from naraninyeo.core.models import Bot, BotMessage, Message, TenancyContext
 
@@ -39,6 +40,7 @@ async def new_message(
     bot_repo: FromDishka[BotRepository],
     clock: FromDishka[Clock],
     id_generator: FromDishka[IdGenerator],
+    plan_executor: FromDishka[PlanActionExecutor],
 ):
     tctx = TenancyContext(tenant_id="default")
     await message_repo.upsert(tctx, new_message_request.message)
@@ -109,9 +111,15 @@ async def new_message(
         latest_history=list(latest_message),
         memories=list(channel_memory)
     )
+    graph_context = NewMessageGraphContext(
+        clock=clock,
+        message_repository=message_repo,
+        memory_repository=memory_repo,
+        plan_action_executor=plan_executor,
+    )
 
     async def message_stream_generator():
-        async for chunk in new_message_graph.astream(init_state):
+        async for chunk in new_message_graph.astream(init_state, context=graph_context):
             updates = chunk.values()
             for state_update in updates:
                 if "outgoing_messages" in state_update:

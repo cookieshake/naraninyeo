@@ -28,6 +28,7 @@ dependencies = [
     "uvicorn>=0.35.0",
     "langgraph>=1.0.1",
     "asyncpg>=0.30.0",
+    "python-dotenv>=1.1.1",
 ]
 
 [project.scripts]
@@ -63,3 +64,7 @@ select = ["E", "F", "W", "B", "I"]
 [tool.ruff.format]
 docstring-code-format = false
 docstring-code-line-length = 50
+
+[tool.basedpyright]
+include = ["naraninyeo"]
+typeCheckingMode = "standard"

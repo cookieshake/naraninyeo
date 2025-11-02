@@ -8,11 +8,11 @@ from naraninyeo.api.graphs.new_message.evaluate_response import evaluate_respons
 from naraninyeo.api.graphs.new_message.execute_plan import execute_plan
 from naraninyeo.api.graphs.new_message.finalize_response import finalize_response
 from naraninyeo.api.graphs.new_message.generate_response import generate_response
-from naraninyeo.api.graphs.new_message.plan import plan
 from naraninyeo.api.graphs.new_message.models import (
     NewMessageGraphContext,
     NewMessageGraphState,
 )
+from naraninyeo.api.graphs.new_message.plan import plan
 from naraninyeo.core.models import EvaluationFeedback
 
 _new_message_graph = StateGraph(
@@ -34,13 +34,13 @@ def route_based_on_evaluation(state: NewMessageGraphState) -> str:
     if state.latest_evaluation_feedback == EvaluationFeedback.PLAN_AGAIN:
         return "plan"
     elif state.latest_evaluation_feedback == EvaluationFeedback.EXECUTE_AGAIN:
-        return "execute_plans"
+        return "execute_plan"
     elif state.latest_evaluation_feedback == EvaluationFeedback.GENERATE_AGAIN:
         return "generate_response"
     elif state.latest_evaluation_feedback == EvaluationFeedback.FINALIZE:
         return END
     else:
-        return START
+        return END
 
 _new_message_graph.add_conditional_edges("evaluate_response", route_based_on_evaluation)
 

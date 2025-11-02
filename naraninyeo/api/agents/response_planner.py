@@ -13,6 +13,7 @@ class ResponsePlannerDeps(BaseModel):
 
 response_planner = StructuredAgent(
     name="Response Planner",
+    model="openrouter:openai/gpt-5-nano",
     deps_type=ResponsePlannerDeps,
     output_type=ResponsePlan,
 )

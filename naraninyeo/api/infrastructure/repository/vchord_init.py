@@ -98,3 +98,10 @@ class VchordInit:
             await conn.execute(self.CREATE_TABLE_ATTACHMENT)
             await conn.execute(self.CREATE_TABLE_MESSAGE)
             await conn.execute(self.CREATE_TABLE_MEMORY_ITEM)
+            await conn.execute(
+                """
+                INSERT INTO naraninyeo.bots (tenant_id, bot_id, bot_name, author_id, created_at)
+                VALUES ('default', 'system_bot', 'System Bot', 'system', NOW())
+                ON CONFLICT (tenant_id, bot_id) DO NOTHING
+                """
+            )

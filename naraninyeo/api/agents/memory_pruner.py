@@ -23,6 +23,7 @@ MemoryPrunerAction: TypeAlias = MemoryMergeAction | MemoryDeleteAction
 
 memory_pruner = StructuredAgent(
     name="Memory Pruner",
+    model="openrouter:openai/gpt-5-nano",
     deps_type=MemoryPrunerDeps,
     output_type=list[MemoryPrunerAction],
 )

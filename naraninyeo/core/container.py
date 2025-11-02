@@ -1,17 +1,18 @@
 
-import asyncio
 from collections.abc import AsyncIterable
 
 from asyncpg import Pool, create_pool
 from dishka import Provider, Scope, make_async_container, provide
 
 from naraninyeo.api.infrastructure.adapter.llamacpp_gemma_embedder import LlamaCppGemmaEmbedder
+from naraninyeo.api.infrastructure.adapter.plan_executor import DefaultPlanActionExecutor
 from naraninyeo.api.infrastructure.interfaces import (
     BotRepository,
     Clock,
     IdGenerator,
     MemoryRepository,
     MessageRepository,
+    PlanActionExecutor,
     TextEmbedder,
 )
 from naraninyeo.api.infrastructure.repository.vchord_bot import VchordBotRepository
@@ -34,7 +35,8 @@ class ConnectionProvider(Provider):
 
     @provide
     async def database_pool(self, settings: Settings) -> AsyncIterable[Pool]:
-        pool = await create_pool(dsn=settings.VCHORD_URI, loop=asyncio.get_running_loop())
+        # Rely on asyncpg choosing the active loop so the pool stays usable across drivers like AnyIO.
+        pool = await create_pool(dsn=settings.VCHORD_URI)
         yield pool
         await pool.close()
 
@@ -51,6 +53,7 @@ class UtilProvider(Provider):
     clock = provide(source=SimpleClock, provides=Clock)
     id_generator = provide(source=NanoidGenerator, provides=IdGenerator)
     text_embedder = provide(source=LlamaCppGemmaEmbedder, provides=TextEmbedder)
+    plan_action_executor = provide(source=DefaultPlanActionExecutor, provides=PlanActionExecutor)
 
 container = make_async_container(
     CoreProvider(),

@@ -12,9 +12,10 @@ class NewMessageGraphState(BaseModel):
     memories: List[MemoryItem]
     status: Literal["processing", "completed", "failed"]
     incoming_message: Message
-    latest_history: Optional[List[Message]] = None
+    latest_history: List[Message]
     response_plan: Optional[ResponsePlan] = None
     plan_action_results: Optional[List[PlanActionResult]] = None
+    evaluation_count: int = 0
     latest_evaluation_feedback: Optional[EvaluationFeedback] = None
     draft_messages: Optional[List[BotMessage]] = None
     outgoing_messages: Optional[List[BotMessage]] = None
