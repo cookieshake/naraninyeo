@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Sequence
 
-from asyncpg import Pool, Connection
+from asyncpg import Connection, Pool
 
 from naraninyeo.core.models import MemoryItem, TenancyContext
 

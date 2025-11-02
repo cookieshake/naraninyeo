@@ -3,8 +3,11 @@ from typing import AsyncIterable, Iterator
 
 import httpx
 import pytest
-from asyncpg import Pool, create_pool
+from asyncpg import create_pool
 from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
+from dishka.integrations.fastapi import setup_dishka
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from testcontainers.core.container import DockerContainer
 from testcontainers.postgres import PostgresContainer
 
@@ -85,8 +88,7 @@ class TestProvider(Provider):
         return copy
 
 
-@pytest.fixture
-async def test_container() -> AsyncIterable[AsyncContainer]:
+async def _test_container() -> AsyncContainer:
     container = make_async_container(
         TestProvider(),
         ConnectionProvider(),
@@ -99,5 +101,28 @@ async def test_container() -> AsyncIterable[AsyncContainer]:
         await VchordInit(temp_pool).run()
     finally:
         await temp_pool.close()
+    return container
+
+@pytest.fixture
+async def test_container() -> AsyncIterable[AsyncContainer]:
+    container = await _test_container()
     yield container
     await container.close()
+
+async def _test_app(test_container: AsyncContainer) -> FastAPI:
+    from naraninyeo.api import create_app
+    app = create_app()
+    setup_dishka(test_container, app)
+    return app
+
+@pytest.fixture
+async def test_app(test_container: AsyncContainer) -> FastAPI:
+    return await _test_app(test_container)
+
+def _test_client(test_app: FastAPI) -> TestClient:
+    return TestClient(test_app)
+
+@pytest.fixture
+def test_client(test_app: FastAPI) -> Iterator[TestClient]:
+    with _test_client(test_app) as client:
+        yield client
