@@ -105,7 +105,7 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                         status="COMPLETED",
                         link=result.link,
                         source=result.link,
-                        content=result.title,
+                        content=f"[{result.title}]\n{result.description}",
                         timestamp=result.published_at
                     )
                     collector.add_result(
@@ -113,10 +113,12 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                         result=aresult
                     )
                     tasks.append(
-                        self._enhance_result_with_fetch(
-                            collector=collector,
-                            plan=action,
-                            plan_action_result=aresult
+                        asyncio.create_task(
+                            self._enhance_result_with_fetch(
+                                collector=collector,
+                                plan=action,
+                                plan_action_result=aresult
+                            )
                         )
                     )
                 await asyncio.gather(*tasks, return_exceptions=True)

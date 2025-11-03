@@ -17,7 +17,7 @@ class SummaryExtractorOutput(BaseModel):
 
 summary_extractor = StructuredAgent(
     name="Summary Extractor",
-    model="openrouter:openai/gpt-4.1-nano",
+    model="openrouter:google/gemini-2.5-flash-lite-preview-09-2025",
     deps_type=SummaryExtractorDeps,
     output_type=NativeOutput(SummaryExtractorOutput)
 )

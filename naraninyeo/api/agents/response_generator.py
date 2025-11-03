@@ -29,7 +29,7 @@ response_generator = StructuredAgent(
         }
     ),
     deps_type=ResponseGeneratorDeps,
-    output_type=str
+    output_type=str,
 )
 
 @response_generator.instructions

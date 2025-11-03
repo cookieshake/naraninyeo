@@ -28,6 +28,10 @@ dependencies = [
     "langgraph>=1.0.1",
     "asyncpg>=0.30.0",
     "python-dotenv>=1.1.1",
+    "opentelemetry-instrumentation-system-metrics>=0.59b0",
+    "opentelemetry-instrumentation-asyncpg>=0.59b0",
+    "opentelemetry-instrumentation-aiokafka>=0.59b0",
+    "opentelemetry-instrumentation-logging>=0.59b0",
 ]
 
 [project.scripts]
