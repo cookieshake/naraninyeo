@@ -55,7 +55,7 @@ class Message(BaseModel):
     @property
     def timestamp_iso(self) -> str:
         tz = os.getenv("TZ", "Asia/Seoul")
-        return self.timestamp.astimezone(tz=ZoneInfo(tz)).isoformat()
+        return self.timestamp.astimezone(tz=ZoneInfo(tz)).isoformat(timespec="minutes")
 
     @computed_field  # type: ignore[misc]
     @property
@@ -129,12 +129,15 @@ class ResponsePlan(BaseModel):
         )
 
 class PlanActionResult(BaseModel):
+    action_result_id: str = Field(min_length=1)
     action: PlanAction
     status: Literal["PENDING", "IN_PROGRESS", "COMPLETED", "FAILED", "ABORTED"]
+    priority: int = 0
     link: Optional[str] = None
     source: Optional[str] = None
     content: Optional[str] = None
     error: Optional[str] = None
+    timestamp: Optional[str] = None
 
 class EvaluationFeedback(str, Enum):
     PLAN_AGAIN = "plan_again"

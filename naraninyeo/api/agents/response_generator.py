@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from pydantic_ai import RunContext
+from pydantic_ai import RunContext, ModelSettings
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.api.infrastructure.interfaces import Clock
@@ -19,7 +19,15 @@ class ResponseGeneratorDeps(BaseModel):
 
 response_generator = StructuredAgent(
     name="Response Generator",
-    model="openrouter:openai/gpt-4.1-nano",
+    model="openrouter:google/gemini-2.5-flash-preview-09-2025",
+    model_settings=ModelSettings(
+        extra_body={
+            "reasoning": {
+                "effort": "low",
+                "enabled": False,
+            },
+        }
+    ),
     deps_type=ResponseGeneratorDeps,
     output_type=str
 )
@@ -59,6 +67,7 @@ async def user_prompt(deps: ResponseGeneratorDeps) -> str:
     action_results = [
         (
             f"{result.action.action_type} (query: {result.action.query}) -> \n"
+            f"{result.timestamp} {result.source or ''}\n"
             f"{result.content.replace('\n', ' ') if result.content else 'No content'}"
         )
         for result in deps.plan_action_results

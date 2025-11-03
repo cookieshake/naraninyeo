@@ -1,7 +1,7 @@
-from typing import Literal, TypeAlias
+from typing import List, Literal, TypeAlias
 
 from pydantic import BaseModel
-from pydantic_ai import RunContext
+from pydantic_ai import RunContext, NativeOutput
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.core.models import MemoryItem
@@ -23,9 +23,9 @@ MemoryPrunerAction: TypeAlias = MemoryMergeAction | MemoryDeleteAction
 
 memory_pruner = StructuredAgent(
     name="Memory Pruner",
-    model="openrouter:openai/gpt-4.1-nano",
+    model="openrouter:openai/gpt-5-nano",
     deps_type=MemoryPrunerDeps,
-    output_type=list[MemoryPrunerAction],
+    output_type=NativeOutput(List[MemoryPrunerAction]),
 )
 
 @memory_pruner.instructions

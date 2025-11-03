@@ -121,5 +121,20 @@ async def handle_user_input(user_input: str):
                     if res.generated_message:
                         await chat.append_message(res.generated_message.content.text)
                         rtest.set(res.model_dump_json(indent=2))
+                        r = NewMessageRequest(
+                            bot_id=bot_id,
+                            message=Message(
+                                message_id=uuid.uuid4().hex,
+                                channel=Channel(channel_id="channel_123", channel_name="text"),
+                                author=Author(author_id="user_123", author_name="Test Bot"),
+                                content=MessageContent(
+                                    text=res.generated_message.content.text,
+                                    attachments=[],
+                                ),
+                                timestamp=datetime.now(UTC),
+                            ),
+                            reply_needed=False
+                        )
+                        await client.post("/new_message", content=r.model_dump_json())
     except Exception as e:
         await chat.append_message(str(e))

@@ -4,7 +4,8 @@ from typing import Dict, List, Literal
 
 from naraninyeo.api.agents.summary_extractor import SummaryExtractorDeps, summary_extractor
 from naraninyeo.api.infrastructure.adapter.naver_search import NaverSearchClient
-from naraninyeo.api.infrastructure.interfaces import MessageRepository, PlanActionExecutor
+from naraninyeo.api.infrastructure.adapter.web_document import WebDocumentFetcher
+from naraninyeo.api.infrastructure.interfaces import IdGenerator, MessageRepository, PlanActionExecutor
 from naraninyeo.core.models import ActionType, MemoryItem, Message, PlanAction, PlanActionResult, TenancyContext
 from naraninyeo.core.settings import Settings
 
@@ -14,11 +15,16 @@ class ActionResultCollector:
         self.results: Dict[str, PlanActionResult] = {}
 
     def add_result(self, action: PlanAction, result: PlanActionResult) -> None:
-        action_id = f"{action.action_type.value}_{action.query or ''}_{action.description}"
-        self.results[action_id] = result
+        self.results[result.action_result_id] = result
+
+    def remove_result(self, action_result_id: str) -> None:
+        if action_result_id in self.results:
+            del self.results[action_result_id]
 
     def get_results(self) -> List[PlanActionResult]:
-        return list(self.results.values())
+        result = list(self.results.values())
+        result.sort(key=lambda r: r.priority, reverse=True)
+        return result
 
 
 class DefaultPlanActionExecutor(PlanActionExecutor):
@@ -26,10 +32,39 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
         self,
         settings: Settings,
         message_repository: MessageRepository,
+        id_generator: IdGenerator,
     ) -> None:
         self.settings = settings
         self.search_client = NaverSearchClient(settings=settings)
         self.message_repository = message_repository
+        self.id_generator = id_generator
+        self.web_document_fetcher = WebDocumentFetcher()
+
+    async def _enhance_result_with_fetch(
+        self,
+        collector: ActionResultCollector,
+        plan: PlanAction,
+        plan_action_result: PlanActionResult,
+    ) -> None:
+        if not plan_action_result.link:
+            return
+
+        fetched_content = await self.web_document_fetcher.fetch_document(plan_action_result.link)
+        extract_summary_deps = SummaryExtractorDeps(
+            plan=plan,
+            result=fetched_content
+        )
+        summary = await summary_extractor.run_with_generator(extract_summary_deps)
+        if summary.output.relevance == 0:
+            collector.remove_result(plan_action_result.action_result_id)
+            return
+        enhanced_result = deepcopy(plan_action_result)
+        enhanced_result.content = summary.output.summary
+        enhanced_result.priority = summary.output.relevance
+        collector.add_result(
+            action=plan_action_result.action,
+            result=enhanced_result
+        )
 
     async def _execute_action(
         self,
@@ -61,36 +96,32 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                     query=action.query or "",
                     limit=5
                 )
-                result_str = "\n".join([
-                    (
-                        f"{result.link}\n"
-                        f"{result.published_at}\n"
-                        f"{result.title}\n"
-                        f"{result.description}\n"
-                    )
-                    for result in results
-                ])
-                collector.add_result(
-                    action=action,
-                    result=PlanActionResult(
+                tasks = []
+                for result in results:
+                    arid = self.id_generator.generate_id()
+                    aresult = PlanActionResult(
+                        action_result_id=arid,
                         action=action,
                         status="COMPLETED",
-                        content=result_str,
+                        link=result.link,
+                        source=result.link,
+                        content=result.title,
+                        timestamp=result.published_at
                     )
-                )
-                deps = SummaryExtractorDeps(
-                    plan=action,
-                    result=result_str,
-                )
-                result = await summary_extractor.run_with_generator(deps)
-                collector.add_result(
-                    action=action,
-                    result=PlanActionResult(
+                    collector.add_result(
                         action=action,
-                        status="COMPLETED",
-                        content=result.output.summary,
+                        result=aresult
                     )
-                )
+                    tasks.append(
+                        self._enhance_result_with_fetch(
+                            collector=collector,
+                            plan=action,
+                            plan_action_result=aresult
+                        )
+                    )
+                await asyncio.gather(*tasks, return_exceptions=True)
+
+
             case ActionType.SEARCH_CHAT_HISTORY:
                 messages = await self.message_repository.text_search_messages(
                     tctx=tctx,
@@ -135,6 +166,7 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                 collector.add_result(
                     action=action,
                     result=PlanActionResult(
+                        action_result_id=self.id_generator.generate_id(),
                         action=action,
                         status="COMPLETED",
                         content="\n".join(result),

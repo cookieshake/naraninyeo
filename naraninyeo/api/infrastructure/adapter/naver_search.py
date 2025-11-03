@@ -1,6 +1,7 @@
 
 
 from datetime import datetime
+import math
 from typing import List, Literal
 
 import dateparser
@@ -42,32 +43,48 @@ class NaverSearchClient:
             "document", "encyclopedia"
         ],
         query: str,
-        limit: int = 5
+        limit: int = 16
     ) -> list[dict[str, str]]:
         base_url = "https://openapi.naver.com/v1/search/"
         match search_type:
             case "general":
                 endpoint = "webkr.json"
+                params = [
+                    {"query": query, "display": math.ceil(limit / 2.0), "sort": "sim"},
+                    {"query": query, "display": math.floor(limit / 2.0), "sort": "date"},
+                ]
             case "news":
                 endpoint = "news.json"
+                params = [
+                    {"query": query, "display": math.ceil(limit / 2.0), "sort": "sim"},
+                    {"query": query, "display": math.floor(limit / 2.0), "sort": "date"},
+                ]
             case "blog":
                 endpoint = "blog.json"
+                params = [
+                    {"query": query, "display": math.ceil(limit / 2.0), "sort": "sim"},
+                    {"query": query, "display": math.floor(limit / 2.0), "sort": "date"},
+                ]
             case "document":
                 endpoint = "doc.json"
+                params = [{"query": query, "display": limit}]
             case "encyclopedia":
                 endpoint = "encyc.json"
+                params = [{"query": query, "display": limit}]
 
         url = f"{base_url}{endpoint}"
         headers = {
             "X-Naver-Client-Id": self.settings.NAVER_CLIENT_ID,
             "X-Naver-Client-Secret": self.settings.NAVER_CLIENT_SECRET,
         }
-        params = {"query": query, "display": limit}
+        result = []
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers, params=params, timeout=10)
-            response.raise_for_status()
-            payload = response.json()
-        return payload.get("items", [])
+            for param in params:
+                response = await client.get(url, headers=headers, params=param, timeout=10)
+                response.raise_for_status()
+                payload = response.json()
+                result.extend(payload.get("items", []))
+        return result
 
     def _parse_result(self, item: dict[str, str]) -> SearchResult:
         title = BeautifulSoup(item.get("title", ""), "html.parser").get_text().strip()

@@ -39,5 +39,8 @@ async def evaluate_response(
 
     state.latest_evaluation_feedback = evaluation_feedback.output
     state.evaluation_count += 1
+    if state.latest_evaluation_feedback != EvaluationFeedback.FINALIZE:
+        state.draft_messages = []
     logger.info("Evaluated response with state: {}", state.model_dump_json())
+
     return state

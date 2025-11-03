@@ -1,7 +1,7 @@
 from typing import Literal
 
 from pydantic import BaseModel
-from pydantic_ai import RunContext
+from pydantic_ai import NativeOutput, RunContext
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.core.models import PlanAction
@@ -19,7 +19,7 @@ summary_extractor = StructuredAgent(
     name="Summary Extractor",
     model="openrouter:openai/gpt-4.1-nano",
     deps_type=SummaryExtractorDeps,
-    output_type=SummaryExtractorOutput
+    output_type=NativeOutput(SummaryExtractorOutput)
 )
 
 @summary_extractor.instructions
@@ -38,6 +38,9 @@ async def user_prompt(deps: SummaryExtractorDeps) -> str:
 f"""
 [검색 쿼리]
 {deps.plan.query}
+
+[쿼리 지침]
+{deps.plan.description}
 
 [문서 내용]
 {deps.result}

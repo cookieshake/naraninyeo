@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from pydantic_ai import RunContext
+from pydantic_ai import NativeOutput, RunContext
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.core.models import Bot, EvaluationFeedback, Message, ResponsePlan
@@ -14,9 +14,9 @@ class ResponseEvaluatorDeps(BaseModel):
 
 response_evaluator = StructuredAgent(
     name="Response Evaluator",
-    model="openrouter:openai/gpt-4.1-nano",
+    model="openrouter:openai/gpt-4.1-mini",
     deps_type=ResponseEvaluatorDeps,
-    output_type=EvaluationFeedback,
+    output_type=NativeOutput(EvaluationFeedback),
 )
 
 @response_evaluator.instructions
