@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from dishka.integrations.fastapi import setup_dishka
-from fastapi import FastAPI, Response
+from fastapi import FastAPI
 
 from naraninyeo.api.routers.bot import bot_router
 from naraninyeo.api.routers.core import core_router

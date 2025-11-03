@@ -168,20 +168,22 @@ class VchordMessageRepository:
                 rows = await conn.fetch(
                     """
                     WITH vector_results AS (
-                        SELECT m.message_id,
-                               m.channel_id,
-                               m.channel_name,
-                               m.author_id,
-                               m.author_name,
-                               m.content_text,
-                               m.timestamp,
-                               ARRAY_AGG(a.attachment_id) FILTER (WHERE a.attachment_id IS NOT NULL) AS attachment_ids_result,
-                               ARRAY_AGG(a.attachment_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS attachment_types,
-                               ARRAY_AGG(a.content_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_types,
-                               ARRAY_AGG(a.content_length) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_lengths,
-                               ARRAY_AGG(a.url) FILTER (WHERE a.attachment_id IS NOT NULL) AS urls,
-                               m.content_text_gvec <-> $3 AS score,
-                               'vector'::TEXT AS search_method
+                        SELECT
+                            m.message_id,
+                            m.channel_id,
+                            m.channel_name,
+                            m.author_id,
+                            m.author_name,
+                            m.content_text,
+                            m.timestamp,
+                            ARRAY_AGG(a.attachment_id) FILTER (WHERE a.attachment_id IS NOT NULL)
+                                AS attachment_ids_result,
+                            ARRAY_AGG(a.attachment_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS attachment_types,
+                            ARRAY_AGG(a.content_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_types,
+                            ARRAY_AGG(a.content_length) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_lengths,
+                            ARRAY_AGG(a.url) FILTER (WHERE a.attachment_id IS NOT NULL) AS urls,
+                            m.content_text_gvec <-> $3 AS score,
+                            'vector'::TEXT AS search_method
                         FROM naraninyeo.messages m
                         LEFT JOIN naraninyeo.attachments a
                             ON a.tenant_id = m.tenant_id AND a.message_id = m.message_id
@@ -200,23 +202,25 @@ class VchordMessageRepository:
                         LIMIT $5
                     ),
                     bm25_results AS (
-                        SELECT m.message_id,
-                               m.channel_id,
-                               m.channel_name,
-                               m.author_id,
-                               m.author_name,
-                               m.content_text,
-                               m.timestamp,
-                               ARRAY_AGG(a.attachment_id) FILTER (WHERE a.attachment_id IS NOT NULL) AS attachment_ids_result,
-                               ARRAY_AGG(a.attachment_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS attachment_types,
-                               ARRAY_AGG(a.content_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_types,
-                               ARRAY_AGG(a.content_length) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_lengths,
-                               ARRAY_AGG(a.url) FILTER (WHERE a.attachment_id IS NOT NULL) AS urls,
-                               m.content_text_bvec <&> to_bm25query(
-                                   'naraninyeo_messages_content_text_bvec_bm25_idx',
-                                   tokenize($4, 'solar_pro_tokenizer')
-                               ) AS score,
-                               'bm25'::TEXT AS search_method
+                        SELECT
+                            m.message_id,
+                            m.channel_id,
+                            m.channel_name,
+                            m.author_id,
+                            m.author_name,
+                            m.content_text,
+                            m.timestamp,
+                            ARRAY_AGG(a.attachment_id) FILTER (WHERE a.attachment_id IS NOT NULL)
+                                AS attachment_ids_result,
+                            ARRAY_AGG(a.attachment_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS attachment_types,
+                            ARRAY_AGG(a.content_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_types,
+                            ARRAY_AGG(a.content_length) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_lengths,
+                            ARRAY_AGG(a.url) FILTER (WHERE a.attachment_id IS NOT NULL) AS urls,
+                            m.content_text_bvec <&> to_bm25query(
+                                'naraninyeo_messages_content_text_bvec_bm25_idx',
+                                tokenize($4, 'solar_pro_tokenizer')
+                            ) AS score,
+                            'bm25'::TEXT AS search_method
                         FROM naraninyeo.messages m
                         LEFT JOIN naraninyeo.attachments a
                             ON a.tenant_id = m.tenant_id AND a.message_id = m.message_id
