@@ -4,7 +4,8 @@ from datetime import UTC, datetime
 
 import httpx
 import uvicorn
-from shiny.express import ui
+from shiny import reactive
+from shiny.express import ui, render
 
 from naraninyeo.api.routers.bot import CreateBotRequest
 from naraninyeo.api.routers.message import NewMessageRequest, NewMessageResponseChunk
@@ -17,8 +18,17 @@ ui.page_opts(
     fillable_mobile=True,
 )
 
-chat = ui.Chat(id="chat")
-chat.ui(messages=["Hello! How can I help you today?"])
+rtest = reactive.Value("Empty")
+
+with ui.layout_column_wrap():
+    with ui.card():
+        chat = ui.Chat(id="chat")
+        chat.ui(messages=["Hello! How can I help you today?"])
+    with ui.card():
+        @render.code
+        def display_test():
+            return rtest()
+
 container = None
 app = None
 client = None
@@ -45,10 +55,9 @@ async def start_fastapi_server():
     server = uvicorn.Server(config)
     await server.serve()
 
-
-@chat.on_user_submit
+@chat.on_user_submit # pyright: ignore[reportPossiblyUnboundVariable]
 async def handle_user_input(user_input: str):
-    global container, app, client, bot_id, server_task
+    global container, app, client, bot_id, server_task, rtest
 
     # 첫 메시지일 때 서버 시작
     if server_task is None:
@@ -111,5 +120,6 @@ async def handle_user_input(user_input: str):
                     res = NewMessageResponseChunk.model_validate_json(line)
                     if res.generated_message:
                         await chat.append_message(res.generated_message.content.text)
+                        rtest.set(res.model_dump_json(indent=2))
     except Exception as e:
         await chat.append_message(str(e))

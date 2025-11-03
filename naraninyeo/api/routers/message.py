@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Response
@@ -18,6 +18,7 @@ from naraninyeo.api.infrastructure.interfaces import (
     PlanActionExecutor,
 )
 from naraninyeo.core.models import Bot, BotMessage, Message, MessageContent, TenancyContext
+from naraninyeo.core.settings import Settings
 
 message_router = APIRouter()
 
@@ -30,11 +31,13 @@ class NewMessageResponseChunk(BaseModel):
     is_final: bool
     error: str | None = None
     generated_message: BotMessage | None = None
+    last_state: Optional[dict] = None
 
 @message_router.post("/new_message")
 @inject
 async def new_message(
     new_message_request: NewMessageRequest,
+    settings: FromDishka[Settings],
     message_repo: FromDishka[MessageRepository],
     memory_repo: FromDishka[MemoryRepository],
     bot_repo: FromDishka[BotRepository],
@@ -121,15 +124,16 @@ async def new_message(
     async def message_stream_generator():
         message_sent = 0
         async for chunk in new_message_graph.astream(init_state, context=graph_context):
-            updates = chunk.values()
-            for state_update in updates:
-                if "outgoing_messages" in state_update:
-                    generated_message = state_update["outgoing_messages"][message_sent:]
+            states = chunk.values()
+            for state in states:
+                if "outgoing_messages" in state:
+                    generated_message = state["outgoing_messages"][message_sent:]
                     message_sent += len(generated_message)
                     for msg in generated_message:
                         yield NewMessageResponseChunk(
                             is_final=False,
-                            generated_message=msg
+                            generated_message=msg,
+                            last_state=state
                         ).model_dump_json() + "\n"
         yield NewMessageResponseChunk(is_final=True).model_dump_json()
 

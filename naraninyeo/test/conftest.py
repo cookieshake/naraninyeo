@@ -83,6 +83,7 @@ class TestProvider(Provider):
     ) -> Settings:  # pragma: no cover
         base = Settings()
         copy = base.model_copy()
+        copy.DEBUG_MODE = True
         copy.LLAMA_CPP_EMBEDDINGS_URI = llamacpp_container.get_connection_url()
         copy.VCHORD_URI = vchord_container.get_connection_url()
         return copy
