@@ -1,4 +1,3 @@
-
 from typing import Sequence
 
 from asyncpg import Pool
@@ -19,14 +18,14 @@ class VchordBotRepository:
                 WHERE tenant_id = $1 AND bot_id = $2
                 """,
                 tctx.tenant_id,
-                bot_id
+                bot_id,
             )
             if row:
                 return Bot(
                     bot_id=row["bot_id"],
                     bot_name=row["bot_name"],
                     author_id=row["author_id"],
-                    created_at=row["created_at"]
+                    created_at=row["created_at"],
                 )
             return None
 
@@ -38,14 +37,14 @@ class VchordBotRepository:
                 FROM naraninyeo.bots
                 WHERE tenant_id = $1
                 """,
-                tctx.tenant_id
+                tctx.tenant_id,
             )
             return [
                 Bot(
                     bot_id=row["bot_id"],
                     bot_name=row["bot_name"],
                     author_id=row["author_id"],
-                    created_at=row["created_at"]
+                    created_at=row["created_at"],
                 )
                 for row in rows
             ]
@@ -61,5 +60,5 @@ class VchordBotRepository:
                 bot.bot_id,
                 bot.bot_name,
                 bot.author_id,
-                bot.created_at
+                bot.created_at,
             )

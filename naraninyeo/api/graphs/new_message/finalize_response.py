@@ -7,8 +7,7 @@ from naraninyeo.api.graphs.new_message.models import (
 
 
 async def finalize_response(
-    state: NewMessageGraphState,
-    runtime: Runtime[NewMessageGraphContext]
+    state: NewMessageGraphState, runtime: Runtime[NewMessageGraphContext]
 ) -> NewMessageGraphState:
     if state.draft_messages is None:
         return state

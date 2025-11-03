@@ -42,6 +42,7 @@ class LlamaCppContainer(DockerContainer):
     def get_connection_url(self) -> str:  # pragma: no cover
         return f"http://{self.get_container_host_ip()}:{self.get_exposed_port(8080)}"
 
+
 class TestProvider(Provider):
     scope = Scope.APP
 
@@ -65,10 +66,7 @@ class TestProvider(Provider):
 
     @provide
     def vchord_container(self) -> Iterator[PostgresContainer]:  # pragma: no cover
-        vchord = PostgresContainer(
-            image="tensorchord/vchord-suite:pg18-20251001",
-            driver=""
-        )
+        vchord = PostgresContainer(image="tensorchord/vchord-suite:pg18-20251001", driver="")
         vchord.start()
         try:
             yield vchord
@@ -104,24 +102,30 @@ async def _test_container() -> AsyncContainer:
         await temp_pool.close()
     return container
 
+
 @pytest.fixture
 async def test_container() -> AsyncIterable[AsyncContainer]:
     container = await _test_container()
     yield container
     await container.close()
 
+
 async def _test_app(test_container: AsyncContainer) -> FastAPI:
     from naraninyeo.api import create_app
+
     app = create_app()
     setup_dishka(test_container, app)
     return app
+
 
 @pytest.fixture
 async def test_app(test_container: AsyncContainer) -> FastAPI:
     return await _test_app(test_container)
 
+
 def _test_client(test_app: FastAPI) -> TestClient:
     return TestClient(test_app)
+
 
 @pytest.fixture
 def test_client(test_app: FastAPI) -> Iterator[TestClient]:

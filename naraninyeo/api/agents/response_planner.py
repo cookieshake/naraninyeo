@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from pydantic_ai import ModelSettings, NativeOutput, RunContext
+from pydantic_ai import ModelSettings, RunContext
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.core.models import ActionType, Bot, MemoryItem, Message, ResponsePlan
@@ -10,6 +10,7 @@ class ResponsePlannerDeps(BaseModel):
     incoming_message: Message
     latest_messages: list[Message]
     memories: list[MemoryItem]
+
 
 response_planner = StructuredAgent(
     name="Response Planner",
@@ -23,13 +24,13 @@ response_planner = StructuredAgent(
         }
     ),
     deps_type=ResponsePlannerDeps,
-    output_type=ResponsePlan
+    output_type=ResponsePlan,
 )
+
 
 @response_planner.instructions
 async def instructions(ctx: RunContext[ResponsePlannerDeps]) -> str:
-    return (
-f"""
+    return f"""
 당신은 사용자의 질문에 답하기 위해 어떤 정보를 검색해야 할지 계획하는 AI입니다.
 사용자의 질문, 대화 기록, 단기 기억을 바탕으로 아래 타입 중 필요한 것을 선택하여 계획하세요.
 
@@ -48,18 +49,13 @@ f"""
 - 각 계획에는 적절한 query와 description을 포함하세요.
 - 쿼리에 현재 시간이 필요할 경우 이를 반영하세요. '오늘', '최근' 등의 표현은 사용하지 말고 구체적인 날짜를 명시하세요.
 """
-)
+
 
 @response_planner.user_prompt
 async def user_prompt(deps: ResponsePlannerDeps) -> str:
-    latest_messages_str = "\n".join(
-        msg.preview for msg in deps.latest_messages
-    )
-    memories_str = "\n".join(
-        f"- {mem.content}" for mem in deps.memories
-    )
-    return (
-f"""
+    latest_messages_str = "\n".join(msg.preview for msg in deps.latest_messages)
+    memories_str = "\n".join(f"- {mem.content}" for mem in deps.memories)
+    return f"""
 ## 봇 정보
 ```
 이름: {deps.bot.bot_name}
@@ -83,4 +79,3 @@ f"""
 위 새로 들어온 메시지에 답하기 위해 어떤 종류의 검색을 어떤 검색어로 해야할까요?
 참고할만한 예전 대화 기록을 활용하여 더 정확한 검색 계획을 수립하세요.
 """
-)

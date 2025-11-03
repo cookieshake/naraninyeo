@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 import httpx
 import uvicorn
 from shiny import reactive
-from shiny.express import ui, render
+from shiny.express import render, ui
 
 from naraninyeo.api.routers.bot import CreateBotRequest
 from naraninyeo.api.routers.message import NewMessageRequest, NewMessageResponseChunk
@@ -25,9 +25,11 @@ with ui.layout_column_wrap():
         chat = ui.Chat(id="chat")
         chat.ui(messages=["Hello! How can I help you today?"])
     with ui.card():
+
         @render.code
         def display_test():
             return rtest()
+
 
 container = None
 app = None
@@ -50,12 +52,13 @@ async def start_fastapi_server():
         app,
         host="127.0.0.1",
         port=32919,
-        log_level="warning"  # 로그 줄이기
+        log_level="warning",  # 로그 줄이기
     )
     server = uvicorn.Server(config)
     await server.serve()
 
-@chat.on_user_submit # pyright: ignore[reportPossiblyUnboundVariable]
+
+@chat.on_user_submit  # pyright: ignore[reportPossiblyUnboundVariable]
 async def handle_user_input(user_input: str):
     global container, app, client, bot_id, server_task, rtest
 
@@ -75,15 +78,9 @@ async def handle_user_input(user_input: str):
 
     if client is None:
         # Create AsyncClient for HTTP requests to FastAPI server
-        client = httpx.AsyncClient(
-            base_url=server_url,
-            timeout=httpx.Timeout(120.0)
-        )
+        client = httpx.AsyncClient(base_url=server_url, timeout=httpx.Timeout(120.0))
     if bot_id is None:
-        bot = CreateBotRequest(
-            name="Test Bot",
-            author_id="user_123"
-        )
+        bot = CreateBotRequest(name="Test Bot", author_id="user_123")
         response = await client.post("/bots", content=bot.model_dump_json())
         bot = response.json()
         bot_id = bot["bot_id"]
@@ -100,14 +97,11 @@ async def handle_user_input(user_input: str):
             ),
             timestamp=datetime.now(UTC),
         ),
-        reply_needed=True
+        reply_needed=True,
     )
     try:
         async with client.stream(
-            "POST",
-            "/new_message",
-            content=msg.model_dump_json(),
-            headers={"Content-Type": "application/json"}
+            "POST", "/new_message", content=msg.model_dump_json(), headers={"Content-Type": "application/json"}
         ) as response:
             if response.status_code != 200:
                 response_text = await response.aread()
@@ -133,7 +127,7 @@ async def handle_user_input(user_input: str):
                                 ),
                                 timestamp=datetime.now(UTC),
                             ),
-                            reply_needed=False
+                            reply_needed=False,
                         )
                         await client.post("/new_message", content=r.model_dump_json())
     except Exception as e:

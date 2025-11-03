@@ -1,9 +1,8 @@
-from datetime import datetime
 import logging
 import os
-from typing import Any
+from datetime import datetime
 
-from openinference.instrumentation.pydantic_ai import OpenInferenceSpanProcessor, is_openinference_span
+from openinference.instrumentation.pydantic_ai import OpenInferenceSpanProcessor
 from opentelemetry import metrics, trace
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
@@ -12,7 +11,6 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 from opentelemetry.instrumentation.aiokafka import AIOKafkaInstrumentor
 from opentelemetry.instrumentation.asyncpg import AsyncPGInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
-from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrumentor
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs._internal import LogRecord
@@ -23,16 +21,19 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter, SimpleSpanProcessor
 from opentelemetry.semconv.attributes import service_attributes
-from pydantic_ai import Agent, InstrumentationSettings
+from pydantic_ai import Agent
 
 ENABLE_OTLP_EXPORTER = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip() != ""
 
 resource = Resource.create({service_attributes.SERVICE_NAME: "naraninyeo"})
 
+
 class OpenTelemetryLog:
     def configure(self):
         logger_provider = LoggerProvider()
-        logger_provider.add_log_record_processor(SimpleLogRecordProcessor(ConsoleLogExporter(formatter=self.log_formatter)))
+        logger_provider.add_log_record_processor(
+            SimpleLogRecordProcessor(ConsoleLogExporter(formatter=self.log_formatter))
+        )
         if ENABLE_OTLP_EXPORTER:
             logger_provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter()))
         set_logger_provider(logger_provider)
@@ -42,18 +43,13 @@ class OpenTelemetryLog:
     def log_formatter(self, record: LogRecord) -> str:
         ts = datetime.fromtimestamp((record.timestamp or 1) / 1e9)
         att = record.attributes or {}
-        filepath = att.get('code.file.path', '')
+        filepath = att.get("code.file.path", "")
         if isinstance(filepath, str):
-            filepath = filepath.split('/')[-1]
-        lineno = att.get('code.line.number', 0)
-        fname = att.get('code.function.name', '')
-        return (
-            f"::LOG:: "
-            f"[{ts.strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"({filepath}:{lineno}:{fname}) "
-            f"{record.body}"
-            "\n"
-        )
+            filepath = filepath.split("/")[-1]
+        lineno = att.get("code.line.number", 0)
+        fname = att.get("code.function.name", "")
+        return f"::LOG:: [{ts.strftime('%Y-%m-%d %H:%M:%S')}] ({filepath}:{lineno}:{fname}) {record.body}\n"
+
 
 class OpenTelemetryTracer:
     def configure(self):
@@ -88,6 +84,7 @@ class OpenTelemetryMetrics:
             metrics.set_meter_provider(
                 meter_provider=provider,
             )
+
 
 class OpenTelemetryInstrumentation:
     def configure(self):

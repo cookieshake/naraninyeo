@@ -8,10 +8,7 @@ from naraninyeo.api.graphs.new_message.models import (
 from naraninyeo.core.models import ResponsePlan
 
 
-async def plan(
-    state: NewMessageGraphState,
-    runtime: Runtime[NewMessageGraphContext]
-) -> NewMessageGraphState:
+async def plan(state: NewMessageGraphState, runtime: Runtime[NewMessageGraphContext]) -> NewMessageGraphState:
     if state.incoming_message is None:
         return state
 
@@ -26,7 +23,7 @@ async def plan(
         bot=state.current_bot,
         incoming_message=state.incoming_message,
         latest_messages=state.latest_history or [],
-        memories=state.memories
+        memories=state.memories,
     )
 
     plan = await response_planner.run_with_generator(deps)

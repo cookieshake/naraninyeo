@@ -1,8 +1,7 @@
-
 from datetime import datetime
 from typing import Sequence
 
-from asyncpg import Connection, Pool
+from asyncpg import Pool
 
 from naraninyeo.core.models import MemoryItem, TenancyContext
 
@@ -38,7 +37,7 @@ class VchordMemoryRepository:
                         item.content,
                         item.created_at,
                         item.updated_at,
-                        item.expires_at
+                        item.expires_at,
                     )
 
     async def delete_many(self, tctx: TenancyContext, memory_item_ids: Sequence[str]) -> int:
@@ -49,7 +48,7 @@ class VchordMemoryRepository:
                 WHERE tenant_id = $1 AND memory_id = ANY($2)
                 """,
                 tctx.tenant_id,
-                memory_item_ids
+                memory_item_ids,
             )
             # Result is in the format "DELETE <number_of_rows>"
             return int(result.split(" ")[1])
@@ -62,17 +61,13 @@ class VchordMemoryRepository:
                 WHERE tenant_id = $1 AND expires_at < $2
                 """,
                 tctx.tenant_id,
-                current_time
+                current_time,
             )
             # Result is in the format "DELETE <number_of_rows>"
             return int(result.split(" ")[1])
 
     async def get_channel_memory_items(
-        self,
-        tctx: TenancyContext,
-        bot_id: str,
-        channel_id: str,
-        limit: int = 100
+        self, tctx: TenancyContext, bot_id: str, channel_id: str, limit: int = 100
     ) -> Sequence[MemoryItem]:
         async with self.pool.acquire() as conn:
             rows = await conn.fetch(
@@ -87,7 +82,7 @@ class VchordMemoryRepository:
                 tctx.tenant_id,
                 bot_id,
                 channel_id,
-                limit
+                limit,
             )
             return [
                 MemoryItem(
@@ -98,7 +93,7 @@ class VchordMemoryRepository:
                     content=row["content"],
                     created_at=row["created_at"],
                     updated_at=row["updated_at"],
-                    expires_at=row["expires_at"]
+                    expires_at=row["expires_at"],
                 )
                 for row in rows
             ]

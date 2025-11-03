@@ -1,9 +1,9 @@
 from pydantic import BaseModel, ConfigDict
-from pydantic_ai import RunContext, ModelSettings
+from pydantic_ai import ModelSettings, RunContext
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.api.infrastructure.interfaces import Clock
-from naraninyeo.core.models import Bot, EvaluationFeedback, MemoryItem, Message, PlanActionResult, ResponsePlan
+from naraninyeo.core.models import Bot, MemoryItem, Message, PlanActionResult, ResponsePlan
 
 
 class ResponseGeneratorDeps(BaseModel):
@@ -16,6 +16,7 @@ class ResponseGeneratorDeps(BaseModel):
     incoming_message: Message
     latest_messages: list[Message]
     memories: list[MemoryItem]
+
 
 response_generator = StructuredAgent(
     name="Response Generator",
@@ -32,11 +33,11 @@ response_generator = StructuredAgent(
     output_type=str,
 )
 
+
 @response_generator.instructions
 async def instructions(ctx: RunContext[ResponseGeneratorDeps]) -> str:
     deps = ctx.deps
-    return (
-f"""
+    return f"""
 당신은 채팅방에 보낼 응답 초안을 생성하는 역할을 합니다.
 지시에 따라 응답을 생성하세요.
 
@@ -57,13 +58,11 @@ f"""
 - 주제 일탈 금지: 사용자가 원치 않으면 새로운 화제를 열지 말 것
 )
 """
-)
+
 
 @response_generator.user_prompt
 async def user_prompt(deps: ResponseGeneratorDeps) -> str:
-    latest_messages_str = "\n".join(
-        msg.preview for msg in deps.latest_messages
-    )
+    latest_messages_str = "\n".join(msg.preview for msg in deps.latest_messages)
     action_results = [
         (
             f"{result.action.action_type} (query: {result.action.query}) -> \n"
@@ -72,8 +71,7 @@ async def user_prompt(deps: ResponseGeneratorDeps) -> str:
         )
         for result in deps.plan_action_results
     ]
-    return (
-f"""
+    return f"""
 # 참고할 만한 정보
 
 [상황]
@@ -118,4 +116,3 @@ f"""
 짧고 간결하게, 핵심만 요약해서 전달하세요. 불필요한 미사여구나 설명은 생략하세요.
 참고 정보에 끌려가서 대화 흐름을 깨지 않도록 주의하세요.
 """
-)

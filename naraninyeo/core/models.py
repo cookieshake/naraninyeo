@@ -11,19 +11,20 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validat
 class TenancyContext(BaseModel):
     tenant_id: str = Field(min_length=1)
 
+
 class Author(BaseModel):
     author_id: str = Field(min_length=1)
     author_name: str = Field(min_length=1)
 
+
 class Bot(BaseModel):
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
     bot_id: str = Field(min_length=1)
     bot_name: str = Field(min_length=1)
     author_id: str = Field(min_length=1)
     created_at: datetime
+
 
 class Attachment(BaseModel):
     attachment_id: str = Field(min_length=1)
@@ -32,18 +33,19 @@ class Attachment(BaseModel):
     content_length: int | None = None
     url: str | None = None
 
+
 class MessageContent(BaseModel):
     text: str = Field(min_length=1)
     attachments: list[Attachment] = Field(default_factory=list)
+
 
 class Channel(BaseModel):
     channel_id: str = Field(min_length=1)
     channel_name: str
 
+
 class Message(BaseModel):
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
     message_id: str = Field(min_length=1)
     channel: Channel
@@ -70,10 +72,12 @@ class Message(BaseModel):
             return value.replace(tzinfo=UTC)
         return value.astimezone(UTC)
 
+
 class BotMessage(BaseModel):
     bot: Bot
     channel: Channel
     content: MessageContent
+
 
 class MemoryItem(BaseModel):
     memory_id: str = Field(min_length=1)
@@ -84,6 +88,7 @@ class MemoryItem(BaseModel):
     created_at: datetime
     updated_at: datetime
     expires_at: Optional[datetime] = None
+
 
 class EnvironmentalContext(BaseModel):
     timestamp: datetime
@@ -98,6 +103,7 @@ class KnowledgeReference(BaseModel):
     url: str | None = None
     timestamp: datetime | None = None
 
+
 class ActionType(str, Enum):
     SEARCH_WEB_GENERAL = "SEARCH_WEB_GENERAL"
     SEARCH_WEB_NEWS = "SEARCH_WEB_NEWS"
@@ -106,10 +112,12 @@ class ActionType(str, Enum):
     SEARCH_WEB_ENCYCLOPEDIA = "SEARCH_WEB_ENCYCLOPEDIA"
     SEARCH_CHAT_HISTORY = "SEARCH_CHAT_HISTORY"
 
+
 class PlanAction(BaseModel):
     action_type: ActionType
     description: str
     query: Optional[str] = None
+
 
 class ResponsePlan(BaseModel):
     actions: list[PlanAction]
@@ -123,10 +131,9 @@ class ResponsePlan(BaseModel):
             for action in self.actions
         ]
         return (
-            "Actions:\n" +
-            "\n".join(action_summaries) +
-            (f"\nGeneration Instructions: {self.generation_instructions}")
+            "Actions:\n" + "\n".join(action_summaries) + (f"\nGeneration Instructions: {self.generation_instructions}")
         )
+
 
 class PlanActionResult(BaseModel):
     action_result_id: str = Field(min_length=1)
@@ -138,6 +145,7 @@ class PlanActionResult(BaseModel):
     content: Optional[str] = None
     error: Optional[str] = None
     timestamp: Optional[str] = None
+
 
 class EvaluationFeedback(str, Enum):
     PLAN_AGAIN = "plan_again"

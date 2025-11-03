@@ -1,4 +1,3 @@
-
 from datetime import UTC, datetime
 
 import pytest  # noqa: F401
@@ -6,13 +5,14 @@ from fastapi.testclient import TestClient
 
 from naraninyeo.api.routers.bot import CreateBotRequest
 from naraninyeo.api.routers.message import NewMessageRequest
-from naraninyeo.core.models import Attachment, Author, Bot, Channel, Message, MessageContent
+from naraninyeo.core.models import Attachment, Author, Channel, Message, MessageContent
 
 
 async def test_simple_request(test_client: TestClient) -> None:
     response = test_client.get("/")
     assert response.status_code == 200
     assert response.text == "Naraninyeo API is running."
+
 
 async def test_new_message_simple(test_client: TestClient) -> None:
     new_message_payload = NewMessageRequest(
@@ -24,16 +24,12 @@ async def test_new_message_simple(test_client: TestClient) -> None:
             content=MessageContent(
                 text="Hello, this is a test message.",
                 attachments=[
-                    Attachment(
-                        attachment_id="att_789",
-                        attachment_type="image",
-                        url="http://example.com/image.png"
-                    )
+                    Attachment(attachment_id="att_789", attachment_type="image", url="http://example.com/image.png")
                 ],
             ),
             timestamp=datetime.now(UTC),
         ),
-        reply_needed=False
+        reply_needed=False,
     )
 
     response = test_client.post("/new_message", content=new_message_payload.model_dump_json())
@@ -43,11 +39,9 @@ async def test_new_message_simple(test_client: TestClient) -> None:
     assert response_json.get("error") is None
     assert response_json.get("generated_message") is None
 
+
 async def test_create_bot_simple(test_client: TestClient) -> None:
-    bot = CreateBotRequest(
-        name="Test Bot",
-        author_id="user_123"
-    )
+    bot = CreateBotRequest(name="Test Bot", author_id="user_123")
 
     response = test_client.post("/bots", content=bot.model_dump_json())
     if response.status_code != 200:
@@ -74,7 +68,7 @@ async def test_generate_message_simple(test_client: TestClient) -> None:
             ),
             timestamp=datetime.now(UTC),
         ),
-        reply_needed=True
+        reply_needed=True,
     )
 
     response = test_client.post("/new_message", content=new_message_payload.model_dump_json())

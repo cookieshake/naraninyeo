@@ -1,17 +1,9 @@
-
-
 import asyncio
-from datetime import datetime
-from typing import List, Literal
 from urllib.parse import urljoin
 
-import dateparser
 import httpx
 from bs4 import BeautifulSoup
 from markdownify import MarkdownConverter
-from pydantic import BaseModel
-
-from naraninyeo.core.settings import Settings
 
 
 class WebDocumentFetcher:

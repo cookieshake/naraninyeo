@@ -1,4 +1,3 @@
-
 import math
 from typing import Sequence
 
@@ -49,7 +48,7 @@ class VchordMessageRepository:
                     message.author.author_name,
                     message.content.text,
                     content_text_embeddings,
-                    message.timestamp
+                    message.timestamp,
                 )
 
                 if message.content.attachments:
@@ -74,49 +73,37 @@ class VchordMessageRepository:
                                 a.attachment_type,
                                 a.content_type,
                                 a.content_length,
-                                a.url
+                                a.url,
                             )
                             for a in message.content.attachments
-                        ]
+                        ],
                     )
 
     async def _parse_message_row(self, row) -> Message:
         attachments = []
         if row["attachment_ids_result"]:
             for i in range(len(row["attachment_ids_result"])):
-                attachments.append(Attachment(
-                    attachment_id=row["attachment_ids_result"][i],
-                    attachment_type=row["attachment_types"][i],
-                    content_type=row["content_types"][i],
-                    content_length=row["content_lengths"][i],
-                    url=row["urls"][i]
-                ))
+                attachments.append(
+                    Attachment(
+                        attachment_id=row["attachment_ids_result"][i],
+                        attachment_type=row["attachment_types"][i],
+                        content_type=row["content_types"][i],
+                        content_length=row["content_lengths"][i],
+                        url=row["urls"][i],
+                    )
+                )
 
         message = Message(
             message_id=row["message_id"],
-            channel=Channel(
-                channel_id=row["channel_id"],
-                channel_name=row["channel_name"]
-            ),
-            author=Author(
-                author_id=row["author_id"],
-                author_name=row["author_name"]
-            ),
-            content=MessageContent(
-                text=row["content_text"],
-                attachments=attachments
-            ),
-            timestamp=row["timestamp"]
+            channel=Channel(channel_id=row["channel_id"], channel_name=row["channel_name"]),
+            author=Author(author_id=row["author_id"], author_name=row["author_name"]),
+            content=MessageContent(text=row["content_text"], attachments=attachments),
+            timestamp=row["timestamp"],
         )
         return message
 
     async def _get_channel_messages(
-        self,
-        tctx: TenancyContext,
-        channel_id: str,
-        reference_message_id: str,
-        limit: int,
-        before: bool
+        self, tctx: TenancyContext, channel_id: str, reference_message_id: str, limit: int, before: bool
     ) -> Sequence[Message]:
         operator = "<" if before else ">"
         order = "DESC" if before else "ASC"
@@ -148,7 +135,7 @@ class VchordMessageRepository:
                 tctx.tenant_id,
                 channel_id,
                 reference_message_id,
-                limit
+                limit,
             )
 
             messages = []
@@ -160,29 +147,17 @@ class VchordMessageRepository:
             return messages
 
     async def get_channel_messages_before(
-        self,
-        tctx: TenancyContext,
-        channel_id: str,
-        before_message_id: str,
-        limit: int = 10
+        self, tctx: TenancyContext, channel_id: str, before_message_id: str, limit: int = 10
     ) -> Sequence[Message]:
         return await self._get_channel_messages(tctx, channel_id, before_message_id, limit, before=True)
 
     async def get_channel_messages_after(
-        self,
-        tctx: TenancyContext,
-        channel_id: str,
-        after_message_id: str,
-        limit: int = 10
+        self, tctx: TenancyContext, channel_id: str, after_message_id: str, limit: int = 10
     ) -> Sequence[Message]:
         return await self._get_channel_messages(tctx, channel_id, after_message_id, limit, before=False)
 
     async def text_search_messages(
-        self,
-        tctx: TenancyContext,
-        channel_id: str,
-        query: str,
-        limit: int = 10
+        self, tctx: TenancyContext, channel_id: str, query: str, limit: int = 10
     ) -> Sequence[Message]:
         query_embedding = await self.text_embedder.embed_queries([query])
         query_embedding = self._format_pgvector(query_embedding[0])
@@ -286,7 +261,7 @@ class VchordMessageRepository:
                     query_embedding,
                     query,
                     vlimit,
-                    blimit
+                    blimit,
                 )
             except PostgresError:
                 rows = await conn.fetch(
@@ -298,7 +273,8 @@ class VchordMessageRepository:
                            m.author_name,
                            m.content_text,
                            m.timestamp,
-                           ARRAY_AGG(a.attachment_id) FILTER (WHERE a.attachment_id IS NOT NULL) AS attachment_ids_result,
+                           ARRAY_AGG(a.attachment_id) FILTER (WHERE a.attachment_id IS NOT NULL)
+                             AS attachment_ids_result,
                            ARRAY_AGG(a.attachment_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS attachment_types,
                            ARRAY_AGG(a.content_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_types,
                            ARRAY_AGG(a.content_length) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_lengths,
@@ -325,7 +301,7 @@ class VchordMessageRepository:
                     tctx.tenant_id,
                     channel_id,
                     query_embedding,
-                    limit
+                    limit,
                 )
 
         messages = []

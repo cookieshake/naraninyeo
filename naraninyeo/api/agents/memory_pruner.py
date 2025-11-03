@@ -1,7 +1,7 @@
 from typing import List, Literal, TypeAlias
 
 from pydantic import BaseModel
-from pydantic_ai import RunContext, NativeOutput
+from pydantic_ai import NativeOutput, RunContext
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.core.models import MemoryItem
@@ -10,14 +10,17 @@ from naraninyeo.core.models import MemoryItem
 class MemoryPrunerDeps(BaseModel):
     memories: list[MemoryItem]
 
+
 class MemoryMergeAction(BaseModel):
     method: Literal["merge"]
     ids: list[int]
     merged_content: str
 
+
 class MemoryDeleteAction(BaseModel):
     method: Literal["delete"]
     ids: list[int]
+
 
 MemoryPrunerAction: TypeAlias = MemoryMergeAction | MemoryDeleteAction
 
@@ -28,10 +31,10 @@ memory_pruner = StructuredAgent(
     output_type=NativeOutput(List[MemoryPrunerAction]),
 )
 
+
 @memory_pruner.instructions
 async def instructions(_: RunContext[MemoryPrunerDeps]) -> str:
-    return (
-"""
+    return """
 당신은 기억 항목 목록을 검토하고, 불필요하거나 중복된 항목을 제거하는 역할을 합니다.
 다음 사항을 고려하여 기억 항목을 선별하세요.
 - 중복된 정보는 제거하세요.
@@ -58,20 +61,15 @@ async def instructions(_: RunContext[MemoryPrunerDeps]) -> str:
 ]
 ```
 """
-)
+
 
 @memory_pruner.user_prompt
 async def user_prompt(deps: MemoryPrunerDeps) -> str:
-    memories = [
-        f"ID {i+1}: {mem.content.replace('\n', ' ')}"
-        for i, mem in enumerate(deps.memories)
-    ]
+    memories = [f"ID {i + 1}: {mem.content.replace('\n', ' ')}" for i, mem in enumerate(deps.memories)]
     memories_str = "\n".join(memories)
-    return (
-f"""
+    return f"""
 다음 기억 항목 목록을 검토하고, 불필요하거나 중복된 항목을 제거하세요.
 
 ## 기억 항목 목록:
 {memories_str}
 """
-)

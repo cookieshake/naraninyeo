@@ -1,11 +1,10 @@
 import asyncio
-from datetime import datetime
-from typing import Literal, Optional
+from typing import Optional
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Response
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from naraninyeo.api.graphs.manage_memory import ManageMemoryGraphContext, ManageMemoryGraphState, manage_memory_graph
 from naraninyeo.api.graphs.new_message import NewMessageGraphContext, NewMessageGraphState, new_message_graph
@@ -17,21 +16,24 @@ from naraninyeo.api.infrastructure.interfaces import (
     MessageRepository,
     PlanActionExecutor,
 )
-from naraninyeo.core.models import Bot, BotMessage, Message, MessageContent, TenancyContext
+from naraninyeo.core.models import BotMessage, Message, TenancyContext
 from naraninyeo.core.settings import Settings
 
 message_router = APIRouter()
+
 
 class NewMessageRequest(BaseModel):
     bot_id: str
     message: Message
     reply_needed: bool = False
 
+
 class NewMessageResponseChunk(BaseModel):
     is_final: bool
     error: str | None = None
     generated_message: BotMessage | None = None
     last_state: Optional[dict] = None
+
 
 @message_router.post("/new_message")
 @inject
@@ -63,9 +65,7 @@ async def new_message(
                     id_generator=id_generator,
                     memory_repository=memory_repo,
                 )
-                asyncio.create_task(
-                    manage_memory_graph.ainvoke(init_state, context=graph_context)
-                )
+                asyncio.create_task(manage_memory_graph.ainvoke(init_state, context=graph_context))
 
         return Response(
             status_code=200,
@@ -79,7 +79,7 @@ async def new_message(
                 tctx,
                 channel_id=new_message_request.message.channel.channel_id,
                 before_message_id=new_message_request.message.message_id,
-                limit=20
+                limit=20,
             )
         )
         channel_memory_task = tg.create_task(
@@ -87,12 +87,10 @@ async def new_message(
                 tctx,
                 bot_id=new_message_request.bot_id,
                 channel_id=new_message_request.message.channel.channel_id,
-                limit=100
+                limit=100,
             )
         )
-        bot_task = tg.create_task(
-            bot_repo.get(tctx, new_message_request.bot_id)
-        )
+        bot_task = tg.create_task(bot_repo.get(tctx, new_message_request.bot_id))
     latest_message = await latest_message_task
     channel_memory = await channel_memory_task
     bot = await bot_task
@@ -100,8 +98,7 @@ async def new_message(
         return Response(
             status_code=400,
             content=NewMessageResponseChunk(
-                is_final=True,
-                error=f"Bot with ID {new_message_request.bot_id} not found."
+                is_final=True, error=f"Bot with ID {new_message_request.bot_id} not found."
             ).model_dump_json(),
             media_type="application/ld+json",
         )
@@ -112,7 +109,7 @@ async def new_message(
         status="processing",
         incoming_message=new_message_request.message,
         latest_history=list(latest_message),
-        memories=list(channel_memory)
+        memories=list(channel_memory),
     )
     graph_context = NewMessageGraphContext(
         clock=clock,
@@ -130,14 +127,12 @@ async def new_message(
                     generated_message = state["outgoing_messages"][message_sent:]
                     message_sent += len(generated_message)
                     for msg in generated_message:
-                        yield NewMessageResponseChunk(
-                            is_final=False,
-                            generated_message=msg,
-                            last_state=state
-                        ).model_dump_json() + "\n"
+                        yield (
+                            NewMessageResponseChunk(
+                                is_final=False, generated_message=msg, last_state=state
+                            ).model_dump_json()
+                            + "\n"
+                        )
         yield NewMessageResponseChunk(is_final=True).model_dump_json()
 
-    return StreamingResponse(
-        content=message_stream_generator(),
-        media_type="application/ld+json"
-    )
+    return StreamingResponse(content=message_stream_generator(), media_type="application/ld+json")

@@ -1,7 +1,5 @@
-
-
-from datetime import datetime
 import math
+from datetime import datetime
 from typing import List, Literal
 
 import dateparser
@@ -18,32 +16,18 @@ class SearchResult(BaseModel):
     description: str
     published_at: str | None
 
+
 class NaverSearchClient:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
     async def search(
-        self,
-        search_type: Literal[
-            "general", "news", "blog",
-            "document", "encyclopedia"
-        ],
-        query: str,
-        limit: int = 5
+        self, search_type: Literal["general", "news", "blog", "document", "encyclopedia"], query: str, limit: int = 5
     ) -> List[SearchResult]:
-        return [
-            self._parse_result(item)
-            for item in await self._request(search_type, query, limit)
-        ]
+        return [self._parse_result(item) for item in await self._request(search_type, query, limit)]
 
     async def _request(
-        self,
-        search_type: Literal[
-            "general", "news", "blog",
-            "document", "encyclopedia"
-        ],
-        query: str,
-        limit: int = 16
+        self, search_type: Literal["general", "news", "blog", "document", "encyclopedia"], query: str, limit: int = 16
     ) -> list[dict[str, str]]:
         base_url = "https://openapi.naver.com/v1/search/"
         match search_type:
@@ -90,10 +74,7 @@ class NaverSearchClient:
         title = BeautifulSoup(item.get("title", ""), "html.parser").get_text().strip()
         description = BeautifulSoup(item.get("description", ""), "html.parser").get_text().strip()
         link = item.get("link") or item.get("originallink")
-        timestamp = self._parse_datetime(
-            item.get("pubDate")
-            or item.get("postdate")
-        )
+        timestamp = self._parse_datetime(item.get("pubDate") or item.get("postdate"))
 
         return SearchResult(
             link=link,

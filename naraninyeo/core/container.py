@@ -1,4 +1,3 @@
-
 from collections.abc import AsyncIterable
 
 from asyncpg import Pool, create_pool
@@ -30,20 +29,17 @@ class CoreProvider(Provider):
     def settings(self) -> Settings:
         return Settings()
 
+
 class ConnectionProvider(Provider):
     scope = Scope.APP
 
     @provide
     async def database_pool(self, settings: Settings) -> AsyncIterable[Pool]:
         # Rely on asyncpg choosing the active loop so the pool stays usable across drivers like AnyIO.
-        pool = await create_pool(
-            dsn=settings.VCHORD_URI,
-            min_size=5,
-            max_size=20,
-            command_timeout=30.0
-        )
+        pool = await create_pool(dsn=settings.VCHORD_URI, min_size=5, max_size=20, command_timeout=30.0)
         yield pool
         await pool.close()
+
 
 class RepositoryProvider(Provider):
     scope = Scope.APP
@@ -52,6 +48,7 @@ class RepositoryProvider(Provider):
     memory_repository = provide(source=VchordMemoryRepository, provides=MemoryRepository)
     message_repository = provide(source=VchordMessageRepository, provides=MessageRepository)
 
+
 class UtilProvider(Provider):
     scope = Scope.APP
 
@@ -59,6 +56,7 @@ class UtilProvider(Provider):
     id_generator = provide(source=NanoidGenerator, provides=IdGenerator)
     text_embedder = provide(source=LlamaCppGemmaEmbedder, provides=TextEmbedder)
     plan_action_executor = provide(source=DefaultPlanActionExecutor, provides=PlanActionExecutor)
+
 
 container = make_async_container(
     CoreProvider(),

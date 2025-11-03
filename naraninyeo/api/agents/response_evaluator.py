@@ -12,6 +12,7 @@ class ResponseEvaluatorDeps(BaseModel):
     latest_messages: list[Message]
     generated_responses: list[str]
 
+
 response_evaluator = StructuredAgent(
     name="Response Evaluator",
     model="openrouter:openai/gpt-4.1-mini",
@@ -19,10 +20,10 @@ response_evaluator = StructuredAgent(
     output_type=NativeOutput(EvaluationFeedback),
 )
 
+
 @response_evaluator.instructions
 async def instructions(_: RunContext[ResponseEvaluatorDeps]) -> str:
-    return (
-"""
+    return """
 당신은 채팅방에 보낼 응답 초안을 평가하는 역할을 합니다.
 응답 초안은 LLM이 생성한 계획에 따라 작성되었습니다.
 
@@ -35,15 +36,12 @@ async def instructions(_: RunContext[ResponseEvaluatorDeps]) -> str:
 만약 응답 실행은 적절하지만, 생성된 응답이 부적절하다고 판단되면 'generate_again'을 반환하세요.
 만약 응답이 적절하다고 판단되면 'finalize'를 반환하세요.
 """
-)
+
 
 @response_evaluator.user_prompt
 async def user_prompt(deps: ResponseEvaluatorDeps) -> str:
-    latest_messages_str = "\n".join(
-        msg.preview for msg in deps.latest_messages
-    )
-    return (
-f"""
+    latest_messages_str = "\n".join(msg.preview for msg in deps.latest_messages)
+    return f"""
 ## 응답할 메시지 이전 대화
 ```
 {latest_messages_str}
@@ -66,4 +64,3 @@ f"""
 
 이 정보를 바탕으로 생성된 응답 초안을 평가하고, 적절한 피드백을 반환하세요.
 """
-)

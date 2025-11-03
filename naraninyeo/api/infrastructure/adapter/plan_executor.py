@@ -50,10 +50,7 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
             return
 
         fetched_content = await self.web_document_fetcher.fetch_document(plan_action_result.link)
-        extract_summary_deps = SummaryExtractorDeps(
-            plan=plan,
-            result=fetched_content
-        )
+        extract_summary_deps = SummaryExtractorDeps(plan=plan, result=fetched_content)
         summary = await summary_extractor.run_with_generator(extract_summary_deps)
         if summary.output.relevance == 0:
             collector.remove_result(plan_action_result.action_result_id)
@@ -61,10 +58,7 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
         enhanced_result = deepcopy(plan_action_result)
         enhanced_result.content = summary.output.summary
         enhanced_result.priority = summary.output.relevance
-        collector.add_result(
-            action=plan_action_result.action,
-            result=enhanced_result
-        )
+        collector.add_result(action=plan_action_result.action, result=enhanced_result)
 
     async def _execute_action(
         self,
@@ -75,26 +69,21 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
     ) -> None:
         match action.action_type:
             case (
-                ActionType.SEARCH_WEB_GENERAL |
-                ActionType.SEARCH_WEB_NEWS |
-                ActionType.SEARCH_WEB_BLOG |
-                ActionType.SEARCH_WEB_SCHOLAR |
-                ActionType.SEARCH_WEB_ENCYCLOPEDIA
+                ActionType.SEARCH_WEB_GENERAL
+                | ActionType.SEARCH_WEB_NEWS
+                | ActionType.SEARCH_WEB_BLOG
+                | ActionType.SEARCH_WEB_SCHOLAR
+                | ActionType.SEARCH_WEB_ENCYCLOPEDIA
             ):
-                action_kv: dict[
-                    ActionType,
-                    Literal["general", "news", "blog", "document", "encyclopedia"]
-                ] = {
-                        ActionType.SEARCH_WEB_GENERAL: "general",
-                        ActionType.SEARCH_WEB_NEWS: "news",
-                        ActionType.SEARCH_WEB_BLOG: "blog",
-                        ActionType.SEARCH_WEB_SCHOLAR: "document",
-                        ActionType.SEARCH_WEB_ENCYCLOPEDIA: "encyclopedia",
-                    }
+                action_kv: dict[ActionType, Literal["general", "news", "blog", "document", "encyclopedia"]] = {
+                    ActionType.SEARCH_WEB_GENERAL: "general",
+                    ActionType.SEARCH_WEB_NEWS: "news",
+                    ActionType.SEARCH_WEB_BLOG: "blog",
+                    ActionType.SEARCH_WEB_SCHOLAR: "document",
+                    ActionType.SEARCH_WEB_ENCYCLOPEDIA: "encyclopedia",
+                }
                 results = await self.search_client.search(
-                    search_type=action_kv[action.action_type],
-                    query=action.query or "",
-                    limit=5
+                    search_type=action_kv[action.action_type], query=action.query or "", limit=5
                 )
                 tasks = []
                 for result in results:
@@ -106,30 +95,21 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                         link=result.link,
                         source=result.link,
                         content=f"[{result.title}]\n{result.description}",
-                        timestamp=result.published_at
+                        timestamp=result.published_at,
                     )
-                    collector.add_result(
-                        action=action,
-                        result=aresult
-                    )
+                    collector.add_result(action=action, result=aresult)
                     tasks.append(
                         asyncio.create_task(
                             self._enhance_result_with_fetch(
-                                collector=collector,
-                                plan=action,
-                                plan_action_result=aresult
+                                collector=collector, plan=action, plan_action_result=aresult
                             )
                         )
                     )
                 await asyncio.gather(*tasks, return_exceptions=True)
 
-
             case ActionType.SEARCH_CHAT_HISTORY:
                 messages = await self.message_repository.text_search_messages(
-                    tctx=tctx,
-                    channel_id=channel_id,
-                    query=action.query or "",
-                    limit=5
+                    tctx=tctx, channel_id=channel_id, query=action.query or "", limit=5
                 )
                 async with asyncio.TaskGroup() as tg:
                     before = []
@@ -138,20 +118,14 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                         before.append(
                             tg.create_task(
                                 self.message_repository.get_channel_messages_before(
-                                    tctx=tctx,
-                                    channel_id=channel_id,
-                                    before_message_id=message.message_id,
-                                    limit=5
+                                    tctx=tctx, channel_id=channel_id, before_message_id=message.message_id, limit=5
                                 )
                             )
                         )
                         after.append(
                             tg.create_task(
                                 self.message_repository.get_channel_messages_after(
-                                    tctx=tctx,
-                                    channel_id=channel_id,
-                                    after_message_id=message.message_id,
-                                    limit=5
+                                    tctx=tctx, channel_id=channel_id, after_message_id=message.message_id, limit=5
                                 )
                             )
                         )
@@ -160,11 +134,7 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
 
                 result = []
                 for b, c, a in zip(before, messages, after, strict=False):
-                    result.append(
-                        f"{'\n'.join(m.preview for m in b)}\n"
-                        f"{c.preview}\n"
-                        f"{'\n'.join(m.preview for m in a)}"
-                    )
+                    result.append(f"{'\n'.join(m.preview for m in b)}\n{c.preview}\n{'\n'.join(m.preview for m in a)}")
                 collector.add_result(
                     action=action,
                     result=PlanActionResult(
@@ -172,7 +142,7 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                         action=action,
                         status="COMPLETED",
                         content="\n".join(result),
-                    )
+                    ),
                 )
 
     async def execute_actions(
@@ -181,7 +151,7 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
         incoming_message: Message,
         latest_history: list[Message],
         memories: list[MemoryItem],
-        actions: list[PlanAction]
+        actions: list[PlanAction],
     ) -> List[PlanActionResult]:
         collector = ActionResultCollector()
         try:
@@ -193,7 +163,7 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                             tctx=tctx,
                             action=action,
                             channel_id=incoming_message.channel.channel_id,
-                            collector=collector
+                            collector=collector,
                         )
                     )
                     tasks.append(task)
