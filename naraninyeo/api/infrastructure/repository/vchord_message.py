@@ -23,7 +23,7 @@ class VchordMessageRepository:
             async with conn.transaction():
                 await conn.execute(
                     """
-                    INSERT INTO naraninyeo.messages (
+                    INSERT INTO messages (
                         tenant_id, message_id, channel_id, channel_name,
                         author_id, author_name,
                         content_text, content_text_gvec, content_text_bvec,
@@ -54,7 +54,7 @@ class VchordMessageRepository:
                 if message.content.attachments:
                     await conn.executemany(
                         """
-                        INSERT INTO naraninyeo.attachments (
+                        INSERT INTO attachments (
                             tenant_id, message_id, attachment_id, attachment_type,
                             content_type, content_length, url
                         )
@@ -119,12 +119,12 @@ class VchordMessageRepository:
                        ARRAY_AGG(a.content_type) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_types,
                        ARRAY_AGG(a.content_length) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_lengths,
                        ARRAY_AGG(a.url) FILTER (WHERE a.attachment_id IS NOT NULL) AS urls
-                FROM naraninyeo.messages m
-                LEFT JOIN naraninyeo.attachments a
+                FROM messages m
+                LEFT JOIN attachments a
                     ON a.tenant_id = m.tenant_id AND a.message_id = m.message_id
                 WHERE m.tenant_id = $1 AND m.channel_id = $2
                   AND m.timestamp {operator} (
-                    SELECT timestamp FROM naraninyeo.messages
+                    SELECT timestamp FROM messages
                     WHERE tenant_id = $1 AND message_id = $3
                   )
                 GROUP BY m.tenant_id, m.message_id, m.channel_id, m.channel_name,
@@ -184,8 +184,8 @@ class VchordMessageRepository:
                             ARRAY_AGG(a.url) FILTER (WHERE a.attachment_id IS NOT NULL) AS urls,
                             m.content_text_gvec <-> $3 AS score,
                             'vector'::TEXT AS search_method
-                        FROM naraninyeo.messages m
-                        LEFT JOIN naraninyeo.attachments a
+                        FROM messages m
+                        LEFT JOIN attachments a
                             ON a.tenant_id = m.tenant_id AND a.message_id = m.message_id
                         WHERE m.tenant_id = $1
                           AND m.channel_id = $2
@@ -217,12 +217,12 @@ class VchordMessageRepository:
                             ARRAY_AGG(a.content_length) FILTER (WHERE a.attachment_id IS NOT NULL) AS content_lengths,
                             ARRAY_AGG(a.url) FILTER (WHERE a.attachment_id IS NOT NULL) AS urls,
                             m.content_text_bvec <&> to_bm25query(
-                                'naraninyeo_messages_content_text_bvec_bm25_idx',
+                                'messages_content_text_bvec_bm25_idx',
                                 tokenize($4, 'solar_pro_tokenizer')
                             ) AS score,
                             'bm25'::TEXT AS search_method
-                        FROM naraninyeo.messages m
-                        LEFT JOIN naraninyeo.attachments a
+                        FROM messages m
+                        LEFT JOIN attachments a
                             ON a.tenant_id = m.tenant_id AND a.message_id = m.message_id
                         WHERE m.tenant_id = $1
                           AND m.channel_id = $2
@@ -285,8 +285,8 @@ class VchordMessageRepository:
                            ARRAY_AGG(a.url) FILTER (WHERE a.attachment_id IS NOT NULL) AS urls,
                            m.content_text_gvec <-> $3 AS score,
                            'vector'::TEXT AS search_method
-                    FROM naraninyeo.messages m
-                    LEFT JOIN naraninyeo.attachments a
+                    FROM messages m
+                    LEFT JOIN attachments a
                         ON a.tenant_id = m.tenant_id AND a.message_id = m.message_id
                     WHERE m.tenant_id = $1
                       AND m.channel_id = $2

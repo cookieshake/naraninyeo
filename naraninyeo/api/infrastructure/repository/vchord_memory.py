@@ -16,7 +16,7 @@ class VchordMemoryRepository:
                 for item in memory_items:
                     await conn.execute(
                         """
-                        INSERT INTO naraninyeo.memory_items (
+                        INSERT INTO memory_items (
                             tenant_id, memory_id, bot_id, channel_id, kind,
                             content, created_at, updated_at, expires_at
                         )
@@ -44,7 +44,7 @@ class VchordMemoryRepository:
         async with self.pool.acquire() as conn:
             result = await conn.execute(
                 """
-                DELETE FROM naraninyeo.memory_items
+                DELETE FROM memory_items
                 WHERE tenant_id = $1 AND memory_id = ANY($2)
                 """,
                 tctx.tenant_id,
@@ -57,7 +57,7 @@ class VchordMemoryRepository:
         async with self.pool.acquire() as conn:
             result = await conn.execute(
                 """
-                DELETE FROM naraninyeo.memory_items
+                DELETE FROM memory_items
                 WHERE tenant_id = $1 AND expires_at < $2
                 """,
                 tctx.tenant_id,
@@ -74,7 +74,7 @@ class VchordMemoryRepository:
                 """
                 SELECT memory_id, bot_id, channel_id, kind,
                        content, created_at, updated_at, expires_at
-                FROM naraninyeo.memory_items
+                FROM memory_items
                 WHERE tenant_id = $1 AND bot_id = $2 AND channel_id = $3
                 ORDER BY created_at DESC
                 LIMIT $4

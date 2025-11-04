@@ -14,7 +14,7 @@ class VchordBotRepository:
             row = await conn.fetchrow(
                 """
                 SELECT bot_id, bot_name, author_id, created_at
-                FROM naraninyeo.bots
+                FROM bots
                 WHERE tenant_id = $1 AND bot_id = $2
                 """,
                 tctx.tenant_id,
@@ -34,7 +34,7 @@ class VchordBotRepository:
             rows = await conn.fetch(
                 """
                 SELECT bot_id, bot_name, author_id, created_at
-                FROM naraninyeo.bots
+                FROM bots
                 WHERE tenant_id = $1
                 """,
                 tctx.tenant_id,
@@ -53,7 +53,7 @@ class VchordBotRepository:
         async with self.pool.acquire() as conn:
             await conn.execute(
                 """
-                INSERT INTO naraninyeo.bots (tenant_id, bot_id, bot_name, author_id, created_at)
+                INSERT INTO bots (tenant_id, bot_id, bot_name, author_id, created_at)
                 VALUES ($1, $2, $3, $4, $5)
                 """,
                 tctx.tenant_id,
