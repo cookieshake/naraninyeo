@@ -123,7 +123,7 @@ async def new_message(
         async for chunk in new_message_graph.astream(init_state, context=graph_context):
             states = chunk.values()
             for state in states:
-                if "outgoing_messages" in state:
+                if "outgoing_messages" in state and state["outgoing_messages"] is not None:
                     generated_message = state["outgoing_messages"][message_sent:]
                     message_sent += len(generated_message)
                     for msg in generated_message:

@@ -13,6 +13,6 @@ async def finalize_response(
         return state
     if state.outgoing_messages is None:
         state.outgoing_messages = []
-    state.outgoing_messages.extend(state.draft_messages)
+    state.outgoing_messages
     state.draft_messages = []
     return state

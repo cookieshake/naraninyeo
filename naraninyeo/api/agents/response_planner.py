@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from pydantic_ai import ModelSettings, RunContext
+from pydantic_ai import ModelSettings, NativeOutput, RunContext
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.core.models import ActionType, Bot, MemoryItem, Message, ResponsePlan
@@ -14,7 +14,7 @@ class ResponsePlannerDeps(BaseModel):
 
 response_planner = StructuredAgent(
     name="Response Planner",
-    model="openrouter:anthropic/claude-haiku-4.5",
+    model="openrouter:x-ai/grok-4-fast",
     model_settings=ModelSettings(
         extra_body={
             "reasoning": {
@@ -47,7 +47,9 @@ async def instructions(ctx: RunContext[ResponsePlannerDeps]) -> str:
 - 필요 없으면 빈 배열을 반환하고, 필요한 경우 여러 타입을 조합할 수 있습니다.
 - query를 포함하지 않은 검색은 계획에 포함하지 말고 설명도 작성하지 마세요.
 - 각 계획에는 적절한 query와 description을 포함하세요.
-- 쿼리에 현재 시간이 필요할 경우 이를 반영하세요. '오늘', '최근' 등의 표현은 사용하지 말고 구체적인 날짜를 명시하세요.
+- 쿼리에 현재 시간이 필요할 경우 이를 반영하세요.
+- '오늘', '최근' 등의 표현은 사용하지 말고 구체적인 날짜를 명시하세요.
+- 날짜는 년, 월 등의 인간에게 친숙한 형식을 사용하세요.
 """
 
 

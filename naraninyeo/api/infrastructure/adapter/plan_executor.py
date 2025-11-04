@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from copy import deepcopy
 from typing import Dict, List, Literal
 
@@ -46,19 +47,22 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
         plan: PlanAction,
         plan_action_result: PlanActionResult,
     ) -> None:
-        if not plan_action_result.link:
-            return
+        try:
+            if not plan_action_result.link:
+                return
 
-        fetched_content = await self.web_document_fetcher.fetch_document(plan_action_result.link)
-        extract_summary_deps = SummaryExtractorDeps(plan=plan, result=fetched_content)
-        summary = await summary_extractor.run_with_generator(extract_summary_deps)
-        if summary.output.relevance == 0:
-            collector.remove_result(plan_action_result.action_result_id)
-            return
-        enhanced_result = deepcopy(plan_action_result)
-        enhanced_result.content = summary.output.summary
-        enhanced_result.priority = summary.output.relevance
-        collector.add_result(action=plan_action_result.action, result=enhanced_result)
+            fetched_content = await self.web_document_fetcher.fetch_document(plan_action_result.link)
+            extract_summary_deps = SummaryExtractorDeps(plan=plan, result=fetched_content)
+            summary = await summary_extractor.run_with_generator(extract_summary_deps)
+            if summary.output.relevance == 0:
+                collector.remove_result(plan_action_result.action_result_id)
+                return
+            enhanced_result = deepcopy(plan_action_result)
+            enhanced_result.content = summary.output.summary
+            enhanced_result.priority = summary.output.relevance
+            collector.add_result(action=plan_action_result.action, result=enhanced_result)
+        except Exception as e:
+            logging.warning(f"Failed to enhance result for action {plan.action_type}: {e}")
 
     async def _execute_action(
         self,
@@ -155,19 +159,18 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
     ) -> List[PlanActionResult]:
         collector = ActionResultCollector()
         try:
-            async with asyncio.TaskGroup() as tg:
-                tasks = []
-                for action in actions:
-                    task = tg.create_task(
-                        self._execute_action(
-                            tctx=tctx,
-                            action=action,
-                            channel_id=incoming_message.channel.channel_id,
-                            collector=collector,
-                        )
+            tasks = []
+            for action in actions:
+                task = asyncio.create_task(
+                    self._execute_action(
+                        tctx=tctx,
+                        action=action,
+                        channel_id=incoming_message.channel.channel_id,
+                        collector=collector,
                     )
-                    tasks.append(task)
-                await asyncio.wait_for(asyncio.gather(*tasks), timeout=10)
+                )
+                tasks.append(task)
+            await asyncio.wait_for(asyncio.gather(*tasks), timeout=20)
         except TimeoutError:
             pass
         return collector.get_results()
