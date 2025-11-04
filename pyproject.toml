@@ -32,6 +32,7 @@ dependencies = [
     "opentelemetry-instrumentation-asyncpg>=0.59b0",
     "opentelemetry-instrumentation-aiokafka>=0.59b0",
     "opentelemetry-instrumentation-logging>=0.59b0",
+    "aiobotocore>=2.25.1",
 ]
 
 [project.scripts]
