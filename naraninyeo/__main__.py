@@ -5,6 +5,7 @@ from dishka.integrations.fastapi import setup_dishka
 
 from naraninyeo.api import create_app
 from naraninyeo.core.container import container
+from naraninyeo.router import get_router
 
 
 async def main() -> None:
@@ -23,6 +24,11 @@ async def main() -> None:
         )
         uvicorn_server = uvicorn.Server(uvicorn_config)
         await uvicorn_server.serve()
+    elif entrypoint == "router":
+        router = await get_router()
+        await router.run()
+    else:
+        raise ValueError(f"Unknown entrypoint: {entrypoint}")
 
 
 if __name__ == "__main__":

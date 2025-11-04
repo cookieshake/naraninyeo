@@ -8,9 +8,7 @@ from naraninyeo.api.graphs.new_message.models import (
 from naraninyeo.core.models import BotMessage, MessageContent
 
 
-async def inform_plan(
-    state: NewMessageGraphState, runtime: Runtime[NewMessageGraphContext]
-) -> dict:
+async def inform_plan(state: NewMessageGraphState, runtime: Runtime[NewMessageGraphContext]) -> dict:
     state.outgoing_messages = []
     if state.response_plan is None:
         return {}

@@ -120,9 +120,7 @@ async def new_message(
 
     async def message_stream_generator():
         message_sent = 0
-        async for state in new_message_graph.astream(
-            init_state, context=graph_context, stream_mode="values"
-        ):
+        async for state in new_message_graph.astream(init_state, context=graph_context, stream_mode="values"):
             if not state:
                 continue
             if "outgoing_messages" in state and state["outgoing_messages"] is not None:

@@ -16,7 +16,7 @@ from naraninyeo.router.api_client import APIClient
 from naraninyeo.router.phone_client import PhoneClient
 
 
-class MessageRouter():
+class MessageRouter:
     def __init__(self) -> None:
         self.first_client = APIClient(os.environ["FIRST_API_URL"], os.environ["BOT_ID"])
         self.second_client = APIClient(os.environ["SECOND_API_URL"], os.environ["BOT_ID"])
@@ -68,7 +68,6 @@ class MessageRouter():
                     message.channel.channel_id,
                     f"읭? {e}",
                 )
-
 
     async def parse_message(self, message_data: dict) -> Message:
         message_id = message_data["json"]["id"]
@@ -149,18 +148,11 @@ class MessageRouter():
             timestamp=timestamp,
         )
 
-    async def upload_attachment(
-        self,
-        attachment: Attachment
-    ) -> Attachment:
+    async def upload_attachment(self, attachment: Attachment) -> Attachment:
         if attachment.url is None:
             return attachment
 
-        key = (
-            f"{attachment.attachment_id[0]}"
-            f"/{attachment.attachment_id[1]}"
-            f"/{attachment.attachment_id[2:]}"
-        )
+        key = f"{attachment.attachment_id[0]}/{attachment.attachment_id[1]}/{attachment.attachment_id[2:]}"
 
         async with TemporaryFile() as temp_file:
             async with httpx.AsyncClient() as client:
@@ -174,7 +166,7 @@ class MessageRouter():
                     temp_file,
                     self.bucket,
                     key,
-                ) # pyright: ignore
+                )  # pyright: ignore
         return Attachment(
             attachment_id=attachment.attachment_id,
             attachment_type=attachment.attachment_type,

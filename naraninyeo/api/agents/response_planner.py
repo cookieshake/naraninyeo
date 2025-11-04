@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from pydantic_ai import ModelSettings, NativeOutput, RunContext
+from pydantic_ai import ModelSettings, RunContext
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.core.models import ActionType, Bot, MemoryItem, Message, ResponsePlan

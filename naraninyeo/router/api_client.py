@@ -1,5 +1,3 @@
-
-
 from typing import AsyncGenerator
 
 import httpx
@@ -22,7 +20,7 @@ class APIClient:
                 connect=10.0,
                 read=180.0,
                 write=180.0,
-            )
+            ),
         )
 
     async def new_message(

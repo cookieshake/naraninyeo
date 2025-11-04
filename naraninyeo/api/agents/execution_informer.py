@@ -1,7 +1,5 @@
-from typing import Literal
-
 from pydantic import BaseModel
-from pydantic_ai import NativeOutput, RunContext
+from pydantic_ai import RunContext
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.core.models import Message, ResponsePlan
@@ -38,6 +36,7 @@ async def instructions(_: RunContext[ExecutionInformerDeps]) -> str:
 - 간단한 메시지를 작성하세요.
 - 질문을 하지 마세요.
 """
+
 
 @execution_informer.user_prompt
 async def user_prompt(deps: ExecutionInformerDeps) -> str:
