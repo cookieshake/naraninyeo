@@ -66,6 +66,7 @@ class MessageRouter:
                     bot_message.channel.channel_id,
                     prefix + bot_message.content.text,
                 )
+                await asyncio.sleep(2)
         except Exception as e:
             logging.error(e)
             if answer_required:
