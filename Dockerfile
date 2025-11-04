@@ -27,8 +27,6 @@ RUN uv sync --no-dev
 
 # Copy project files
 COPY naraninyeo/ naraninyeo/
-COPY main.py main.py
 
 # Run the application with OpenTelemetry instrumentation - using kafka consumer mode
-ENTRYPOINT ["uv", "run", "--no-dev", "python", "main.py"]
-CMD [ "http" ]
+ENTRYPOINT ["uv", "run", "--no-dev", "python", "-m", "naraninyeo"]

@@ -32,14 +32,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Generate date-based tag
+        id: date-tag
+        run: |
+          DATE=$(date -u +"%Y-%m-%d")
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "tag=${DATE}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "branch-tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=sha
+            type=raw,value=${{ steps.date-tag.outputs.tag }}
+            type=raw,value=${{ steps.date-tag.outputs.branch-tag }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -68,8 +76,8 @@ jobs:
         run: |
           SERVICE_NAME="naraninyeo"
           BRANCH="${{ github.ref_name }}"
-          SHA_TAG=$(echo "${{ needs.build-and-push.outputs.tags }}" | grep -o "sha-[a-f0-9]\{7\}")
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHA_TAG}"
+          DATE_TAG=$(echo "${{ needs.build-and-push.outputs.tags }}" | grep -o "[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-[a-f0-9]\{7\}")
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${DATE_TAG}"
 
           kn service update ${SERVICE_NAME}-${BRANCH} \
             --namespace naraninyeo \
