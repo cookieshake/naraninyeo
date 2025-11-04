@@ -37,7 +37,10 @@ class APIClient:
         async with self.client.stream(
             "POST",
             "/new_message",
-            json=req.model_dump(),
+            content=req.model_dump_json(),
+            headers={
+                "Content-Type": "application/ld+json",
+            },
         ) as response:
             response.raise_for_status()
             async for chunk in response.aiter_lines():

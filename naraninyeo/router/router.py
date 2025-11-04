@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 import random
 from datetime import datetime
@@ -50,7 +51,7 @@ class MessageRouter:
         try:
             message = await self.parse_message(json.loads(msg.value))
         except Exception as e:
-            print(e)
+            logging.error(e)
             return
 
         answer_required = message.content.text.startswith("/")
@@ -66,11 +67,11 @@ class MessageRouter:
                     prefix + bot_message.content.text,
                 )
         except Exception as e:
-            print(e)
+            logging.error(e)
             if answer_required:
                 await self.phone_client.reply(
                     message.channel.channel_id,
-                    f".EntityFrameworkError? {e}",
+                    f"읭? {e}",
                 )
 
     async def parse_message(self, message_data: dict) -> Message:
