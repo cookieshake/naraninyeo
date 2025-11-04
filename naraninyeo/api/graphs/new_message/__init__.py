@@ -12,7 +12,10 @@ from naraninyeo.api.graphs.new_message.models import (
 from naraninyeo.api.graphs.new_message.plan import plan
 from naraninyeo.core.models import EvaluationFeedback
 
-_new_message_graph = StateGraph(state_schema=NewMessageGraphState, context_schema=NewMessageGraphContext)
+_new_message_graph = StateGraph(
+    state_schema=NewMessageGraphState,
+    context_schema=NewMessageGraphContext,
+)
 
 _new_message_graph.add_node("plan", plan)
 _new_message_graph.add_node("inform_plan", inform_plan)
@@ -38,7 +41,7 @@ def route_based_on_evaluation(state: NewMessageGraphState) -> str:
     elif state.latest_evaluation_feedback == EvaluationFeedback.FINALIZE:
         return "finalize_response"
     else:
-        return END
+        raise ValueError(f"Unknown evaluation feedback: {state.latest_evaluation_feedback}")
 
 
 _new_message_graph.add_conditional_edges("evaluate_response", route_based_on_evaluation)

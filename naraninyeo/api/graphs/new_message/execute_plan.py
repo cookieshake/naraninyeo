@@ -7,6 +7,7 @@ from naraninyeo.api.graphs.new_message.models import (
 
 
 async def execute_plan(state: NewMessageGraphState, runtime: Runtime[NewMessageGraphContext]) -> NewMessageGraphState:
+    state.outgoing_messages = []
     executor = runtime.context.plan_action_executor
     if state.response_plan is None:
         return state

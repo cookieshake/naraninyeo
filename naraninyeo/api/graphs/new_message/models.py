@@ -1,7 +1,7 @@
 import operator
 from typing import Annotated, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from naraninyeo.api.infrastructure.interfaces import Clock, MemoryRepository, MessageRepository, PlanActionExecutor
 from naraninyeo.core.models import (
@@ -27,8 +27,8 @@ class NewMessageGraphState(BaseModel):
     plan_action_results: Optional[List[PlanActionResult]] = None
     evaluation_count: int = 0
     latest_evaluation_feedback: Optional[EvaluationFeedback] = None
-    draft_messages: Optional[List[BotMessage]] = None
-    outgoing_messages: Optional[Annotated[List[BotMessage], operator.add]] = None
+    draft_messages: List[BotMessage] = Field(default_factory=list)
+    outgoing_messages: Annotated[List[BotMessage], operator.add] = Field(default_factory=list)
 
 
 class NewMessageGraphContext(BaseModel):

@@ -87,7 +87,7 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                     ActionType.SEARCH_WEB_ENCYCLOPEDIA: "encyclopedia",
                 }
                 results = await self.search_client.search(
-                    search_type=action_kv[action.action_type], query=action.query or "", limit=5
+                    search_type=action_kv[action.action_type], query=action.query or "", limit=12
                 )
                 tasks = []
                 for result in results:

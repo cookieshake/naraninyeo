@@ -1,3 +1,4 @@
+import logging
 from langgraph.runtime import Runtime
 
 from naraninyeo.api.graphs.new_message.models import (
@@ -8,11 +9,13 @@ from naraninyeo.api.graphs.new_message.models import (
 
 async def finalize_response(
     state: NewMessageGraphState, runtime: Runtime[NewMessageGraphContext]
-) -> NewMessageGraphState:
-    if state.draft_messages is None:
-        return state
-    if state.outgoing_messages is None:
-        state.outgoing_messages = []
-    state.outgoing_messages
-    state.draft_messages = []
-    return state
+) -> dict:
+    logging.info("Finalizing response")
+    state.outgoing_messages = []
+    if len(state.draft_messages) == 0:
+        return {}
+    return {
+        "outgoing_messages": state.draft_messages,
+        "draft_messages": [],
+    }
+

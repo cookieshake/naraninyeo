@@ -9,6 +9,7 @@ from naraninyeo.core.models import ResponsePlan
 
 
 async def plan(state: NewMessageGraphState, runtime: Runtime[NewMessageGraphContext]) -> NewMessageGraphState:
+    state.outgoing_messages = []
     if state.incoming_message is None:
         return state
 
