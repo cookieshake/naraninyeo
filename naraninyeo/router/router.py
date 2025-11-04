@@ -18,6 +18,7 @@ from naraninyeo.router.phone_client import PhoneClient
 
 class MessageRouter:
     def __init__(self) -> None:
+        self.test_emoji = "🧑‍🔬"
         self.first_client = APIClient(os.environ["FIRST_API_URL"], os.environ["BOT_ID"])
         self.second_client = APIClient(os.environ["SECOND_API_URL"], os.environ["BOT_ID"])
         self.phone_client = PhoneClient(os.environ["PHONE_API_URL"])
@@ -59,7 +60,7 @@ class MessageRouter:
                 if client == self.first_client:
                     prefix = ""
                 else:
-                    prefix = "🧑‍🔬 "
+                    prefix = self.test_emoji + " "
                 await self.phone_client.reply(
                     bot_message.channel.channel_id,
                     prefix + bot_message.content.text,
@@ -69,10 +70,11 @@ class MessageRouter:
             if answer_required:
                 await self.phone_client.reply(
                     message.channel.channel_id,
-                    f"읭? {e}",
+                    f".EntityFrameworkError? {e}",
                 )
 
     async def parse_message(self, message_data: dict) -> Message:
+        message_data["json"]["message"] = message_data["json"]["message"].replace(self.test_emoji, "")
         message_id = message_data["json"]["id"]
         channel = Channel(
             channel_id=message_data["json"]["chat_id"],

@@ -66,7 +66,7 @@ class TestProvider(Provider):
 
     @provide
     def vchord_container(self) -> Iterator[PostgresContainer]:  # pragma: no cover
-        vchord = PostgresContainer(image="tensorchord/vchord-suite:pg18-20251001", driver="")
+        vchord = PostgresContainer(image="tensorchord/vchord-suite:pg17-20251101", driver="")
         vchord.start()
         try:
             yield vchord
