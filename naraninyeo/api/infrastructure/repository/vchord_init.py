@@ -7,7 +7,6 @@ class VchordInit:
         self.pool = pool
 
     DATABASE_INIT = """
-        CREATE SCHEMA IF NOT EXISTS naraninyeo;
         CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
         CREATE EXTENSION IF NOT EXISTS pg_tokenizer CASCADE;
         CREATE EXTENSION IF NOT EXISTS vchord_bm25 CASCADE;
@@ -24,7 +23,7 @@ class VchordInit:
     """
 
     CREATE_TABLE_BOT = """
-        CREATE TABLE IF NOT EXISTS naraninyeo.bots (
+        CREATE TABLE IF NOT EXISTS bots (
             tenant_id VARCHAR(255) NOT NULL,
             bot_id VARCHAR(255) NOT NULL,
             bot_name VARCHAR(255) NOT NULL,
@@ -36,7 +35,7 @@ class VchordInit:
     """
 
     CREATE_TABLE_ATTACHMENT = """
-        CREATE TABLE IF NOT EXISTS naraninyeo.attachments (
+        CREATE TABLE IF NOT EXISTS attachments (
             tenant_id VARCHAR(255) NOT NULL,
             message_id VARCHAR(255) NOT NULL,
             attachment_id VARCHAR(255) NOT NULL,
@@ -50,7 +49,7 @@ class VchordInit:
     """
 
     CREATE_TABLE_MESSAGE = """
-        CREATE TABLE IF NOT EXISTS naraninyeo.messages (
+        CREATE TABLE IF NOT EXISTS messages (
             tenant_id VARCHAR(255) NOT NULL,
             message_id VARCHAR(255) NOT NULL,
             channel_id VARCHAR(255) NOT NULL,
@@ -65,13 +64,13 @@ class VchordInit:
 
             PRIMARY KEY (tenant_id, message_id)
         );
-        CREATE INDEX IF NOT EXISTS naraninyeo_messages_content_text_bvec_bm25_idx
-        ON naraninyeo.messages
+        CREATE INDEX IF NOT EXISTS messages_content_text_bvec_bm25_idx
+        ON messages
         USING bm25 (content_text_bvec bm25_ops);
     """
 
     CREATE_TABLE_MEMORY_ITEM = """
-        CREATE TABLE IF NOT EXISTS naraninyeo.memory_items (
+        CREATE TABLE IF NOT EXISTS memory_items (
             tenant_id VARCHAR(255) NOT NULL,
             memory_id VARCHAR(255) NOT NULL,
             bot_id VARCHAR(255) NOT NULL,
@@ -100,7 +99,7 @@ class VchordInit:
             await conn.execute(self.CREATE_TABLE_MEMORY_ITEM)
             await conn.execute(
                 """
-                INSERT INTO naraninyeo.bots (tenant_id, bot_id, bot_name, author_id, created_at)
+                INSERT INTO bots (tenant_id, bot_id, bot_name, author_id, created_at)
                 VALUES ('default', 'system_bot', 'System Bot', 'system', NOW())
                 ON CONFLICT (tenant_id, bot_id) DO NOTHING
                 """
