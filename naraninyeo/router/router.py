@@ -30,6 +30,9 @@ class MessageRouter:
         )
         self.session = get_session()
         self.bucket = os.environ["S3_BUCKET"]
+        self.aws_access_key_id = os.environ["AWS_ACCESS_KEY_ID"]
+        self.aws_secret_access_key = os.environ["AWS_SECRET_ACCESS_KEY"]
+        self.s3_endpoint_url = os.environ["S3_ENDPOINT_URL"]
 
     async def run(self) -> None:
         await self.consumer.start()
@@ -161,7 +164,12 @@ class MessageRouter:
                     async for chunk in response.aiter_bytes():
                         await temp_file.write(chunk)
             await temp_file.seek(0)
-            async with self.session.create_client("s3") as client:
+            async with self.session.create_client(
+                "s3",
+                aws_access_key_id=self.aws_access_key_id,
+                aws_secret_access_key=self.aws_secret_access_key,
+                endpoint_url=self.s3_endpoint_url,
+            ) as client:
                 await client.upload_fileobj(
                     temp_file,
                     self.bucket,
