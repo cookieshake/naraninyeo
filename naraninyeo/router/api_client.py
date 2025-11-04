@@ -20,6 +20,7 @@ class APIClient:
                 connect=10.0,
                 read=180.0,
                 write=180.0,
+                pool=10.0,
             ),
         )
 
