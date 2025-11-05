@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from typing import Optional
 
 from dishka.integrations.fastapi import FromDishka, inject
@@ -52,26 +53,40 @@ async def new_message(
 
     if not new_message_request.reply_needed:
         bot = await bot_repo.get(tctx, new_message_request.bot_id)
-        if bot and (new_message_request.message.author.author_id == bot.bot_id):
+        if bot and (new_message_request.message.author.author_id == bot.author_id):
+            latest_memory = await memory_repo.get_channel_memory_items(
+                tctx,
+                bot_id=new_message_request.bot_id,
+                channel_id=new_message_request.message.channel.channel_id,
+                limit=1,
+            )
+            latest_update = latest_memory[0].updated_at if latest_memory else None
             latest_messages = await message_repo.get_channel_messages_before(
                 tctx,
                 channel_id=new_message_request.message.channel.channel_id,
                 before_message_id=new_message_request.message.message_id,
-                limit=20,
+                limit=30,
             )
-            init_state = ManageMemoryGraphState(
-                current_tctx=tctx,
-                current_bot=bot,
-                status="processing",
-                incoming_message=new_message_request.message,
-                latest_history=list(latest_messages),
-            )
-            graph_context = ManageMemoryGraphContext(
-                clock=clock,
-                id_generator=id_generator,
-                memory_repository=memory_repo,
-            )
-            asyncio.create_task(manage_memory_graph.ainvoke(init_state, context=graph_context))
+            oldest_message_ts_in_history = latest_messages[0].timestamp if latest_messages else None
+            if (latest_update and oldest_message_ts_in_history) and oldest_message_ts_in_history > latest_update:
+                logging.info(
+                    "Oldest message in history (%s) is newer than latest update (%s)",
+                    oldest_message_ts_in_history,
+                    latest_update,
+                )
+                init_state = ManageMemoryGraphState(
+                    current_tctx=tctx,
+                    current_bot=bot,
+                    status="processing",
+                    incoming_message=new_message_request.message,
+                    latest_history=list(latest_messages),
+                )
+                graph_context = ManageMemoryGraphContext(
+                    clock=clock,
+                    id_generator=id_generator,
+                    memory_repository=memory_repo,
+                )
+                asyncio.create_task(manage_memory_graph.ainvoke(init_state, context=graph_context))
 
         return Response(
             status_code=200,

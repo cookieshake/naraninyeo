@@ -76,7 +76,7 @@ class VchordMemoryRepository:
                        content, created_at, updated_at, expires_at
                 FROM memory_items
                 WHERE tenant_id = $1 AND bot_id = $2 AND channel_id = $3
-                ORDER BY created_at DESC
+                ORDER BY updated_at DESC
                 LIMIT $4
                 """,
                 tctx.tenant_id,
