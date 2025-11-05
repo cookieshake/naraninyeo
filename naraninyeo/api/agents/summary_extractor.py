@@ -19,7 +19,7 @@ class SummaryExtractorOutput(BaseModel):
 
 summary_extractor = StructuredAgent(
     name="Summary Extractor",
-    model="openrouter:openai/gpt-oss-120b",
+    model="openrouter:openai/gpt-oss-20b",
     deps_type=SummaryExtractorDeps,
     output_type=NativeOutput(SummaryExtractorOutput),
 )

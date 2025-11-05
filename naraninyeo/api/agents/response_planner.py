@@ -14,7 +14,7 @@ class ResponsePlannerDeps(BaseModel):
 
 response_planner = StructuredAgent(
     name="Response Planner",
-    model="openrouter:x-ai/grok-4-fast",
+    model="openrouter:openai/gpt-4.1-mini",
     model_settings=ModelSettings(
         extra_body={
             "reasoning": {

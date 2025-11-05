@@ -3,13 +3,17 @@ from urllib.parse import urljoin
 
 import httpx
 from bs4 import BeautifulSoup
-from markdownify import MarkdownConverter
-
+from html_to_markdown import convert, PreprocessingOptions
 
 class WebDocumentFetcher:
     def __init__(self) -> None:
-        self.markdown_converter = MarkdownConverter(bullets="* ")
-        self.client = httpx.AsyncClient(verify=False)
+        self.client = httpx.AsyncClient(
+            verify=False,
+            timeout=10.0,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:144.0) Gecko/20100101 Firefox/144.0",
+            },
+        )
 
     async def fetch_document(
         self,
@@ -37,7 +41,7 @@ class WebDocumentFetcher:
             async with httpx.AsyncClient() as iframe_client:
                 iframe_links = [urljoin(url, iframe.get("src")) for iframe in iframes]  # pyright: ignore[reportArgumentType, reportAttributeAccessIssue]
                 iframe_htmls = await asyncio.gather(
-                    *(iframe_client.get(link, timeout=10.0) for link in iframe_links),
+                    *(iframe_client.get(link) for link in iframe_links),
                     return_exceptions=True,
                 )
             for iframe, iframe_resp in zip(iframes, iframe_htmls, strict=False):
@@ -53,5 +57,11 @@ class WebDocumentFetcher:
         self,
         soup: BeautifulSoup,
     ) -> str:
-        markdown_content = self.markdown_converter.convert_soup(soup)
+        markdown_content = convert(
+            soup.prettify(),
+            preprocessing=PreprocessingOptions(
+                enabled=True,
+                preset="aggressive",
+            )
+        )
         return markdown_content

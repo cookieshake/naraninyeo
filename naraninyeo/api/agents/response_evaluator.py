@@ -15,7 +15,7 @@ class ResponseEvaluatorDeps(BaseModel):
 
 response_evaluator = StructuredAgent(
     name="Response Evaluator",
-    model="openrouter:openai/gpt-4.1-mini",
+    model="openrouter:openai/gpt-4.1-nano",
     deps_type=ResponseEvaluatorDeps,
     output_type=NativeOutput(EvaluationFeedback),
 )

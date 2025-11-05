@@ -35,7 +35,7 @@ class Attachment(BaseModel):
 
 
 class MessageContent(BaseModel):
-    text: str = Field(min_length=1)
+    text: str
     attachments: list[Attachment] = Field(default_factory=list)
 
 

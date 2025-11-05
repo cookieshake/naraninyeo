@@ -20,7 +20,7 @@ class ResponseGeneratorDeps(BaseModel):
 
 response_generator = StructuredAgent(
     name="Response Generator",
-    model="openrouter:google/gemini-2.5-flash-preview-09-2025",
+    model="openrouter:anthropic/claude-sonnet-4.5",
     model_settings=ModelSettings(
         extra_body={
             "reasoning": {
