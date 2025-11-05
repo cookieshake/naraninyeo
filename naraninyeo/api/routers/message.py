@@ -51,21 +51,27 @@ async def new_message(
     await message_repo.upsert(tctx, new_message_request.message)
 
     if not new_message_request.reply_needed:
-        if new_message_request.message.author.author_id == new_message_request.bot_id:
-            bot = await bot_repo.get(tctx, new_message_request.bot_id)
-            if bot:
-                init_state = ManageMemoryGraphState(
-                    current_tctx=tctx,
-                    current_bot=bot,
-                    status="processing",
-                    incoming_message=new_message_request.message,
-                )
-                graph_context = ManageMemoryGraphContext(
-                    clock=clock,
-                    id_generator=id_generator,
-                    memory_repository=memory_repo,
-                )
-                asyncio.create_task(manage_memory_graph.ainvoke(init_state, context=graph_context))
+        bot = await bot_repo.get(tctx, new_message_request.bot_id)
+        if bot and (new_message_request.message.author.author_id == bot.bot_id):
+            latest_messages = await message_repo.get_channel_messages_before(
+                tctx,
+                channel_id=new_message_request.message.channel.channel_id,
+                before_message_id=new_message_request.message.message_id,
+                limit=20,
+            )
+            init_state = ManageMemoryGraphState(
+                current_tctx=tctx,
+                current_bot=bot,
+                status="processing",
+                incoming_message=new_message_request.message,
+                latest_history=list(latest_messages),
+            )
+            graph_context = ManageMemoryGraphContext(
+                clock=clock,
+                id_generator=id_generator,
+                memory_repository=memory_repo,
+            )
+            asyncio.create_task(manage_memory_graph.ainvoke(init_state, context=graph_context))
 
         return Response(
             status_code=200,

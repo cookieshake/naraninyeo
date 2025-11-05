@@ -3,7 +3,8 @@ from urllib.parse import urljoin
 
 import httpx
 from bs4 import BeautifulSoup
-from html_to_markdown import convert, PreprocessingOptions
+from html_to_markdown import PreprocessingOptions, convert
+
 
 class WebDocumentFetcher:
     def __init__(self) -> None:
@@ -62,6 +63,6 @@ class WebDocumentFetcher:
             preprocessing=PreprocessingOptions(
                 enabled=True,
                 preset="aggressive",
-            )
+            ),
         )
         return markdown_content
