@@ -18,7 +18,7 @@ class ExecutionInformerOutput(BaseModel):
 
 execution_informer = StructuredAgent(
     name="Execution Informer",
-    model="openrouter:openai/gpt-4.1-mini",
+    model="openrouter:google/gemini-2.5-flash-lite-preview-09-2025",
     deps_type=ExecutionInformerDeps,
     output_type=ExecutionInformerOutput,
 )
