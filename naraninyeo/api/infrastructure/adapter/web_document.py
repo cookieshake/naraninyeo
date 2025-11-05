@@ -28,7 +28,7 @@ class WebDocumentFetcher:
         self,
         url: str,
     ) -> str:
-        response = await self.client.get(url, timeout=10.0)
+        response = await self.client.get(url, timeout=10.0, follow_redirects=True)
         response.raise_for_status()
         return response.text
 
