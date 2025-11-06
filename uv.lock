@@ -996,6 +996,17 @@ wheels = [
 ]
 
 [[package]]
+name = "html-to-markdown"
+version = "2.5.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/12/44/ae69b5994be93041a6d40bb627e0a9876b14b63a75fb38bd981e105ffc07/html_to_markdown-2.5.6.tar.gz", hash = "sha256:0a891fc327a4cc8017cd9af93c46d657cdd36c837f49f039319f10a4b2aec605", size = 1933181, upload-time = "2025-10-29T21:19:10.59Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/be/c9/10703e3f190d0b9988b9683bdcb7278013f951010a582529e54cbb101309/html_to_markdown-2.5.6-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:9476b5a031ff7ec250e849688d4cd783105535fe36e142b76a031d58c83c3b48", size = 4871290, upload-time = "2025-10-29T21:19:04.73Z" },
+    { url = "https://files.pythonhosted.org/packages/f3/c1/b45e17e5d66110932aca582b4e179d0a9837653a214756c67246e0604ae8/html_to_markdown-2.5.6-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:7eb5a08c38251443dfc194694acef826261e3c01a9aeec20073e4f7a26321817", size = 5397487, upload-time = "2025-10-29T21:19:07.306Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/42/55a7dce8fda38193e1dfb6e9c60f1d2ea5219bcacf5deef83db88a639d85/html_to_markdown-2.5.6-cp310-abi3-win_amd64.whl", hash = "sha256:277bebbbe731ca75b098ce6900e576d896c457a6ca036d7545207902adf2a66a", size = 5145598, upload-time = "2025-10-29T21:19:08.996Z" },
+]
+
+[[package]]
 name = "htmltools"
 version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1634,6 +1645,7 @@ dependencies = [
     { name = "dateparser" },
     { name = "dishka" },
     { name = "fastapi" },
+    { name = "html-to-markdown" },
     { name = "httpx" },
     { name = "langgraph" },
     { name = "loguru" },
@@ -1677,6 +1689,7 @@ requires-dist = [
     { name = "dateparser", specifier = ">=1.2.2" },
     { name = "dishka", specifier = ">=1.6.0" },
     { name = "fastapi", specifier = ">=0.116.1" },
+    { name = "html-to-markdown", specifier = ">=2.5.6" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "langgraph", specifier = ">=1.0.1" },
     { name = "loguru", specifier = ">=0.7.3" },
