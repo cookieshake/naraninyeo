@@ -49,78 +49,7 @@ async def new_message(
     plan_executor: FromDishka[PlanActionExecutor],
 ):
     tctx = TenancyContext(tenant_id="default")
-    await message_repo.upsert(tctx, new_message_request.message)
-
-    if not new_message_request.reply_needed:
-        bot = await bot_repo.get(tctx, new_message_request.bot_id)
-        if bot and (new_message_request.message.author.author_id == bot.author_id):
-            latest_update_ts = await memory_repo.get_latest_memory_update_ts(
-                tctx,
-                bot_id=new_message_request.bot_id,
-                channel_id=new_message_request.message.channel.channel_id,
-            )
-            latest_messages = await message_repo.get_channel_messages_before(
-                tctx,
-                channel_id=new_message_request.message.channel.channel_id,
-                before_message_id=new_message_request.message.message_id,
-                limit=30,
-            )
-            oldest_message_ts_in_history = latest_messages[0].timestamp if latest_messages else None
-            if (not latest_update_ts) or (
-                oldest_message_ts_in_history and oldest_message_ts_in_history > latest_update_ts
-            ):
-                logging.info(
-                    "Oldest message in history (%s) is newer than latest update (%s)",
-                    oldest_message_ts_in_history,
-                    latest_update_ts,
-                )
-                init_state = ManageMemoryGraphState(
-                    current_tctx=tctx,
-                    current_bot=bot,
-                    status="processing",
-                    incoming_message=new_message_request.message,
-                    latest_history=list(latest_messages),
-                )
-                graph_context = ManageMemoryGraphContext(
-                    clock=clock,
-                    id_generator=id_generator,
-                    memory_repository=memory_repo,
-                )
-                asyncio.create_task(manage_memory_graph.ainvoke(init_state, context=graph_context))
-            else:
-                logging.info(
-                    "No need to update memory. Latest memory update ts: %s, Oldest message ts in history: %s",
-                    latest_update_ts,
-                    oldest_message_ts_in_history,
-                )
-
-        return Response(
-            status_code=200,
-            content=NewMessageResponseChunk(is_final=True).model_dump_json(),
-            media_type="application/ld+json",
-        )
-
-    async with asyncio.TaskGroup() as tg:
-        latest_message_task = tg.create_task(
-            message_repo.get_channel_messages_before(
-                tctx,
-                channel_id=new_message_request.message.channel.channel_id,
-                before_message_id=new_message_request.message.message_id,
-                limit=20,
-            )
-        )
-        channel_memory_task = tg.create_task(
-            memory_repo.get_channel_memory_items(
-                tctx,
-                bot_id=new_message_request.bot_id,
-                channel_id=new_message_request.message.channel.channel_id,
-                limit=100,
-            )
-        )
-        bot_task = tg.create_task(bot_repo.get(tctx, new_message_request.bot_id))
-    latest_message = await latest_message_task
-    channel_memory = await channel_memory_task
-    bot = await bot_task
+    bot = await bot_repo.get(tctx, new_message_request.bot_id)
     if not bot:
         return Response(
             status_code=400,
@@ -129,39 +58,97 @@ async def new_message(
             ).model_dump_json(),
             media_type="application/ld+json",
         )
+    async with asyncio.TaskGroup() as tg:
+        upsert = tg.create_task(message_repo.upsert(tctx, new_message_request.message))
+        latest_update_ts = tg.create_task(
+            memory_repo.get_latest_memory_update_ts(
+                tctx,
+                bot_id=new_message_request.bot_id,
+                channel_id=new_message_request.message.channel.channel_id,
+            )
+        )
+        latest_messages = tg.create_task(
+            message_repo.get_channel_messages_before(
+                tctx,
+                channel_id=new_message_request.message.channel.channel_id,
+                before_message_id=new_message_request.message.message_id,
+                limit=30,
+            )
+        )
+    await upsert
+    latest_update_ts = await latest_update_ts
+    latest_messages = await latest_messages
+    oldest_message_ts_in_history = latest_messages[0].timestamp if latest_messages else None
 
-    init_state = NewMessageGraphState(
-        current_tctx=tctx,
-        current_bot=bot,
-        status="processing",
-        incoming_message=new_message_request.message,
-        latest_history=list(latest_message),
-        memories=list(channel_memory),
-    )
-    graph_context = NewMessageGraphContext(
-        clock=clock,
-        message_repository=message_repo,
-        memory_repository=memory_repo,
-        plan_action_executor=plan_executor,
-    )
+    if (not latest_update_ts) or (
+        oldest_message_ts_in_history and oldest_message_ts_in_history > latest_update_ts
+    ):
+        logging.info(
+            "Oldest message in history (%s) is newer than latest update (%s)",
+            oldest_message_ts_in_history,
+            latest_update_ts,
+        )
+        init_state = ManageMemoryGraphState(
+            current_tctx=tctx,
+            current_bot=bot,
+            status="processing",
+            incoming_message=new_message_request.message,
+            latest_history=list(latest_messages),
+        )
+        graph_context = ManageMemoryGraphContext(
+            clock=clock,
+            id_generator=id_generator,
+            memory_repository=memory_repo,
+        )
+        asyncio.create_task(manage_memory_graph.ainvoke(init_state, context=graph_context))
+    else:
+        logging.info(
+            "No need to update memory. Latest memory update ts: %s, Oldest message ts in history: %s",
+            latest_update_ts,
+            oldest_message_ts_in_history,
+        )
 
-    async def message_stream_generator():
-        current_state = init_state.model_copy()
-        async for state in new_message_graph.astream(init_state, context=graph_context, stream_mode="updates"):
-            state = state.popitem()[1]
-            if not state:
-                continue
-            for key, value in state.items():
-                current_state.__setattr__(key, value)
-            if "outgoing_messages" in state and state["outgoing_messages"] is not None:
-                generated_message = state["outgoing_messages"]
-                for msg in generated_message:
-                    yield (
-                        NewMessageResponseChunk(
-                            is_final=False, generated_message=msg, last_state=current_state.model_dump()
-                        ).model_dump_json()
-                        + "\n"
-                    )
-        yield NewMessageResponseChunk(is_final=True).model_dump_json()
+    if new_message_request.reply_needed:
+        channel_memory = await memory_repo.get_channel_memory_items(
+            tctx,
+            bot_id=new_message_request.bot_id,
+            channel_id=new_message_request.message.channel.channel_id,
+            limit=100,
+        )
 
-    return StreamingResponse(content=message_stream_generator(), media_type="application/ld+json")
+        init_state = NewMessageGraphState(
+            current_tctx=tctx,
+            current_bot=bot,
+            status="processing",
+            incoming_message=new_message_request.message,
+            latest_history=list(latest_messages),
+            memories=list(channel_memory),
+        )
+        graph_context = NewMessageGraphContext(
+            clock=clock,
+            message_repository=message_repo,
+            memory_repository=memory_repo,
+            plan_action_executor=plan_executor,
+        )
+
+        async def message_stream_generator():
+            current_state = init_state.model_copy()
+            async for state in new_message_graph.astream(init_state, context=graph_context, stream_mode="updates"):
+                state = state.popitem()[1]
+                if not state:
+                    continue
+                for key, value in state.items():
+                    current_state.__setattr__(key, value)
+                if "outgoing_messages" in state and state["outgoing_messages"] is not None:
+                    generated_message = state["outgoing_messages"]
+                    for msg in generated_message:
+                        yield (
+                            NewMessageResponseChunk(
+                                is_final=False, generated_message=msg, last_state=current_state.model_dump()
+                            ).model_dump_json()
+                            + "\n"
+                        )
+            yield NewMessageResponseChunk(is_final=True).model_dump_json()
+        return StreamingResponse(content=message_stream_generator(), media_type="application/ld+json")
+    else:
+        return NewMessageResponseChunk(is_final=True)

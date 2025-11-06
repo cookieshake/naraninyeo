@@ -19,7 +19,7 @@ from naraninyeo.router.phone_client import PhoneClient
 
 class MessageRouter:
     def __init__(self) -> None:
-        self.test_emoji = "🧑‍🔬"
+        self.test_emoji = "🥈"
         self.first_client = APIClient(os.environ["FIRST_API_URL"], os.environ["BOT_ID"])
         self.second_client = APIClient(os.environ["SECOND_API_URL"], os.environ["BOT_ID"])
         self.phone_client = PhoneClient(os.environ["PHONE_API_URL"])
@@ -66,7 +66,7 @@ class MessageRouter:
                     bot_message.channel.channel_id,
                     prefix + bot_message.content.text,
                 )
-                await asyncio.sleep(2)
+                await asyncio.sleep(3)
         except Exception as e:
             logging.error(e)
             if answer_required:
