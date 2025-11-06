@@ -54,13 +54,11 @@ async def new_message(
     if not new_message_request.reply_needed:
         bot = await bot_repo.get(tctx, new_message_request.bot_id)
         if bot and (new_message_request.message.author.author_id == bot.author_id):
-            latest_memory = await memory_repo.get_channel_memory_items(
+            latest_update_ts = await memory_repo.get_latest_memory_update_ts(
                 tctx,
                 bot_id=new_message_request.bot_id,
                 channel_id=new_message_request.message.channel.channel_id,
-                limit=1,
             )
-            latest_update = latest_memory[0].updated_at if latest_memory else None
             latest_messages = await message_repo.get_channel_messages_before(
                 tctx,
                 channel_id=new_message_request.message.channel.channel_id,
@@ -68,11 +66,13 @@ async def new_message(
                 limit=30,
             )
             oldest_message_ts_in_history = latest_messages[0].timestamp if latest_messages else None
-            if (latest_update and oldest_message_ts_in_history) and oldest_message_ts_in_history > latest_update:
+            if (not latest_update_ts) or (
+                oldest_message_ts_in_history and oldest_message_ts_in_history > latest_update_ts
+            ):
                 logging.info(
                     "Oldest message in history (%s) is newer than latest update (%s)",
                     oldest_message_ts_in_history,
-                    latest_update,
+                    latest_update_ts,
                 )
                 init_state = ManageMemoryGraphState(
                     current_tctx=tctx,
@@ -87,6 +87,8 @@ async def new_message(
                     memory_repository=memory_repo,
                 )
                 asyncio.create_task(manage_memory_graph.ainvoke(init_state, context=graph_context))
+            else:
+                logging.info("No need to update memory")
 
         return Response(
             status_code=200,
@@ -140,17 +142,19 @@ async def new_message(
     )
 
     async def message_stream_generator():
-        message_sent = 0
-        async for state in new_message_graph.astream(init_state, context=graph_context, stream_mode="values"):
+        current_state = init_state.model_copy()
+        async for state in new_message_graph.astream(init_state, context=graph_context, stream_mode="updates"):
+            state = state.popitem()[1]
             if not state:
                 continue
+            for key, value in state.items():
+                current_state.__setattr__(key, value)
             if "outgoing_messages" in state and state["outgoing_messages"] is not None:
-                generated_message = state["outgoing_messages"][message_sent:]
-                message_sent += len(generated_message)
+                generated_message = state["outgoing_messages"]
                 for msg in generated_message:
                     yield (
                         NewMessageResponseChunk(
-                            is_final=False, generated_message=msg, last_state=state
+                            is_final=False, generated_message=msg, last_state=current_state.model_dump()
                         ).model_dump_json()
                         + "\n"
                     )

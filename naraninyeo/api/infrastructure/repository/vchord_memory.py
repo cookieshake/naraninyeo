@@ -97,3 +97,19 @@ class VchordMemoryRepository:
                 )
                 for row in rows
             ]
+
+    async def get_latest_memory_update_ts(
+        self, tctx: TenancyContext, bot_id: str, channel_id: str
+    ) -> datetime | None:
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT MAX(updated_at) AS latest_update
+                FROM memory_items
+                WHERE tenant_id = $1 AND bot_id = $2 AND channel_id = $3
+                """,
+                tctx.tenant_id,
+                bot_id,
+                channel_id,
+            )
+            return row["latest_update"] if row and row["latest_update"] else None

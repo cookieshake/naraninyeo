@@ -20,7 +20,7 @@ class ResponseGeneratorDeps(BaseModel):
 
 response_generator = StructuredAgent(
     name="Response Generator",
-    model="openrouter:anthropic/claude-sonnet-4.5",
+    model="openrouter:deepseek/deepseek-chat-v3-0324",
     model_settings=ModelSettings(
         extra_body={
             "reasoning": {
@@ -56,7 +56,7 @@ async def instructions(ctx: RunContext[ResponseGeneratorDeps]) -> str:
 - 대화 맥락 우선: 직전 대화의 흐름과 톤을 최우선으로 맞출 것
 - 참고 정보는 보조자료: 대화 맥락과 충돌하면 참고 정보를 과감히 무시할 것
 - 주제 일탈 금지: 사용자가 원치 않으면 새로운 화제를 열지 말 것
-)
+- 마크다운 사용 금지: 응답에 마크다운 문법 절대 사용 금지
 """
 
 
@@ -102,17 +102,9 @@ async def user_prompt(deps: ResponseGeneratorDeps) -> str:
 {deps.incoming_message.preview}
 ```
 
-# 응답 생성 지시사항
-
-1) 직전 대화의 흐름과 톤에 자연스럽게 이어질 것
-2) 마지막 메시지의 의도에 정확히 답할 것
-3) 참고 정보는 보조로만 사용하고, 대화 맥락과 충돌하면 참고 정보를 과감히 무시할 것
-- 주제 일탈 금지. 사용자가 원하지 않으면 새로운 화제를 시작하지 말 것.
-
 위 내용을 바탕으로 '{deps.bot.bot_name}'의 응답을 생성하세요.
 
 반드시 메시지 내용만 작성하세요.
 "시간 이름: 내용" 형식이나 "나란잉여:" 같은 접두사를 절대 사용하지 마세요.
 짧고 간결하게, 핵심만 요약해서 전달하세요. 불필요한 미사여구나 설명은 생략하세요.
-참고 정보에 끌려가서 대화 흐름을 깨지 않도록 주의하세요.
 """

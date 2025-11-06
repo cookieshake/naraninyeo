@@ -11,7 +11,7 @@ class MemoryExtractorDeps(BaseModel):
 
 memory_extractor = StructuredAgent(
     name="Memory Extractor",
-    model="openrouter:openai/gpt-5-nano",
+    model="openrouter:openai/gpt-4.1-nano",
     deps_type=MemoryExtractorDeps,
     output_type=list[str],
 )

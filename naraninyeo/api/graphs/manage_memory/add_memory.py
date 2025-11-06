@@ -10,10 +10,9 @@ from naraninyeo.core.models import MemoryItem, Message
 async def extract_memory_items_from_messages(
     state: ManageMemoryGraphState, runtime: Runtime[ManageMemoryGraphContext], messages: list[Message]
 ) -> list[MemoryItem]:
-    clock = runtime.context.clock
     id_generator = runtime.context.id_generator
     memories = await memory_extractor.run_with_generator(MemoryExtractorDeps(latest_messages=messages))
-    now = clock.now()
+    now = state.incoming_message.timestamp
     memories = [
         MemoryItem(
             memory_id=id_generator.generate_id(),

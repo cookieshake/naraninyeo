@@ -14,6 +14,6 @@ async def finalize_response(state: NewMessageGraphState, runtime: Runtime[NewMes
     if len(state.draft_messages) == 0:
         return {}
     return {
-        "outgoing_messages": state.draft_messages,
+        "outgoing_messages": state.outgoing_messages + state.draft_messages,
         "draft_messages": [],
     }
