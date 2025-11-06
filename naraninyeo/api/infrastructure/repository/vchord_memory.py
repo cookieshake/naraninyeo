@@ -98,9 +98,7 @@ class VchordMemoryRepository:
                 for row in rows
             ]
 
-    async def get_latest_memory_update_ts(
-        self, tctx: TenancyContext, bot_id: str, channel_id: str
-    ) -> datetime | None:
+    async def get_latest_memory_update_ts(self, tctx: TenancyContext, bot_id: str, channel_id: str) -> datetime | None:
         async with self.pool.acquire() as conn:
             row = await conn.fetchrow(
                 """

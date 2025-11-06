@@ -170,10 +170,7 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                     )
                 )
                 tasks.append(task)
-            await asyncio.wait_for(
-                asyncio.gather(*tasks, return_exceptions=True),
-                timeout=20
-            )
+            await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=20)
         except TimeoutError:
             pass
         return collector.get_results()

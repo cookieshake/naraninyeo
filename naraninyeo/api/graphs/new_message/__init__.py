@@ -30,6 +30,7 @@ _new_message_graph.add_edge("plan", "inform_plan")
 _new_message_graph.add_edge("execute_plan", "generate_response")
 _new_message_graph.add_edge("generate_response", "evaluate_response")
 
+
 def route_based_on_evaluation(state: NewMessageGraphState) -> str:
     if state.latest_evaluation_feedback == EvaluationFeedback.PLAN_AGAIN:
         return "plan"
