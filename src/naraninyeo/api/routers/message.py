@@ -80,9 +80,7 @@ async def new_message(
     latest_messages = await latest_messages
     oldest_message_ts_in_history = latest_messages[0].timestamp if latest_messages else None
 
-    if (not latest_update_ts) or (
-        oldest_message_ts_in_history and oldest_message_ts_in_history > latest_update_ts
-    ):
+    if (not latest_update_ts) or (oldest_message_ts_in_history and oldest_message_ts_in_history > latest_update_ts):
         logging.info(
             "Oldest message in history (%s) is newer than latest update (%s)",
             oldest_message_ts_in_history,
@@ -149,6 +147,7 @@ async def new_message(
                             + "\n"
                         )
             yield NewMessageResponseChunk(is_final=True).model_dump_json()
+
         return StreamingResponse(content=message_stream_generator(), media_type="application/ld+json")
     else:
         return NewMessageResponseChunk(is_final=True)
