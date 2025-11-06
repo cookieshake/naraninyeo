@@ -88,7 +88,7 @@ async def new_message(
                 )
                 asyncio.create_task(manage_memory_graph.ainvoke(init_state, context=graph_context))
             else:
-                logging.info("No need to update memory")
+                logging.info("No need to update memory. Latest memory update ts: %s, Oldest message ts in history: %s", latest_update_ts, oldest_message_ts_in_history)
 
         return Response(
             status_code=200,
