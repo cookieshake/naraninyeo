@@ -1,7 +1,10 @@
 from typing import Literal
 
 from pydantic import BaseModel
-from pydantic_ai import NativeOutput, RunContext
+from pydantic_ai import RunContext
+from pydantic_ai.models.fallback import FallbackModel
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.core.models import PlanAction
@@ -19,9 +22,12 @@ class SummaryExtractorOutput(BaseModel):
 
 summary_extractor = StructuredAgent(
     name="Summary Extractor",
-    model="openrouter:openai/gpt-oss-20b",
+    model=FallbackModel(
+        OpenAIChatModel("openai/gpt-oss-20b", provider=OpenRouterProvider()),
+        OpenAIChatModel("openai/gpt-oss-120b", provider=OpenRouterProvider()),
+    ),
     deps_type=SummaryExtractorDeps,
-    output_type=NativeOutput(SummaryExtractorOutput),
+    output_type=SummaryExtractorOutput,
 )
 
 
@@ -37,9 +43,6 @@ async def instructions(_: RunContext[SummaryExtractorDeps]) -> str:
 @summary_extractor.user_prompt
 async def user_prompt(deps: SummaryExtractorDeps) -> str:
     return f"""
-[검색 쿼리]
-{deps.plan.query}
-
 [쿼리 지침]
 {deps.plan.description}
 

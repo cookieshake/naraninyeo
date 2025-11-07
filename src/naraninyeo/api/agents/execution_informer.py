@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 from pydantic_ai import RunContext
+from pydantic_ai.models.fallback import FallbackModel
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.core.models import Message, ResponsePlan
@@ -18,7 +21,10 @@ class ExecutionInformerOutput(BaseModel):
 
 execution_informer = StructuredAgent(
     name="Execution Informer",
-    model="openrouter:google/gemini-2.5-flash-lite-preview-09-2025",
+    model=FallbackModel(
+        OpenAIChatModel("google/gemini-2.5-flash-lite-preview-09-2025", provider=OpenRouterProvider()),
+        OpenAIChatModel("qwen/qwen3-next-80b-a3b-instruct", provider=OpenRouterProvider()),
+    ),
     deps_type=ExecutionInformerDeps,
     output_type=ExecutionInformerOutput,
 )

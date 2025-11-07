@@ -34,6 +34,9 @@ dependencies = [
     "opentelemetry-instrumentation-logging>=0.59b0",
     "aiobotocore>=2.25.1",
     "html-to-markdown>=2.5.6",
+    "langsmith[otel]>=0.4.39",
+    "cachetools>=6.2.1",
+    "finance-datareader>=0.9.96",
 ]
 
 [project.scripts]
