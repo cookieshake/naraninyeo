@@ -3,7 +3,7 @@ import logging
 from copy import deepcopy
 from typing import Dict, List, Literal
 
-from opentelemetry.trace import get_tracer, get_current_span
+from opentelemetry.trace import get_current_span, get_tracer
 
 from naraninyeo.api.agents.summary_extractor import SummaryExtractorDeps, summary_extractor
 from naraninyeo.api.infrastructure.adapter.naver_search import NaverSearchClient

@@ -5,7 +5,7 @@ from typing import List, Literal
 import dateparser
 import httpx
 from bs4 import BeautifulSoup
-from opentelemetry.trace import get_tracer, get_current_span
+from opentelemetry.trace import get_current_span, get_tracer
 from pydantic import BaseModel
 
 from naraninyeo.core.settings import Settings
