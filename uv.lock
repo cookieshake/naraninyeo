@@ -1390,6 +1390,13 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/1f/38/9a97f650b8cdb2ba0356d65aef9239f4a30db69ae44c30daa2cf8dd3f350/langsmith-0.4.39-py3-none-any.whl", hash = "sha256:48872eaaa449fc10781b5251f4fc05bc7d5c2d1d733a734566a96dd9166108b4", size = 397767, upload-time = "2025-11-01T00:06:16.433Z" },
 ]
 
+[package.optional-dependencies]
+otel = [
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
+]
+
 [[package]]
 name = "linkify-it-py"
 version = "2.0.3"
@@ -1648,6 +1655,7 @@ dependencies = [
     { name = "html-to-markdown" },
     { name = "httpx" },
     { name = "langgraph" },
+    { name = "langsmith", extra = ["otel"] },
     { name = "loguru" },
     { name = "markdownify" },
     { name = "nanoid" },
@@ -1692,6 +1700,7 @@ requires-dist = [
     { name = "html-to-markdown", specifier = ">=2.5.6" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "langgraph", specifier = ">=1.0.1" },
+    { name = "langsmith", extras = ["otel"], specifier = ">=0.4.39" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "markdownify", specifier = ">=1.2.0" },
     { name = "nanoid", specifier = ">=2.0.0" },

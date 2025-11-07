@@ -3,6 +3,8 @@ import logging
 from copy import deepcopy
 from typing import Dict, List, Literal
 
+from opentelemetry.trace import get_tracer, get_current_span
+
 from naraninyeo.api.agents.summary_extractor import SummaryExtractorDeps, summary_extractor
 from naraninyeo.api.infrastructure.adapter.naver_search import NaverSearchClient
 from naraninyeo.api.infrastructure.adapter.web_document import WebDocumentFetcher
@@ -67,6 +69,7 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
         except Exception as e:
             logging.warning(f"Failed to enhance result for action {plan.action_type}: {e}")
 
+    @get_tracer(__name__).start_as_current_span("execute_action")
     async def _execute_action(
         self,
         tctx: TenancyContext,
@@ -74,6 +77,9 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
         channel_id: str,
         collector: ActionResultCollector,
     ) -> None:
+        span = get_current_span()
+        span.set_attribute("plan.action_type", action.action_type.value)
+        span.set_attribute("plan.action_query", action.query or "")
         match action.action_type:
             case (
                 ActionType.SEARCH_WEB_GENERAL

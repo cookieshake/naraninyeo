@@ -5,6 +5,7 @@ from typing import List, Literal
 import dateparser
 import httpx
 from bs4 import BeautifulSoup
+from opentelemetry.trace import get_tracer, get_current_span
 from pydantic import BaseModel
 
 from naraninyeo.core.settings import Settings
@@ -21,9 +22,14 @@ class NaverSearchClient:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
+    @get_tracer(__name__).start_as_current_span("naver_search")
     async def search(
         self, search_type: Literal["general", "news", "blog", "document", "encyclopedia"], query: str, limit: int
     ) -> List[SearchResult]:
+        span = get_current_span()
+        span.set_attribute("search.type", search_type)
+        span.set_attribute("search.query", query)
+        span.set_attribute("search.limit", limit)
         return [self._parse_result(item) for item in await self._request(search_type, query, limit)]
 
     async def _request(
@@ -70,6 +76,7 @@ class NaverSearchClient:
                 result.extend(payload.get("items", []))
         return result
 
+    @get_tracer(__name__).start_as_current_span("parse_result")
     def _parse_result(self, item: dict[str, str]) -> SearchResult:
         title = BeautifulSoup(item.get("title", ""), "html.parser").get_text().strip()
         description = BeautifulSoup(item.get("description", ""), "html.parser").get_text().strip()

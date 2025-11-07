@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 import httpx
 from bs4 import BeautifulSoup
 from html_to_markdown import PreprocessingOptions, convert
+from opentelemetry.trace import get_tracer
 from pydantic import BaseModel
 
 
@@ -48,6 +49,7 @@ class WebDocumentFetcher:
         response.raise_for_status()
         return response.text
 
+    @get_tracer(__name__).start_as_current_span("preprocess_html")
     async def _preprocess_html(self, url: str, html_content: str) -> BeautifulSoup:
         soup = BeautifulSoup(html_content, "html.parser")
         for script_or_style in soup(["script", "style"]):
@@ -69,6 +71,7 @@ class WebDocumentFetcher:
                 element.decompose()
         return soup
 
+    @get_tracer(__name__).start_as_current_span("html_to_markdown")
     async def _html_to_markdown(
         self,
         soup: BeautifulSoup,

@@ -93,3 +93,6 @@ class OpenTelemetryInstrumentation:
         AsyncPGInstrumentor().instrument()
         HTTPXClientInstrumentor().instrument()
         AIOKafkaInstrumentor().instrument()
+        os.environ["LANGSMITH_OTEL_ENABLED"] = "true"
+        os.environ["LANGSMITH_TRACING"] = "true"
+        os.environ["LANGSMITH_OTEL_ONLY"] = "true"
