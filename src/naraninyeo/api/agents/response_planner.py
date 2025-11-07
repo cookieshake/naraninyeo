@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 from pydantic_ai import ModelSettings, RunContext
+from pydantic_ai.models.fallback import FallbackModel
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.core.models import ActionType, Bot, MemoryItem, Message, ResponsePlan
@@ -14,7 +17,10 @@ class ResponsePlannerDeps(BaseModel):
 
 response_planner = StructuredAgent(
     name="Response Planner",
-    model="openrouter:openai/gpt-4.1-mini",
+    model=FallbackModel(
+        OpenAIChatModel("openai/gpt-4.1-mini", provider=OpenRouterProvider()),
+        OpenAIChatModel("anthropic/claude-haiku-4.5", provider=OpenRouterProvider()),
+    ),
     model_settings=ModelSettings(
         extra_body={
             "reasoning": {

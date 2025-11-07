@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 from pydantic_ai import NativeOutput, RunContext
+from pydantic_ai.models.fallback import FallbackModel
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.core.models import Bot, EvaluationFeedback, Message, ResponsePlan
@@ -15,9 +18,12 @@ class ResponseEvaluatorDeps(BaseModel):
 
 response_evaluator = StructuredAgent(
     name="Response Evaluator",
-    model="openrouter:openai/gpt-4.1-nano",
+    model=FallbackModel(
+        OpenAIChatModel("openai/gpt-4.1-nano", provider=OpenRouterProvider()),
+        OpenAIChatModel("google/gemini-2.5-flash-lite", provider=OpenRouterProvider()),
+    ),
     deps_type=ResponseEvaluatorDeps,
-    output_type=NativeOutput(EvaluationFeedback),
+    output_type=EvaluationFeedback,
 )
 
 

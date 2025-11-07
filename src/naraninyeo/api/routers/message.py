@@ -58,8 +58,8 @@ async def new_message(
             ).model_dump_json(),
             media_type="application/ld+json",
         )
+    await message_repo.upsert(tctx, new_message_request.message)
     async with asyncio.TaskGroup() as tg:
-        upsert = tg.create_task(message_repo.upsert(tctx, new_message_request.message))
         latest_update_ts = tg.create_task(
             memory_repo.get_latest_memory_update_ts(
                 tctx,
@@ -75,7 +75,6 @@ async def new_message(
                 limit=30,
             )
         )
-    await upsert
     latest_update_ts = await latest_update_ts
     latest_messages = await latest_messages
     oldest_message_ts_in_history = latest_messages[0].timestamp if latest_messages else None

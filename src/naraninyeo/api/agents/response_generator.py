@@ -1,5 +1,8 @@
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import ModelSettings, RunContext
+from pydantic_ai.models.fallback import FallbackModel
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.api.infrastructure.interfaces import Clock
@@ -20,7 +23,10 @@ class ResponseGeneratorDeps(BaseModel):
 
 response_generator = StructuredAgent(
     name="Response Generator",
-    model="openrouter:deepseek/deepseek-chat-v3-0324",
+    model=FallbackModel(
+        OpenAIChatModel("deepseek/deepseek-v3.1-terminus", provider=OpenRouterProvider()),
+        OpenAIChatModel("deepseek/deepseek-chat-v3-0324", provider=OpenRouterProvider()),
+    ),
     model_settings=ModelSettings(
         extra_body={
             "reasoning": {
