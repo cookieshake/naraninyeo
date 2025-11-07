@@ -26,7 +26,7 @@ COPY uv.lock .
 RUN uv sync --no-dev
 
 # Copy project files
-COPY naraninyeo/ naraninyeo/
+COPY src/ src/
 
 # Run the application with OpenTelemetry instrumentation - using kafka consumer mode
 ENTRYPOINT ["uv", "run", "--no-dev", "python", "-m", "naraninyeo"]
