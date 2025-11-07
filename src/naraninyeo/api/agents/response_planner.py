@@ -18,8 +18,8 @@ class ResponsePlannerDeps(BaseModel):
 response_planner = StructuredAgent(
     name="Response Planner",
     model=FallbackModel(
-        OpenAIChatModel("openai/gpt-4.1-mini", provider=OpenRouterProvider()),
-        OpenAIChatModel("anthropic/claude-haiku-4.5", provider=OpenRouterProvider()),
+        OpenAIChatModel("openai/gpt-4.1", provider=OpenRouterProvider()),
+        OpenAIChatModel("google/gemini-2.5-flash", provider=OpenRouterProvider()),
     ),
     model_settings=ModelSettings(
         extra_body={
@@ -48,6 +48,7 @@ async def instructions(ctx: RunContext[ResponsePlannerDeps]) -> str:
 - {ActionType.SEARCH_WEB_GENERAL}: 일반 웹 페이지 전반 탐색
 - {ActionType.SEARCH_WEB_SCHOLAR}: 학술/문서 기반 정보
 - {ActionType.SEARCH_CHAT_HISTORY}: 과거 대화 내용 탐색
+- {ActionType.SEARCH_FINANCIAL_DATA}: 특정 종목의 금융 데이터를 찾을 때. query에는 종목명만 입력하고 다른 정보는 입력하지 마세요.
 
 아래의 지침을 따르세요:
 - 필요 없으면 빈 배열을 반환하고, 필요한 경우 여러 타입을 조합할 수 있습니다.
@@ -56,6 +57,7 @@ async def instructions(ctx: RunContext[ResponsePlannerDeps]) -> str:
 - 쿼리에 현재 시간이 필요할 경우 이를 반영하세요.
 - '오늘', '최근' 등의 표현은 사용하지 말고 구체적인 날짜를 명시하세요.
 - 날짜는 년, 월 등의 인간에게 친숙한 형식을 사용하세요.
+- 다양한 검색 타입을 조합하여 사용자의 질문에 답할 수 있도록 계획하세요.
 """
 
 

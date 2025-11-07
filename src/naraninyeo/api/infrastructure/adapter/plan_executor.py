@@ -5,7 +5,9 @@ from typing import Dict, List, Literal
 
 from opentelemetry.trace import get_current_span, get_tracer
 
+from naraninyeo.api.agents.financial_summarizer import FinancialSummarizerDeps, financial_summarizer
 from naraninyeo.api.agents.summary_extractor import SummaryExtractorDeps, summary_extractor
+from naraninyeo.api.infrastructure.adapter.finance_search import FinanceSearchClient
 from naraninyeo.api.infrastructure.adapter.naver_search import NaverSearchClient
 from naraninyeo.api.infrastructure.adapter.web_document import WebDocumentFetcher
 from naraninyeo.api.infrastructure.interfaces import IdGenerator, MessageRepository, PlanActionExecutor
@@ -42,6 +44,7 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
         self.message_repository = message_repository
         self.id_generator = id_generator
         self.web_document_fetcher = WebDocumentFetcher()
+        self.finance_search_client = FinanceSearchClient()
 
     async def _enhance_result_with_fetch(
         self,
@@ -157,6 +160,64 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                         content="\n".join(result),
                     ),
                 )
+            case ActionType.SEARCH_FINANCIAL_DATA:
+                if action.query is None:
+                    raise ValueError("Query is required for financial data search")
+                ticker = await self.finance_search_client.search_symbol(action.query)
+                if ticker is None:
+                    raise ValueError("Ticker not found for query: {}".format(action.query))
+                price = asyncio.create_task(self.finance_search_client.search_current_price(ticker))
+                short_term_price = asyncio.create_task(self.finance_search_client.get_short_term_price(ticker))
+                long_term_price = asyncio.create_task(self.finance_search_client.get_long_term_price(ticker))
+                news = asyncio.create_task(self.finance_search_client.search_news(ticker))
+                await asyncio.gather(price, short_term_price, long_term_price, news, return_exceptions=True)
+
+                if isinstance(price, Exception):
+                    price = ""
+                else:
+                    price = price.result() or ""
+
+                if isinstance(short_term_price, Exception):
+                    short_term_price = ""
+                else:
+                    short_term_price = short_term_price.result()
+                    short_term_price = "\n".join(
+                        f"{item.local_date}: {item.close_price}" for item in short_term_price
+                    )
+
+                if isinstance(long_term_price, Exception):
+                    long_term_price = ""
+                else:
+                    long_term_price = long_term_price.result()
+                    long_term_price = "\n".join(
+                        f"{item.local_date}: {item.close_price}" for item in long_term_price
+                    )
+
+                if isinstance(news, Exception):
+                    news = ""
+                else:
+                    news = news.result()
+                    news = "\n".join(
+                        f"[{item.source}, {item.timestamp}] {item.title}\n{item.body}" for item in news
+                    )
+                financial_summarizer_deps = FinancialSummarizerDeps(
+                    action=action,
+                    price=price,
+                    short_term_price=short_term_price,
+                    long_term_price=long_term_price,
+                    news=news,
+                )
+                financial_summarizer_result = await financial_summarizer.run_with_generator(financial_summarizer_deps)
+                collector.add_result(
+                    action=action,
+                    result=PlanActionResult(
+                        action_result_id=self.id_generator.generate_id(),
+                        action=action,
+                        status="COMPLETED",
+                        content=financial_summarizer_result.output,
+                        priority=5,
+                    ),
+                )
 
     async def execute_actions(
         self,
@@ -167,8 +228,8 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
         actions: list[PlanAction],
     ) -> List[PlanActionResult]:
         collector = ActionResultCollector()
+        tasks: list[asyncio.Task] = []
         try:
-            tasks = []
             for action in actions:
                 task = asyncio.create_task(
                     self._execute_action(
@@ -176,10 +237,15 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                         action=action,
                         channel_id=incoming_message.channel.channel_id,
                         collector=collector,
-                    )
+                    ),
+                    name=f"{action.action_type.value}-{action.query}",
                 )
                 tasks.append(task)
             await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=20)
         except TimeoutError:
             pass
+        finally:
+            for task in tasks:
+                if task.exception() is not None:
+                    logging.warning(f"Task failed: ({task.get_name()}) {task.exception()}")
         return collector.get_results()
