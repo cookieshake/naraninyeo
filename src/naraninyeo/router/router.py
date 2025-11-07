@@ -55,7 +55,7 @@ class MessageRouter:
             return
 
         answer_required = message.content.text.startswith("/")
-        client = self.get_client(shuffle=answer_required)
+        client = self.get_client(text=message.content.text, shuffle=answer_required)
         try:
             async for bot_message in client.new_message(message, reply_needed=answer_required):
                 if client == self.first_client:
@@ -185,7 +185,9 @@ class MessageRouter:
             url=f"s3://{self.bucket}/{key}",
         )
 
-    def get_client(self, shuffle: bool = False):
+    def get_client(self, text, shuffle: bool = False) -> APIClient:
+        if text.strip().startswith("/!"):
+            return self.second_client
         if shuffle:
             p = 6 / 7
             return self.first_client if random.random() < p else self.second_client
