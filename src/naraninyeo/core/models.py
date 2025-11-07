@@ -105,7 +105,6 @@ class KnowledgeReference(BaseModel):
 
 
 class ActionType(str, Enum):
-    SEARCH_WEB_GENERAL = "SEARCH_WEB_GENERAL"
     SEARCH_WEB_NEWS = "SEARCH_WEB_NEWS"
     SEARCH_WEB_BLOG = "SEARCH_WEB_BLOG"
     SEARCH_WEB_SCHOLAR = "SEARCH_WEB_SCHOLAR"
