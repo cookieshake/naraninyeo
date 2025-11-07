@@ -66,7 +66,7 @@ async def handle_user_input(user_input: str):
     if server_task is None:
         await chat.append_message("서버를 시작합니다...")
         server_task = asyncio.create_task(start_fastapi_server())
-        for _ in range(10):
+        for _ in range(30):
             await asyncio.sleep(1)
             try:
                 async with httpx.AsyncClient() as _client:
