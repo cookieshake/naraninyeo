@@ -52,7 +52,7 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                 return
 
             fetched_content = await self.web_document_fetcher.fetch_document(plan_action_result.link)
-            extract_summary_deps = SummaryExtractorDeps(plan=plan, result=fetched_content)
+            extract_summary_deps = SummaryExtractorDeps(plan=plan, result=fetched_content.markdown_content)
             summary = await summary_extractor.run_with_generator(extract_summary_deps)
             if summary.output.relevance == 0:
                 collector.remove_result(plan_action_result.action_result_id)
@@ -60,6 +60,9 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
             enhanced_result = deepcopy(plan_action_result)
             enhanced_result.content = summary.output.summary
             enhanced_result.priority = summary.output.relevance
+            enhanced_result.timestamp = (
+                fetched_content.meta_tags.get("article:published_time") or enhanced_result.timestamp
+            )
             collector.add_result(action=plan_action_result.action, result=enhanced_result)
         except Exception as e:
             logging.warning(f"Failed to enhance result for action {plan.action_type}: {e}")

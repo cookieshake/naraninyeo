@@ -4,6 +4,14 @@ from urllib.parse import urljoin
 import httpx
 from bs4 import BeautifulSoup
 from html_to_markdown import PreprocessingOptions, convert
+from pydantic import BaseModel
+
+
+class FetchedDocument(BaseModel):
+    url: str
+    meta_tags: dict[str, str]
+    html_content: str
+    markdown_content: str
 
 
 class WebDocumentFetcher:
@@ -19,11 +27,18 @@ class WebDocumentFetcher:
     async def fetch_document(
         self,
         url: str,
-    ) -> str:
+    ) -> FetchedDocument:
         html_content = await self._fetch_document(url)
         soup = await self._preprocess_html(url, html_content)
+        tags = {}
+        meta_tags = soup.find_all("meta")
+        for tag in meta_tags:
+            if tag.get("name"):
+                tags[tag.get("name").lower()] = tag.get("content", "")  # pyright: ignore[reportOptionalMemberAccess, reportAttributeAccessIssue]
+            if tag.get("property"):
+                tags[tag.get("property").lower()] = tag.get("content", "")  # pyright: ignore[reportOptionalMemberAccess, reportAttributeAccessIssue]
         markdown_content = await self._html_to_markdown(soup)
-        return markdown_content
+        return FetchedDocument(url=url, meta_tags=tags, html_content=html_content, markdown_content=markdown_content)
 
     async def _fetch_document(
         self,

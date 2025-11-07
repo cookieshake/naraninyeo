@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from pydantic_ai import NativeOutput, RunContext
+from pydantic_ai import RunContext
 from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
