@@ -73,12 +73,14 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
     ) -> None:
         match action.action_type:
             case (
-                ActionType.SEARCH_WEB_NEWS
+                ActionType.SEARCH_WEB_GENERAL
+                | ActionType.SEARCH_WEB_NEWS
                 | ActionType.SEARCH_WEB_BLOG
                 | ActionType.SEARCH_WEB_SCHOLAR
                 | ActionType.SEARCH_WEB_ENCYCLOPEDIA
             ):
-                action_kv: dict[ActionType, Literal["news", "blog", "document", "encyclopedia"]] = {
+                action_kv: dict[ActionType, Literal["general", "news", "blog", "document", "encyclopedia"]] = {
+                    ActionType.SEARCH_WEB_GENERAL: "general",
                     ActionType.SEARCH_WEB_NEWS: "news",
                     ActionType.SEARCH_WEB_BLOG: "blog",
                     ActionType.SEARCH_WEB_SCHOLAR: "document",

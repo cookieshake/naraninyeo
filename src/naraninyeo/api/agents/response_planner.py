@@ -45,6 +45,7 @@ async def instructions(ctx: RunContext[ResponsePlannerDeps]) -> str:
 사용 가능한 검색 타입:
 - {ActionType.SEARCH_WEB_NEWS}: 최신 뉴스를 찾을 때
 - {ActionType.SEARCH_WEB_BLOG}: 개인 경험/후기를 찾을 때
+- {ActionType.SEARCH_WEB_GENERAL}: 일반 웹 페이지 전반 탐색
 - {ActionType.SEARCH_WEB_SCHOLAR}: 학술/문서 기반 정보
 - {ActionType.SEARCH_CHAT_HISTORY}: 과거 대화 내용 탐색
 
