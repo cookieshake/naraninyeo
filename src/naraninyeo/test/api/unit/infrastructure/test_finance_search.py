@@ -8,11 +8,13 @@ async def finance_search_client():
     client = FinanceSearchClient()
     return client
 
+
 test_queries = [
     "애플",
     "MSFT",
     "삼성전자",
 ]
+
 
 async def test_search_symbol(finance_search_client: FinanceSearchClient):
     result = await finance_search_client.search_symbol("애플")
@@ -22,6 +24,7 @@ async def test_search_symbol(finance_search_client: FinanceSearchClient):
     assert result.name == "애플"
     assert result.nation == "USA"
 
+
 @pytest.mark.parametrize("query", test_queries)
 async def test_search_news(finance_search_client: FinanceSearchClient, query: str):
     symbol = await finance_search_client.search_symbol(query)
@@ -30,6 +33,7 @@ async def test_search_news(finance_search_client: FinanceSearchClient, query: st
     result = await finance_search_client.search_news(symbol)
     assert result is not None
     assert len(result) > 0
+
 
 @pytest.mark.parametrize("query", test_queries)
 async def test_search_current_price(finance_search_client: FinanceSearchClient, query: str):

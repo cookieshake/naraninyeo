@@ -181,25 +181,19 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                     short_term_price = ""
                 else:
                     short_term_price = short_term_price.result()
-                    short_term_price = "\n".join(
-                        f"{item.local_date}: {item.close_price}" for item in short_term_price
-                    )
+                    short_term_price = "\n".join(f"{item.local_date}: {item.close_price}" for item in short_term_price)
 
                 if isinstance(long_term_price, Exception):
                     long_term_price = ""
                 else:
                     long_term_price = long_term_price.result()
-                    long_term_price = "\n".join(
-                        f"{item.local_date}: {item.close_price}" for item in long_term_price
-                    )
+                    long_term_price = "\n".join(f"{item.local_date}: {item.close_price}" for item in long_term_price)
 
                 if isinstance(news, Exception):
                     news = ""
                 else:
                     news = news.result()
-                    news = "\n".join(
-                        f"[{item.source}, {item.timestamp}] {item.title}\n{item.body}" for item in news
-                    )
+                    news = "\n".join(f"[{item.source}, {item.timestamp}] {item.title}\n{item.body}" for item in news)
                 financial_summarizer_deps = FinancialSummarizerDeps(
                     action=action,
                     price=price,

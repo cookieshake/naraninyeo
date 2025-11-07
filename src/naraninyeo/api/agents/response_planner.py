@@ -48,7 +48,8 @@ async def instructions(ctx: RunContext[ResponsePlannerDeps]) -> str:
 - {ActionType.SEARCH_WEB_GENERAL}: 일반 웹 페이지 전반 탐색
 - {ActionType.SEARCH_WEB_SCHOLAR}: 학술/문서 기반 정보
 - {ActionType.SEARCH_CHAT_HISTORY}: 과거 대화 내용 탐색
-- {ActionType.SEARCH_FINANCIAL_DATA}: 특정 종목의 금융 데이터를 찾을 때. query에는 종목명만 입력하고 다른 정보는 입력하지 마세요.
+- {ActionType.SEARCH_FINANCIAL_DATA}:
+    특정 종목의 금융 데이터를 찾을 때. query에는 종목명만 입력하고 다른 정보는 입력하지 마세요.
 
 아래의 지침을 따르세요:
 - 필요 없으면 빈 배열을 반환하고, 필요한 경우 여러 타입을 조합할 수 있습니다.

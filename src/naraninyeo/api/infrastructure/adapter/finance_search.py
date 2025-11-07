@@ -1,9 +1,8 @@
-from datetime import timedelta
 from functools import reduce
 
 import httpx
-from pydantic import BaseModel
 from cachetools import TTLCache, cached
+from pydantic import BaseModel
 
 
 class Ticker(BaseModel):
