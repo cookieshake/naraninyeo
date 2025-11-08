@@ -237,9 +237,13 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
                 tasks.append(task)
             await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=20)
         except TimeoutError:
-            pass
+            logging.warning(f"Plan execution timeout after 20 seconds. {len(tasks)} tasks were running.")
         finally:
             for task in tasks:
-                if task.exception() is not None:
-                    logging.warning(f"Task failed: ({task.get_name()}) {task.exception()}")
-        return collector.get_results()
+                if task.done():
+                    if task.cancelled():
+                        logging.warning(f"Task cancelled: ({task.get_name()})")
+                    elif (exc := task.exception()) is not None:
+                        logging.warning(f"Task failed: ({task.get_name()}) {exc}")
+        results = collector.get_results()
+        return results
