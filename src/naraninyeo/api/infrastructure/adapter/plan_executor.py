@@ -240,7 +240,10 @@ class DefaultPlanActionExecutor(PlanActionExecutor):
             logging.warning(f"Plan execution timeout after 20 seconds. {len(tasks)} tasks were running.")
         finally:
             for task in tasks:
-                if task.done() and task.exception() is not None:
-                    logging.warning(f"Task failed: ({task.get_name()}) {task.exception()}")
+                if task.done():
+                    if task.cancelled():
+                        logging.warning(f"Task cancelled: ({task.get_name()})")
+                    elif (exc := task.exception()) is not None:
+                        logging.warning(f"Task failed: ({task.get_name()}) {exc}")
         results = collector.get_results()
         return results
