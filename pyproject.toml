@@ -37,6 +37,7 @@ dependencies = [
     "langsmith[otel]>=0.4.39",
     "cachetools>=6.2.1",
     "finance-datareader>=0.9.96",
+    "opentelemetry-instrumentation-fastapi>=0.59b0",
 ]
 
 [project.scripts]

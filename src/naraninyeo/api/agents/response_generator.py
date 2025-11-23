@@ -24,13 +24,13 @@ class ResponseGeneratorDeps(BaseModel):
 response_generator = StructuredAgent(
     name="Response Generator",
     model=FallbackModel(
+        OpenAIChatModel("google/gemini-3-pro-preview", provider=OpenRouterProvider()),
         OpenAIChatModel("deepseek/deepseek-v3.1-terminus", provider=OpenRouterProvider()),
-        OpenAIChatModel("deepseek/deepseek-chat-v3-0324", provider=OpenRouterProvider()),
     ),
     model_settings=ModelSettings(
         extra_body={
             "reasoning": {
-                "effort": "low",
+                "effort": "minimum",
                 "enabled": False,
             },
         }
