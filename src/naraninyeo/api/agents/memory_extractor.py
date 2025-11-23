@@ -21,7 +21,7 @@ memory_extractor = StructuredAgent(
     model_settings=ModelSettings(
         extra_body={
             "reasoning": {
-                "effort": "minimum",
+                "effort": "none",
                 "enabled": False,
             },
         }
