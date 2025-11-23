@@ -25,7 +25,7 @@ financial_summarizer = StructuredAgent(
     model_settings=ModelSettings(
         extra_body={
             "reasoning": {
-                "effort": "minimum",
+                "effort": "none",
                 "enabled": False,
             },
         }
