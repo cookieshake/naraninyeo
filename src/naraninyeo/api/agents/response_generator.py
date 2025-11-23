@@ -30,7 +30,7 @@ response_generator = StructuredAgent(
     model_settings=ModelSettings(
         extra_body={
             "reasoning": {
-                "effort": "low",
+                "effort": "minimum",
                 "enabled": False,
             },
         }
