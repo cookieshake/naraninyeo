@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from naraninyeo.api.graphs.manage_memory import ManageMemoryGraphContext, ManageMemoryGraphState, manage_memory_graph
 from naraninyeo.api.graphs.new_message import NewMessageGraphContext, NewMessageGraphState, new_message_graph
+from naraninyeo.api.infrastructure.adapter.naver_search import NaverSearchClient
 from naraninyeo.api.infrastructure.interfaces import (
     BotRepository,
     Clock,
@@ -126,6 +127,7 @@ async def new_message(
             message_repository=message_repo,
             memory_repository=memory_repo,
             plan_action_executor=plan_executor,
+            naver_search_client=NaverSearchClient(settings),
         )
 
         async def message_stream_generator():

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from pydantic_ai import ModelSettings, RunContext
+from pydantic_ai import ModelHTTPError, ModelSettings, RunContext
 from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
@@ -10,7 +10,6 @@ from naraninyeo.core.models import Bot, EvaluationFeedback, Message, ResponsePla
 
 class ResponseEvaluatorDeps(BaseModel):
     bot: Bot
-    plan: ResponsePlan
     incoming_message: Message
     latest_messages: list[Message]
     generated_responses: list[str]
@@ -21,6 +20,7 @@ response_evaluator = StructuredAgent(
     model=FallbackModel(
         OpenAIChatModel("openai/gpt-4.1-nano", provider=OpenRouterProvider()),
         OpenAIChatModel("google/gemini-2.5-flash-lite", provider=OpenRouterProvider()),
+        fallback_on=lambda err: isinstance(err, ModelHTTPError) and err.status_code > 500,
     ),
     model_settings=ModelSettings(
         extra_body={
@@ -64,11 +64,6 @@ async def user_prompt(deps: ResponseEvaluatorDeps) -> str:
 ## 응답할 메시지
 ```
 {deps.incoming_message.preview}
-```
-
-## 응답 계획
-```
-{deps.plan.summary}
 ```
 
 ## 생성된 응답 초안

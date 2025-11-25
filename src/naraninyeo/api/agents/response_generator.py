@@ -1,10 +1,11 @@
 from pydantic import BaseModel, ConfigDict
-from pydantic_ai import ModelSettings, RunContext
+from pydantic_ai import ModelHTTPError, ModelSettings, RunContext
 from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 from naraninyeo.api.agents.base import StructuredAgent
+from naraninyeo.api.agents.information_gatherer import InformationGathererOutput
 from naraninyeo.api.infrastructure.interfaces import Clock
 from naraninyeo.core.models import Bot, MemoryItem, Message, PlanActionResult, ResponsePlan
 
@@ -14,8 +15,7 @@ class ResponseGeneratorDeps(BaseModel):
 
     clock: Clock
     bot: Bot
-    plan: ResponsePlan
-    plan_action_results: list[PlanActionResult]
+    information_gathering_results: list[InformationGathererOutput]
     incoming_message: Message
     latest_messages: list[Message]
     memories: list[MemoryItem]
@@ -26,12 +26,13 @@ response_generator = StructuredAgent(
     model=FallbackModel(
         OpenAIChatModel("google/gemini-3-pro-preview", provider=OpenRouterProvider()),
         OpenAIChatModel("deepseek/deepseek-v3.1-terminus", provider=OpenRouterProvider()),
+        fallback_on=lambda err: isinstance(err, ModelHTTPError) and err.status_code > 500,
     ),
     model_settings=ModelSettings(
         extra_body={
             "reasoning": {
                 "effort": "none",
-                "enabled": False,
+                # "enabled": False,
             },
         }
     ),
@@ -71,11 +72,10 @@ async def user_prompt(deps: ResponseGeneratorDeps) -> str:
     latest_messages_str = "\n".join(msg.preview for msg in deps.latest_messages)
     action_results = [
         (
-            f"{result.action.action_type} (query: {result.action.query}) -> \n"
-            f"{result.timestamp} {result.source or ''}\n"
+            f"{result.source}:\n"
             f"{result.content.replace('\n', ' ') if result.content else 'No content'}"
         )
-        for result in deps.plan_action_results
+        for result in deps.information_gathering_results
     ]
     return f"""
 # 참고할 만한 정보

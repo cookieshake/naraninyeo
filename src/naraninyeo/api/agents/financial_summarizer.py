@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from pydantic_ai import ModelSettings, RunContext
+from pydantic_ai.exceptions import ModelHTTPError
 from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
@@ -21,6 +22,7 @@ financial_summarizer = StructuredAgent(
     model=FallbackModel(
         OpenAIChatModel("x-ai/grok-4-fast", provider=OpenRouterProvider()),
         OpenAIChatModel("openai/gpt-4.1-mini", provider=OpenRouterProvider()),
+        fallback_on=lambda err: isinstance(err, ModelHTTPError) and err.status_code > 500,
     ),
     model_settings=ModelSettings(
         extra_body={

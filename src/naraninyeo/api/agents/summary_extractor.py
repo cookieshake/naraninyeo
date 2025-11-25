@@ -1,7 +1,7 @@
 from typing import Literal
 
 from pydantic import BaseModel
-from pydantic_ai import ModelSettings, RunContext
+from pydantic_ai import ModelHTTPError, ModelSettings, RunContext
 from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
@@ -25,6 +25,7 @@ summary_extractor = StructuredAgent(
     model=FallbackModel(
         OpenAIChatModel("openai/gpt-oss-20b", provider=OpenRouterProvider()),
         OpenAIChatModel("openai/gpt-oss-120b", provider=OpenRouterProvider()),
+        fallback_on=lambda err: isinstance(err, ModelHTTPError) and err.status_code > 500,
     ),
     model_settings=ModelSettings(
         extra_body={

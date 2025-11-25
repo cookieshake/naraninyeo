@@ -15,16 +15,12 @@ async def evaluate_response(
 ) -> NewMessageGraphState:
     state.outgoing_messages = []
     logging.info("Evaluating response")
-    if state.response_plan is None:
-        return state
-
     if state.evaluation_count > 1:
         state.latest_evaluation_feedback = EvaluationFeedback.FINALIZE
         return state
 
     evaluator_deps = ResponseEvaluatorDeps(
         bot=state.current_bot,
-        plan=state.response_plan,
         incoming_message=state.incoming_message,
         latest_messages=state.latest_history,
         generated_responses=[msg.content.text for msg in state.draft_messages],

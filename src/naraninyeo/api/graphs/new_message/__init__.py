@@ -1,15 +1,13 @@
 from langgraph.graph import START, StateGraph
 
 from naraninyeo.api.graphs.new_message.evaluate_response import evaluate_response
-from naraninyeo.api.graphs.new_message.execute_plan import execute_plan
 from naraninyeo.api.graphs.new_message.finalize_response import finalize_response
+from naraninyeo.api.graphs.new_message.gather_information import gather_information
 from naraninyeo.api.graphs.new_message.generate_response import generate_response
-from naraninyeo.api.graphs.new_message.inform_plan import inform_plan
 from naraninyeo.api.graphs.new_message.models import (
     NewMessageGraphContext,
     NewMessageGraphState,
 )
-from naraninyeo.api.graphs.new_message.plan import plan
 from naraninyeo.core.models import EvaluationFeedback
 
 _new_message_graph = StateGraph(
@@ -17,25 +15,21 @@ _new_message_graph = StateGraph(
     context_schema=NewMessageGraphContext,
 )
 
-_new_message_graph.add_node("plan", plan)
-_new_message_graph.add_node("inform_plan", inform_plan)
-_new_message_graph.add_node("execute_plan", execute_plan)
+_new_message_graph.add_node("gather_information", gather_information)
 _new_message_graph.add_node("generate_response", generate_response)
 _new_message_graph.add_node("evaluate_response", evaluate_response)
 _new_message_graph.add_node("finalize_response", finalize_response)
 
-_new_message_graph.add_edge(START, "plan")
-_new_message_graph.add_edge("plan", "execute_plan")
-_new_message_graph.add_edge("plan", "inform_plan")
-_new_message_graph.add_edge("execute_plan", "generate_response")
+_new_message_graph.add_edge(START, "gather_information")
+_new_message_graph.add_edge("gather_information", "generate_response")
 _new_message_graph.add_edge("generate_response", "evaluate_response")
 
 
 def route_based_on_evaluation(state: NewMessageGraphState) -> str:
     if state.latest_evaluation_feedback == EvaluationFeedback.PLAN_AGAIN:
-        return "plan"
+        return "gather_information"
     elif state.latest_evaluation_feedback == EvaluationFeedback.EXECUTE_AGAIN:
-        return "execute_plan"
+        return "gather_information"
     elif state.latest_evaluation_feedback == EvaluationFeedback.GENERATE_AGAIN:
         return "generate_response"
     elif state.latest_evaluation_feedback == EvaluationFeedback.FINALIZE:
