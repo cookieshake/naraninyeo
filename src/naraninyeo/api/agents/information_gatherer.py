@@ -4,8 +4,7 @@ from typing import List, Literal
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import ModelHTTPError, ModelSettings, PromptedOutput, RunContext
 from pydantic_ai.models.fallback import FallbackModel
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openrouter import OpenRouterProvider
+from pydantic_ai.models.openrouter import OpenRouterModel
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.api.agents.financial_summarizer import FinancialSummarizerDeps
@@ -34,18 +33,12 @@ class InformationGathererOutput(BaseModel):
 information_gatherer = StructuredAgent(
     name="Information Gatherer",
     model=FallbackModel(
-        OpenAIChatModel("z-ai/glm-4.5-air", provider=OpenRouterProvider()),
-        OpenAIChatModel("google/gemini-2.5-flash", provider=OpenRouterProvider()),
+        OpenRouterModel("deepseek/deepseek-v3.2"),
+        OpenRouterModel("google/gemini-3-pro-preview"),
         fallback_on=lambda err: isinstance(err, ModelHTTPError) and err.status_code > 500,
     ),
     model_settings=ModelSettings(
         parallel_tool_calls=True,
-        extra_body={
-            "reasoning": {
-                "effort": "none",
-                "enabled": False,
-            },
-        }
     ),
     deps_type=InformationGathererDeps,
     output_type=List[InformationGathererOutput],
