@@ -4,7 +4,7 @@ from typing import List, Literal
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import ModelHTTPError, ModelSettings, PromptedOutput, RunContext
 from pydantic_ai.models.fallback import FallbackModel
-from pydantic_ai.models.openrouter import OpenRouterModel
+from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings, OpenRouterReasoning
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.api.agents.financial_summarizer import FinancialSummarizerDeps
@@ -32,13 +32,12 @@ class InformationGathererOutput(BaseModel):
 
 information_gatherer = StructuredAgent(
     name="Information Gatherer",
-    model=FallbackModel(
-        OpenRouterModel("deepseek/deepseek-v3.2"),
-        OpenRouterModel("google/gemini-3-pro-preview"),
-        fallback_on=lambda err: isinstance(err, ModelHTTPError) and err.status_code > 500,
-    ),
-    model_settings=ModelSettings(
+    model=OpenRouterModel("x-ai/grok-4.1-fast"),
+    model_settings=OpenRouterModelSettings(
         parallel_tool_calls=True,
+        openrouter_reasoning=OpenRouterReasoning(
+            enabled=False,
+        )
     ),
     deps_type=InformationGathererDeps,
     output_type=List[InformationGathererOutput],

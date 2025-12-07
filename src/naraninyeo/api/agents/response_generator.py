@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from pydantic_ai import ModelHTTPError, ModelSettings, RunContext
 from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openrouter import OpenRouterProvider
+from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings, OpenRouterReasoning
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.api.agents.information_gatherer import InformationGathererOutput
@@ -23,18 +23,12 @@ class ResponseGeneratorDeps(BaseModel):
 
 response_generator = StructuredAgent(
     name="Response Generator",
-    model=FallbackModel(
-        OpenAIChatModel("google/gemini-3-pro-preview", provider=OpenRouterProvider()),
-        OpenAIChatModel("deepseek/deepseek-v3.1-terminus", provider=OpenRouterProvider()),
-        fallback_on=lambda err: isinstance(err, ModelHTTPError) and err.status_code > 500,
-    ),
-    model_settings=ModelSettings(
-        extra_body={
-            "reasoning": {
-                "effort": "none",
-                # "enabled": False,
-            },
-        }
+    model=OpenRouterModel("deepseek/deepseek-v3.2"),
+    model_settings=OpenRouterModelSettings(
+        parallel_tool_calls=True,
+        openrouter_reasoning=OpenRouterReasoning(
+            enabled=False,
+        )
     ),
     deps_type=ResponseGeneratorDeps,
     output_type=str,
