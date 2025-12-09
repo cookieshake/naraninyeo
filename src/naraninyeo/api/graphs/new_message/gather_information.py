@@ -8,8 +8,7 @@ from naraninyeo.api.graphs.new_message.models import (
 
 
 async def gather_information(
-    state: NewMessageGraphState,
-    runtime: Runtime[NewMessageGraphContext]
+    state: NewMessageGraphState, runtime: Runtime[NewMessageGraphContext]
 ) -> NewMessageGraphState:
     deps = InformationGathererDeps(
         tctx=state.current_tctx,

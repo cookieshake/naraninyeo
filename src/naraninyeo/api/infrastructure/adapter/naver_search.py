@@ -28,7 +28,7 @@ class NaverSearchClient:
         search_type: Literal["general", "news", "blog", "document", "encyclopedia"],
         query: str,
         limit: int,
-        order: Optional[Literal["sim", "date"]] = None
+        order: Optional[Literal["sim", "date"]] = None,
     ) -> List[SearchResult]:
         span = get_current_span()
         span.set_attribute("search.type", search_type)
@@ -41,7 +41,7 @@ class NaverSearchClient:
         search_type: Literal["general", "news", "blog", "document", "encyclopedia"],
         query: str,
         limit: int,
-        order: Optional[Literal["sim", "date"]]
+        order: Optional[Literal["sim", "date"]],
     ) -> list[dict[str, str]]:
         base_url = "https://openapi.naver.com/v1/search/"
         match search_type:
@@ -62,7 +62,7 @@ class NaverSearchClient:
                     params = [
                         {"query": query, "display": math.ceil(limit / 2.0), "sort": "sim"},
                         {"query": query, "display": math.floor(limit / 2.0), "sort": "date"},
-                ]
+                    ]
             case "blog":
                 endpoint = "blog.json"
                 if order:
@@ -71,7 +71,7 @@ class NaverSearchClient:
                     params = [
                         {"query": query, "display": math.ceil(limit / 2.0), "sort": "sim"},
                         {"query": query, "display": math.floor(limit / 2.0), "sort": "date"},
-                   ]
+                    ]
             case "document":
                 endpoint = "doc.json"
                 params = [{"query": query, "display": limit}]

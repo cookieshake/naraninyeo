@@ -23,6 +23,7 @@ class InformationGathererDeps(BaseModel):
     message_repository: MessageRepository
     naver_search_client: NaverSearchClient
 
+
 class InformationGathererOutput(BaseModel):
     source: str
     content: str
@@ -36,7 +37,7 @@ information_gatherer = StructuredAgent(
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",
             enabled=False,
-        )
+        ),
     ),
     deps_type=InformationGathererDeps,
     output_type=List[InformationGathererOutput],
@@ -88,21 +89,22 @@ async def user_prompt(deps: InformationGathererDeps) -> str:
 위 새로 들어온 메시지에 답하기 위해 필요한 모든 정보를 수집하세요.
 """
 
+
 @information_gatherer.tool
 async def naver_search(
     ctx: RunContext[InformationGathererDeps],
-    search_type:  Literal["general", "news", "blog", "document", "encyclopedia"],
+    search_type: Literal["general", "news", "blog", "document", "encyclopedia"],
     query: str,
     limit: int,
     order: Literal["sim", "date"] = "sim",
 ) -> List[InformationGathererOutput]:
-    '''
+    """
     네이버 검색 도구입니다.
     search_type: 검색 유형 (general, news, blog, document, encyclopedia)
     query: 검색 쿼리
     limit: 검색 결과 수 (최대 30)
     order: 정렬 기준 (sim: 정확도순, date: 최신순)
-    '''
+    """
     nv_client = ctx.deps.naver_search_client
     results = await nv_client.search(
         search_type=search_type,
@@ -114,19 +116,20 @@ async def naver_search(
         InformationGathererOutput(
             source=f"Naver {search_type} Search (Query: {query})",
             content=f"Title: {result.title}\n"
-                    f"Link: {result.link}\n"
-                    f"Description: {result.description}\n"
-                    f"Published At: {result.published_at or 'N/A'}"
+            f"Link: {result.link}\n"
+            f"Description: {result.description}\n"
+            f"Published At: {result.published_at or 'N/A'}",
         )
         for result in results
     ]
 
+
 @information_gatherer.tool_plain
 async def fetch_webpage(url: str) -> InformationGathererOutput:
-    '''
+    """
     웹페이지 내용을 가져오는 도구입니다.
     url: 웹페이지 URL
-    '''
+    """
     fetcher = WebDocumentFetcher()
     content = await fetcher.fetch_document(url)
     return InformationGathererOutput(
@@ -134,14 +137,15 @@ async def fetch_webpage(url: str) -> InformationGathererOutput:
         content=content.markdown_content,
     )
 
+
 @information_gatherer.tool_plain
 async def financial_data_lookup(
     stock_name: str,
 ) -> InformationGathererOutput:
-    '''
+    """
     금융 데이터 조회 도구입니다.
     stock_name: 종목명
-    '''
+    """
     fsc = FinanceSearchClient()
     ticker = await fsc.search_symbol(stock_name)
     if ticker is None:
@@ -174,19 +178,22 @@ async def financial_data_lookup(
     else:
         news = news.result()
         news = "\n".join(f"[{item.source}, {item.timestamp}] {item.title}\n{item.body}" for item in news)
-    content = f"Ticker Info:\n" \
-              f"Code: {ticker.code}\n" \
-              f"Type: {ticker.type}\n" \
-              f"Name: {ticker.name}\n" \
-              f"Nation: {ticker.nation}\n" \
-              f"Current Price: {price}\n" \
-              f"Short Term Price Info:\n{short_term_price}\n\n" \
-              f"Long Term Price Info:\n{long_term_price}\n\n" \
-              f"Related News:\n{news}"
+    content = (
+        f"Ticker Info:\n"
+        f"Code: {ticker.code}\n"
+        f"Type: {ticker.type}\n"
+        f"Name: {ticker.name}\n"
+        f"Nation: {ticker.nation}\n"
+        f"Current Price: {price}\n"
+        f"Short Term Price Info:\n{short_term_price}\n\n"
+        f"Long Term Price Info:\n{long_term_price}\n\n"
+        f"Related News:\n{news}"
+    )
     return InformationGathererOutput(
         source=f"Financial Data Lookup (Stock Name: {stock_name})",
         content=content,
     )
+
 
 @information_gatherer.tool
 async def chat_history_lookup(
@@ -194,11 +201,11 @@ async def chat_history_lookup(
     keyword: str,
     limit: int,
 ) -> List[InformationGathererOutput]:
-    '''
+    """
     대화 기록 조회 도구입니다.
     keyword: 검색 키워드
     limit: 검색 결과 수
-    '''
+    """
     results = await ctx.deps.message_repository.text_search_messages(
         tctx=ctx.deps.tctx,
         channel_id=ctx.deps.incoming_message.channel.channel_id,
@@ -207,9 +214,7 @@ async def chat_history_lookup(
     )
     return [
         InformationGathererOutput(
-            source="Chat History Lookup",
-            content=f"Timestamp: {msg.timestamp_iso}\n"
-                    f"Content Preview: {msg.preview}"
+            source="Chat History Lookup", content=f"Timestamp: {msg.timestamp_iso}\nContent Preview: {msg.preview}"
         )
         for msg in results
     ]

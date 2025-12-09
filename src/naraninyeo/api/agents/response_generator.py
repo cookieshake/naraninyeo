@@ -1,13 +1,11 @@
 from pydantic import BaseModel, ConfigDict
-from pydantic_ai import ModelHTTPError, ModelSettings, RunContext
-from pydantic_ai.models.fallback import FallbackModel
-from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai import RunContext
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings, OpenRouterReasoning
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.api.agents.information_gatherer import InformationGathererOutput
 from naraninyeo.api.infrastructure.interfaces import Clock
-from naraninyeo.core.models import Bot, MemoryItem, Message, PlanActionResult, ResponsePlan
+from naraninyeo.core.models import Bot, MemoryItem, Message
 
 
 class ResponseGeneratorDeps(BaseModel):
@@ -29,7 +27,7 @@ response_generator = StructuredAgent(
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",
             enabled=True,
-        )
+        ),
     ),
     deps_type=ResponseGeneratorDeps,
     output_type=str,
@@ -66,10 +64,7 @@ async def instructions(ctx: RunContext[ResponseGeneratorDeps]) -> str:
 async def user_prompt(deps: ResponseGeneratorDeps) -> str:
     latest_messages_str = "\n".join(msg.preview for msg in deps.latest_messages)
     action_results = [
-        (
-            f"{result.source}:\n"
-            f"{result.content.replace('\n', ' ') if result.content else 'No content'}"
-        )
+        (f"{result.source}:\n{result.content.replace('\n', ' ') if result.content else 'No content'}")
         for result in deps.information_gathering_results
     ]
     return f"""

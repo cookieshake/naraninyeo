@@ -5,7 +5,7 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 from naraninyeo.api.agents.base import StructuredAgent
-from naraninyeo.core.models import Bot, EvaluationFeedback, Message, ResponsePlan
+from naraninyeo.core.models import Bot, EvaluationFeedback, Message
 
 
 class ResponseEvaluatorDeps(BaseModel):
