@@ -1,9 +1,6 @@
 from pydantic import BaseModel
-from pydantic_ai import ModelSettings, RunContext
-from pydantic_ai.exceptions import ModelHTTPError
-from pydantic_ai.models.fallback import FallbackModel
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openrouter import OpenRouterProvider
+from pydantic_ai import RunContext
+from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings, OpenRouterReasoning
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.core.models import PlanAction
@@ -19,18 +16,12 @@ class FinancialSummarizerDeps(BaseModel):
 
 financial_summarizer = StructuredAgent(
     name="Financial Summarizer",
-    model=FallbackModel(
-        OpenAIChatModel("x-ai/grok-4-fast", provider=OpenRouterProvider()),
-        OpenAIChatModel("openai/gpt-4.1-mini", provider=OpenRouterProvider()),
-        fallback_on=lambda err: isinstance(err, ModelHTTPError) and err.status_code > 500,
-    ),
-    model_settings=ModelSettings(
-        extra_body={
-            "reasoning": {
-                "effort": "none",
-                "enabled": False,
-            },
-        }
+    model=OpenRouterModel("x-ai/grok-4-fast"),
+    model_settings=OpenRouterModelSettings(
+        openrouter_reasoning=OpenRouterReasoning(
+            effort="low",
+            enabled=False,
+        ),
     ),
     deps_type=FinancialSummarizerDeps,
     output_type=str,
