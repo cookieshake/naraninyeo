@@ -25,6 +25,7 @@ class WebDocumentFetcher:
             },
         )
 
+    @get_tracer(__name__).start_as_current_span("fetch_document")
     async def fetch_document(
         self,
         url: str,
@@ -49,7 +50,6 @@ class WebDocumentFetcher:
         response.raise_for_status()
         return response.text
 
-    @get_tracer(__name__).start_as_current_span("preprocess_html")
     async def _preprocess_html(self, url: str, html_content: str) -> BeautifulSoup:
         soup = BeautifulSoup(html_content, "html.parser")
         for script_or_style in soup(["script", "style"]):
@@ -71,7 +71,6 @@ class WebDocumentFetcher:
                 element.decompose()
         return soup
 
-    @get_tracer(__name__).start_as_current_span("html_to_markdown")
     async def _html_to_markdown(
         self,
         soup: BeautifulSoup,

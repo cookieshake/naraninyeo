@@ -23,11 +23,12 @@ class ResponseGeneratorDeps(BaseModel):
 
 response_generator = StructuredAgent(
     name="Response Generator",
-    model=OpenRouterModel("deepseek/deepseek-v3.2"),
+    model=OpenRouterModel("google/gemini-3-pro-preview"),
     model_settings=OpenRouterModelSettings(
         parallel_tool_calls=True,
         openrouter_reasoning=OpenRouterReasoning(
-            enabled=False,
+            effort="low",
+            enabled=True,
         )
     ),
     deps_type=ResponseGeneratorDeps,

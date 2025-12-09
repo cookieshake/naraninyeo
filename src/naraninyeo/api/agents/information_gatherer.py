@@ -2,17 +2,15 @@ import asyncio
 from typing import List, Literal
 
 from pydantic import BaseModel, ConfigDict
-from pydantic_ai import ModelHTTPError, ModelSettings, PromptedOutput, RunContext
-from pydantic_ai.models.fallback import FallbackModel
+from pydantic_ai import RunContext
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings, OpenRouterReasoning
 
 from naraninyeo.api.agents.base import StructuredAgent
-from naraninyeo.api.agents.financial_summarizer import FinancialSummarizerDeps
 from naraninyeo.api.infrastructure.adapter.finance_search import FinanceSearchClient
 from naraninyeo.api.infrastructure.adapter.naver_search import NaverSearchClient
+from naraninyeo.api.infrastructure.adapter.web_document import WebDocumentFetcher
 from naraninyeo.api.infrastructure.interfaces import MessageRepository
-from naraninyeo.core.container import container
-from naraninyeo.core.models import ActionType, Bot, MemoryItem, Message, ResponsePlan, TenancyContext
+from naraninyeo.core.models import Bot, MemoryItem, Message, TenancyContext
 
 
 class InformationGathererDeps(BaseModel):
@@ -32,10 +30,11 @@ class InformationGathererOutput(BaseModel):
 
 information_gatherer = StructuredAgent(
     name="Information Gatherer",
-    model=OpenRouterModel("x-ai/grok-4.1-fast"),
+    model=OpenRouterModel("z-ai/glm-4.6"),
     model_settings=OpenRouterModelSettings(
         parallel_tool_calls=True,
         openrouter_reasoning=OpenRouterReasoning(
+            effort="low",
             enabled=False,
         )
     ),
@@ -54,13 +53,10 @@ async def instructions(ctx: RunContext[InformationGathererDeps]) -> str:
 현재 시간은 {ctx.deps.incoming_message.timestamp_iso} 입니다.
 
 아래의 지침을 따르세요:
-- 필요 없으면 빈 배열을 반환하고, 필요한 경우 여러 타입을 조합할 수 있습니다.
-- query를 포함하지 않은 검색은 계획에 포함하지 말고 설명도 작성하지 마세요.
-- 각 계획에는 적절한 query와 description을 포함하세요.
 - 쿼리에 현재 시간이 필요할 경우 이를 반영하세요.
 - '오늘', '최근' 등의 표현은 사용하지 말고 구체적인 날짜를 명시하세요.
 - 날짜는 년, 월 등의 인간에게 친숙한 형식을 사용하세요.
-- 다양한 검색 타입을 조합하여 사용자의 질문에 답할 수 있도록 계획하세요.
+- 도구 실행 결과를 검토한 뒤, 최종 답변에 필요한 핵심 정보만 `add_source` 도구를 통해 전달하세요.
 """
 
 
@@ -118,11 +114,25 @@ async def naver_search(
         InformationGathererOutput(
             source=f"Naver {search_type} Search (Query: {query})",
             content=f"Title: {result.title}\n"
+                    f"Link: {result.link}\n"
                     f"Description: {result.description}\n"
                     f"Published At: {result.published_at or 'N/A'}"
         )
         for result in results
     ]
+
+@information_gatherer.tool_plain
+async def fetch_webpage(url: str) -> InformationGathererOutput:
+    '''
+    웹페이지 내용을 가져오는 도구입니다.
+    url: 웹페이지 URL
+    '''
+    fetcher = WebDocumentFetcher()
+    content = await fetcher.fetch_document(url)
+    return InformationGathererOutput(
+        source=f"Webpage Fetcher (URL: {url})",
+        content=content.markdown_content,
+    )
 
 @information_gatherer.tool_plain
 async def financial_data_lookup(
