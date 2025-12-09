@@ -18,7 +18,7 @@ from naraninyeo.api.infrastructure.interfaces import (
     MessageRepository,
     PlanActionExecutor,
 )
-from naraninyeo.core.models import BotMessage, Message, TenancyContext
+from naraninyeo.core.models import BotMessage, Message, MessageContent, TenancyContext
 from naraninyeo.core.settings import Settings
 
 message_router = APIRouter()
@@ -131,22 +131,26 @@ async def new_message(
         )
 
         async def message_stream_generator():
-            current_state = init_state.model_copy()
-            async for state in new_message_graph.astream(init_state, context=graph_context, stream_mode="updates"):
-                state = state.popitem()[1]
-                if not state:
-                    continue
-                for key, value in state.items():
-                    current_state.__setattr__(key, value)
-                if "outgoing_messages" in state and state["outgoing_messages"] is not None:
-                    generated_message = state["outgoing_messages"]
-                    for msg in generated_message:
-                        yield (
-                            NewMessageResponseChunk(
-                                is_final=False, generated_message=msg, last_state=current_state.model_dump()
-                            ).model_dump_json()
-                            + "\n"
-                        )
+            current_state: dict = init_state.model_dump()
+            async for tpl in new_message_graph.astream(  # pyright: ignore[reportAssignmentType]
+                init_state, context=graph_context, stream_mode=["values", "custom"]
+            ):
+                tpl: tuple[str, dict] = tpl
+                mode, state = tpl
+                if mode == "values":
+                    current_state = state # pyright: ignore[reportAssignmentType]
+                elif mode == "custom":
+                    if state.get("type") == "response":
+                        text: str = state.get("text", "")
+                        yield NewMessageResponseChunk(
+                            is_final=False,
+                            generated_message=BotMessage(
+                                bot=bot,
+                                channel=new_message_request.message.channel,
+                                content=MessageContent(text=text),
+                            ),
+                            last_state=current_state,
+                        ).model_dump_json() + "\n"
             yield NewMessageResponseChunk(is_final=True).model_dump_json()
 
         return StreamingResponse(content=message_stream_generator(), media_type="application/ld+json")

@@ -13,7 +13,6 @@ from naraninyeo.core.models import EvaluationFeedback
 async def evaluate_response(
     state: NewMessageGraphState, runtime: Runtime[NewMessageGraphContext]
 ) -> NewMessageGraphState:
-    state.outgoing_messages = []
     logging.info("Evaluating response")
     if state.evaluation_count > 1:
         state.latest_evaluation_feedback = EvaluationFeedback.FINALIZE

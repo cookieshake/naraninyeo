@@ -1,5 +1,4 @@
-import operator
-from typing import Annotated, List, Literal, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -27,7 +26,6 @@ class NewMessageGraphState(BaseModel):
     information_gathering_results: List[InformationGathererOutput] = Field(default_factory=list)
     latest_evaluation_feedback: Optional[EvaluationFeedback] = None
     draft_messages: List[BotMessage] = Field(default_factory=list)
-    outgoing_messages: Annotated[List[BotMessage], operator.add] = Field(default_factory=list)
 
 
 class NewMessageGraphContext(BaseModel):

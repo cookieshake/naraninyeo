@@ -1,5 +1,6 @@
 import logging
 
+from langgraph.config import get_stream_writer
 from langgraph.runtime import Runtime
 
 from naraninyeo.api.graphs.new_message.models import (
@@ -8,12 +9,16 @@ from naraninyeo.api.graphs.new_message.models import (
 )
 
 
-async def finalize_response(state: NewMessageGraphState, runtime: Runtime[NewMessageGraphContext]) -> dict:
+async def finalize_response(
+    state: NewMessageGraphState, runtime: Runtime[NewMessageGraphContext]
+) -> NewMessageGraphState:
     logging.info("Finalizing response")
-    state.outgoing_messages = []
-    if len(state.draft_messages) == 0:
-        return {}
-    return {
-        "outgoing_messages": state.outgoing_messages + state.draft_messages,
-        "draft_messages": [],
-    }
+    writer = get_stream_writer()
+    for msg in state.draft_messages:
+        writer(
+            {
+                "type": "response",
+                "text": msg.content.text,
+            }
+        )
+    return state
