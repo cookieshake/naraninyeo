@@ -12,7 +12,6 @@ class Ticker(BaseModel):
     reuter_code: str
     type: str
     name: str
-    nation: str
     url: str
     category: str
 
@@ -51,7 +50,6 @@ class FinanceSearchClient:
                     reuter_code=item["reutersCode"],
                     type=item["typeCode"],
                     name=item["name"],
-                    nation=item["nationCode"],
                     url=item["url"],
                     category=item["category"],
                 )
@@ -62,7 +60,7 @@ class FinanceSearchClient:
 
     async def search_news(self, symbol: Ticker) -> list[NewsSearchResult]:
         """주어진 쿼리에 해당하는 종목에 대한 뉴스를 검색합니다."""
-        if symbol.nation == "KOR":
+        if "domestic" in symbol.url.lower():
             url = f"https://m.stock.naver.com/api/news/stock/{symbol.reuter_code}"
         else:
             url = f"https://api.stock.naver.com/news/worldStock/{symbol.reuter_code}"
@@ -78,7 +76,7 @@ class FinanceSearchClient:
             raise Exception(f"Failed to search news: {response.status_code}, {response.text}")
         response = response.json()
         result = []
-        if symbol.nation == "KOR":
+        if "domestic" in symbol.url.lower():
             items = [r["items"] for r in response]
             items = reduce(lambda x, y: x + y, items)
         else:
@@ -114,7 +112,7 @@ class FinanceSearchClient:
 
     async def get_short_term_price(self, symbol: Ticker) -> list[PriceInfo]:
         """주어진 쿼리에 해당하는 종목에 대한 단기간의 종가를 검색합니다"""
-        df = fdr.DataReader(symbol.code.strip("."), start=datetime.now() - timedelta(days=30))
+        df = fdr.DataReader(symbol.code, start=datetime.now() - timedelta(days=30))
         result = []
         for item in df.iloc[-15:-1].iterrows():
             result.append(
@@ -129,9 +127,9 @@ class FinanceSearchClient:
 
     async def get_long_term_price(self, symbol: Ticker) -> list[PriceInfo]:
         """주어진 쿼리에 해당하는 종목에 대한 장기간의 종가를 검색합니다"""
-        df = fdr.DataReader(symbol.code.strip("."), start="1990-01-01")
+        df = fdr.DataReader(symbol.code, start="1990-01-01")
         result = []
-        for item in df.iloc[:: int(len(df) / 100)].iterrows():
+        for item in df.iloc[:: max(1, int(len(df) / 100))].iterrows():
             result.append(
                 PriceInfo(
                     local_date=item[0].strftime("%Y-%m-%d"),

@@ -69,7 +69,7 @@ async def instructions(ctx: RunContext[InformationGathererDeps]) -> str:
 - 쿼리에 현재 시간이 필요할 경우 이를 반영하세요.
 - '오늘', '최근' 등의 표현은 사용하지 말고 구체적인 날짜를 명시하세요.
 - 날짜는 년, 월 등의 인간에게 친숙한 형식을 사용하세요.
-- 도구 실행 결과를 검토한 뒤, 최종 답변에 필요한 핵심 정보만 `add_source` 도구를 통해 전달하세요.
+- 도구 실행 결과를 검토한 뒤, 최종 답변에 필요한 핵심 정보만 `InformationGathererOutput` 형식의 목록으로 최종 반환하세요.
 """
 
 
@@ -170,35 +170,33 @@ async def financial_data_lookup(
     long_term_price = asyncio.create_task(fsc.get_long_term_price(ticker))
     news = asyncio.create_task(fsc.search_news(ticker))
     await asyncio.gather(price, short_term_price, long_term_price, news, return_exceptions=True)
-
-    if isinstance(price, Exception):
+    if price.exception():
         price = ""
     else:
         price = price.result() or ""
 
-    if isinstance(short_term_price, Exception):
+    if short_term_price.exception():
         short_term_price = ""
     else:
         short_term_price = short_term_price.result()
         short_term_price = "\n".join(f"{item.local_date}: {item.close_price}" for item in short_term_price)
 
-    if isinstance(long_term_price, Exception):
+    if long_term_price.exception():
         long_term_price = ""
     else:
         long_term_price = long_term_price.result()
         long_term_price = "\n".join(f"{item.local_date}: {item.close_price}" for item in long_term_price)
 
-    if isinstance(news, Exception):
+    if news.exception():
         news = ""
     else:
         news = news.result()
         news = "\n".join(f"[{item.source}, {item.timestamp}] {item.title}\n{item.body}" for item in news)
     content = (
         f"Ticker Info:\n"
-        f"Code: {ticker.reuter_code}\n"
+        f"Code: {ticker.code}\n"
         f"Type: {ticker.type}\n"
         f"Name: {ticker.name}\n"
-        f"Nation: {ticker.nation}\n"
         f"Current Price: {price}\n"
         f"Short Term Price Info:\n{short_term_price}\n\n"
         f"Long Term Price Info:\n{long_term_price}\n\n"

@@ -25,7 +25,6 @@ async def test_search_symbol(finance_search_client: FinanceSearchClient):
     assert result.reuter_code == "AAPL.O"
     assert result.type == "NASDAQ"
     assert result.name == "애플"
-    assert result.nation == "USA"
 
 
 @pytest.mark.parametrize("query", test_queries)
