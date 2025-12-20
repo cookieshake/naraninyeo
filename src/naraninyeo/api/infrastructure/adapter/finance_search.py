@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 class Ticker(BaseModel):
     code: str
+    reuter_code: str
     type: str
     name: str
     nation: str
@@ -46,7 +47,8 @@ class FinanceSearchClient:
         for item in response["result"]["items"]:
             result.append(
                 Ticker(
-                    code=item["reutersCode"],
+                    code=item["code"],
+                    reuter_code=item["reutersCode"],
                     type=item["typeCode"],
                     name=item["name"],
                     nation=item["nationCode"],
@@ -61,9 +63,9 @@ class FinanceSearchClient:
     async def search_news(self, symbol: Ticker) -> list[NewsSearchResult]:
         """주어진 쿼리에 해당하는 종목에 대한 뉴스를 검색합니다."""
         if symbol.nation == "KOR":
-            url = f"https://m.stock.naver.com/api/news/stock/{symbol.code}"
+            url = f"https://m.stock.naver.com/api/news/stock/{symbol.reuter_code}"
         else:
-            url = f"https://api.stock.naver.com/news/worldStock/{symbol.code}"
+            url = f"https://api.stock.naver.com/news/worldStock/{symbol.reuter_code}"
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 url,
@@ -96,9 +98,9 @@ class FinanceSearchClient:
 
     async def search_current_price(self, symbol: Ticker) -> str | None:
         if "domestic" in symbol.url.lower():
-            url = f"https://polling.finance.naver.com/api/realtime/domestic/{symbol.category}/{symbol.code}"
+            url = f"https://polling.finance.naver.com/api/realtime/domestic/{symbol.category}/{symbol.reuter_code}"
         else:
-            url = f"https://polling.finance.naver.com/api/realtime/worldstock/{symbol.category}/{symbol.code}"
+            url = f"https://polling.finance.naver.com/api/realtime/worldstock/{symbol.category}/{symbol.reuter_code}"
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 url,

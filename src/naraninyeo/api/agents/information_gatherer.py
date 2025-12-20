@@ -195,7 +195,7 @@ async def financial_data_lookup(
         news = "\n".join(f"[{item.source}, {item.timestamp}] {item.title}\n{item.body}" for item in news)
     content = (
         f"Ticker Info:\n"
-        f"Code: {ticker.code}\n"
+        f"Code: {ticker.reuter_code}\n"
         f"Type: {ticker.type}\n"
         f"Name: {ticker.name}\n"
         f"Nation: {ticker.nation}\n"
