@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Protocol, Sequence, runtime_checkable
 
-from naraninyeo.core.models import Bot, MemoryItem, Message, PlanAction, PlanActionResult, TenancyContext
+from naraninyeo.core.models import Bot, MemoryItem, Message, TenancyContext
 
 
 @runtime_checkable

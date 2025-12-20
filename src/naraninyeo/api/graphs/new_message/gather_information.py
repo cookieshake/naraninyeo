@@ -61,12 +61,13 @@ async def gather_information(
                     logging.warning("Information gathering resource limit exceeded")
                 case TimeoutError():
                     logging.warning("Information gathering timeout")
-            # tool call이 마지막 메시지라면 제거    
+            # tool call이 마지막 메시지라면 제거
             latest = messages[-1]
             if isinstance(latest, ModelResponse) and latest.tool_calls:
                 messages = messages[:-1]
             output = await information_gatherer.run(
-                "주어진 자원을 사용하여 정보 수집을 완료하지 못했습니다. 지금까지의 정보를 사용해서 빠르게 답변해주세요.",
+                "주어진 자원을 사용하여 정보 수집을 완료하지 못했습니다. "
+                "지금까지의 정보를 사용해서 빠르게 답변해주세요.",
                 deps=deps.model_copy(update={"use_tool_calls": False}),
                 message_history=messages,
             )

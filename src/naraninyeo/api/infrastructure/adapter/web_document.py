@@ -1,13 +1,14 @@
-from html_to_markdown.options import ConversionOptions
-from bs4.element import Tag
 import asyncio
 from urllib.parse import urljoin
 
 import httpx
 from bs4 import BeautifulSoup
+from bs4.element import Tag
 from html_to_markdown import PreprocessingOptions, convert
+from html_to_markdown.options import ConversionOptions
 from opentelemetry.trace import get_tracer
 from pydantic import BaseModel
+
 
 async def _fetch_iframe_payload(client: httpx.AsyncClient, url: str) -> tuple[str, bool]:
     try:
@@ -44,9 +45,7 @@ def _replace_iframe_with_content(
     iframe.replace_with(container)
 
 
-async def embed_iframes(
-    soup: BeautifulSoup, client: httpx.AsyncClient, base_url: str
-) -> dict[str, str]:
+async def embed_iframes(soup: BeautifulSoup, client: httpx.AsyncClient, base_url: str) -> dict[str, str]:
     iframe_tags = [iframe for iframe in soup.find_all("iframe") if iframe.get("src")]
     if not iframe_tags:
         return {}
@@ -61,7 +60,7 @@ async def embed_iframes(
     payloads = await asyncio.gather(*tasks, return_exceptions=True)
 
     collected_metadata: dict[str, str] = {}
-    for iframe, url, payload in zip(iframe_tags, urls, payloads):
+    for iframe, url, payload in zip(iframe_tags, urls, payloads, strict=False):
         if isinstance(payload, BaseException):
             html, loaded = f"[Failed to embed iframe from {url}: {payload}]", False
             fragment = None
@@ -95,7 +94,6 @@ def extract_metadata(soup: BeautifulSoup) -> dict[str, str]:
     return metadata
 
 
-
 def sanitize_content_tree(soup: BeautifulSoup) -> BeautifulSoup:
     layout_tokens = {"header", "footer", "nav", "sidebar", "menu", "advert", "ads", "sponsor"}
     for element in soup.find_all(True):
@@ -105,7 +103,7 @@ def sanitize_content_tree(soup: BeautifulSoup) -> BeautifulSoup:
         style = attrs.get("style")
         if isinstance(style, list):
             style = " ".join(style)
-        style = (style or "")
+        style = style or ""
         style = style.replace(" ", "").lower()
         if "hidden" in attrs:
             element.decompose()
@@ -148,6 +146,7 @@ def to_markdown(html: str) -> str:
         ),
     )
 
+
 class FetchedDocument(BaseModel):
     url: str
     meta_tags: dict[str, str]
@@ -168,7 +167,6 @@ async def url_to_text(url: str, follow_redirect: bool = True) -> FetchedDocument
             metadata.setdefault(key, value)
         sanitized_soup = sanitize_content_tree(soup)
         markdown_content = to_markdown(sanitized_soup.prettify())
-        text_content = sanitized_soup.get_text("\n", strip=True)
 
     return FetchedDocument(
         url=str(response.url),

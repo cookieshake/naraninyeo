@@ -1,11 +1,10 @@
-from copy import replace
-from pydantic_ai.tools import ToolDefinition
 import asyncio
 from typing import List, Literal
 
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import RunContext
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings, OpenRouterReasoning
+from pydantic_ai.tools import ToolDefinition
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.api.infrastructure.adapter.finance_search import FinanceSearchClient
@@ -30,6 +29,7 @@ class InformationGathererDeps(BaseModel):
 class InformationGathererOutput(BaseModel):
     source: str
     content: str
+
 
 async def block_tool_calls_if_needed(
     ctx: RunContext[InformationGathererDeps], tool_defs: list[ToolDefinition]
