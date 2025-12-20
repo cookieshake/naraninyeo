@@ -1,17 +1,16 @@
-import operator
-from typing import Annotated, List, Literal, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from naraninyeo.api.infrastructure.interfaces import Clock, MemoryRepository, MessageRepository, PlanActionExecutor
+from naraninyeo.api.agents.information_gatherer import InformationGathererOutput
+from naraninyeo.api.infrastructure.adapter.naver_search import NaverSearchClient
+from naraninyeo.api.infrastructure.interfaces import Clock, MemoryRepository, MessageRepository
 from naraninyeo.core.models import (
     Bot,
     BotMessage,
     EvaluationFeedback,
     MemoryItem,
     Message,
-    PlanActionResult,
-    ResponsePlan,
     TenancyContext,
 )
 
@@ -23,12 +22,10 @@ class NewMessageGraphState(BaseModel):
     status: Literal["processing", "completed", "failed"]
     incoming_message: Message
     latest_history: List[Message]
-    response_plan: Optional[ResponsePlan] = None
-    plan_action_results: Optional[List[PlanActionResult]] = None
     evaluation_count: int = 0
+    information_gathering_results: List[InformationGathererOutput] = Field(default_factory=list)
     latest_evaluation_feedback: Optional[EvaluationFeedback] = None
     draft_messages: List[BotMessage] = Field(default_factory=list)
-    outgoing_messages: Annotated[List[BotMessage], operator.add] = Field(default_factory=list)
 
 
 class NewMessageGraphContext(BaseModel):
@@ -37,4 +34,4 @@ class NewMessageGraphContext(BaseModel):
     clock: Clock
     message_repository: MessageRepository
     memory_repository: MemoryRepository
-    plan_action_executor: PlanActionExecutor
+    naver_search_client: NaverSearchClient

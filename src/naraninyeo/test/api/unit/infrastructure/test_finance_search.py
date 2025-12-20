@@ -13,16 +13,18 @@ test_queries = [
     "애플",
     "MSFT",
     "삼성전자",
+    "코스피",
+    "NASDAQ",
 ]
 
 
 async def test_search_symbol(finance_search_client: FinanceSearchClient):
     result = await finance_search_client.search_symbol("애플")
     assert result is not None
-    assert result.code == "AAPL.O"
+    assert result.code == "AAPL"
+    assert result.reuter_code == "AAPL.O"
     assert result.type == "NASDAQ"
     assert result.name == "애플"
-    assert result.nation == "USA"
 
 
 @pytest.mark.parametrize("query", test_queries)

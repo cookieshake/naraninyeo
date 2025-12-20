@@ -3,9 +3,148 @@ from urllib.parse import urljoin
 
 import httpx
 from bs4 import BeautifulSoup
+from bs4.element import Tag
 from html_to_markdown import PreprocessingOptions, convert
+from html_to_markdown.options import ConversionOptions
 from opentelemetry.trace import get_tracer
 from pydantic import BaseModel
+
+
+async def _fetch_iframe_payload(client: httpx.AsyncClient, url: str) -> tuple[str, bool]:
+    try:
+        response = await client.get(url)
+        response.raise_for_status()
+        return response.text, True
+    except Exception as exc:  # noqa: BLE001 - placeholder needs the message
+        return f"[Failed to embed iframe from {url}: {exc}]", False
+
+
+def _replace_iframe_with_content(
+    soup: BeautifulSoup,
+    iframe: Tag,
+    html: str,
+    src_url: str,
+    loaded: bool,
+    fragment: BeautifulSoup | None = None,
+) -> None:
+    if not loaded:
+        iframe.replace_with(soup.new_string(html))
+        return
+
+    fragment = fragment or BeautifulSoup(html, "html.parser")
+    container = soup.new_tag("div")
+    container["data-embedded-src"] = src_url
+
+    nodes = fragment.body.contents if fragment.body else fragment.contents
+    if not nodes:
+        container.string = html
+    else:
+        for node in list(nodes):
+            container.append(node)
+
+    iframe.replace_with(container)
+
+
+async def embed_iframes(soup: BeautifulSoup, client: httpx.AsyncClient, base_url: str) -> dict[str, str]:
+    iframe_tags = [iframe for iframe in soup.find_all("iframe") if iframe.get("src")]
+    if not iframe_tags:
+        return {}
+
+    urls = []
+    for iframe in iframe_tags:
+        src = iframe.get("src")
+        if isinstance(src, list):
+            src = src[0] if src else ""
+        urls.append(urljoin(base_url, str(src) if src else ""))
+    tasks = [_fetch_iframe_payload(client, url) for url in urls]
+    payloads = await asyncio.gather(*tasks, return_exceptions=True)
+
+    collected_metadata: dict[str, str] = {}
+    for iframe, url, payload in zip(iframe_tags, urls, payloads, strict=False):
+        if isinstance(payload, BaseException):
+            html, loaded = f"[Failed to embed iframe from {url}: {payload}]", False
+            fragment = None
+        else:
+            html, loaded = payload
+            fragment = BeautifulSoup(html, "html.parser") if loaded else None
+
+        iframe_metadata = extract_metadata(fragment) if fragment else {}
+        _replace_iframe_with_content(soup, iframe, html, url, loaded, fragment)
+
+        for key, value in iframe_metadata.items():
+            collected_metadata.setdefault(key, value)
+
+    return collected_metadata
+
+
+def extract_metadata(soup: BeautifulSoup) -> dict[str, str]:
+    metadata: dict[str, str] = {}
+    for meta in soup.find_all("meta"):
+        key = meta.get("name") or meta.get("property") or meta.get("http-equiv")
+        content = meta.get("content")
+
+        if isinstance(key, list):
+            key = key[0] if key else None
+        if isinstance(content, list):
+            content = content[0] if content else None
+
+        if not key or content is None:
+            continue
+        metadata[str(key)] = str(content)
+    return metadata
+
+
+def sanitize_content_tree(soup: BeautifulSoup) -> BeautifulSoup:
+    layout_tokens = {"header", "footer", "nav", "sidebar", "menu", "advert", "ads", "sponsor"}
+    for element in soup.find_all(True):
+        if not isinstance(element, Tag):
+            continue
+        attrs = element.attrs or {}
+        style = attrs.get("style")
+        if isinstance(style, list):
+            style = " ".join(style)
+        style = style or ""
+        style = style.replace(" ", "").lower()
+        if "hidden" in attrs:
+            element.decompose()
+            continue
+        if attrs.get("aria-hidden") == "true":
+            element.decompose()
+            continue
+        if "display:none" in style or "visibility:hidden" in style:
+            element.decompose()
+            continue
+        if element.name == "a" and element.get("href") == "#":
+            element.unwrap()
+            continue
+        id_val = attrs.get("id")
+        if isinstance(id_val, list):
+            id_val = " ".join(id_val)
+        id_attr = (id_val or "").lower()
+        class_tokens = [token.lower() for token in attrs.get("class", [])]
+        if (
+            element.name in layout_tokens
+            or any(token in id_attr for token in layout_tokens)
+            or any(any(token in cls for token in layout_tokens) for cls in class_tokens)
+        ):
+            element.decompose()
+            continue
+    return soup
+
+
+def to_markdown(html: str) -> str:
+    return convert(
+        html,
+        preprocessing=PreprocessingOptions(
+            enabled=True,
+            preset="aggressive",
+        ),
+        options=ConversionOptions(
+            extract_metadata=False,
+            strip_tags={"button", "svg"},
+            autolinks=False,
+        ),
+    )
 
 
 class FetchedDocument(BaseModel):
@@ -15,72 +154,32 @@ class FetchedDocument(BaseModel):
     markdown_content: str
 
 
-class WebDocumentFetcher:
-    def __init__(self) -> None:
-        self.client = httpx.AsyncClient(
-            verify=False,
-            timeout=10.0,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:144.0) Gecko/20100101 Firefox/144.0",
-            },
-        )
+async def url_to_text(url: str, follow_redirect: bool = True) -> FetchedDocument:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, follow_redirects=follow_redirect)
+        response.raise_for_status()
 
+        soup = BeautifulSoup(response.text, "html.parser")
+        iframe_metadata = await embed_iframes(soup, client, str(response.url))
+        rendered_html = soup.prettify()
+        metadata = extract_metadata(soup)
+        for key, value in iframe_metadata.items():
+            metadata.setdefault(key, value)
+        sanitized_soup = sanitize_content_tree(soup)
+        markdown_content = to_markdown(sanitized_soup.prettify())
+
+    return FetchedDocument(
+        url=str(response.url),
+        meta_tags=metadata,
+        html_content=rendered_html,
+        markdown_content=markdown_content,
+    )
+
+
+class WebDocumentFetcher:
+    @get_tracer(__name__).start_as_current_span("fetch_document")
     async def fetch_document(
         self,
         url: str,
     ) -> FetchedDocument:
-        html_content = await self._fetch_document(url)
-        soup = await self._preprocess_html(url, html_content)
-        tags = {}
-        meta_tags = soup.find_all("meta")
-        for tag in meta_tags:
-            if tag.get("name"):
-                tags[tag.get("name").lower()] = tag.get("content", "")  # pyright: ignore[reportOptionalMemberAccess, reportAttributeAccessIssue]
-            if tag.get("property"):
-                tags[tag.get("property").lower()] = tag.get("content", "")  # pyright: ignore[reportOptionalMemberAccess, reportAttributeAccessIssue]
-        markdown_content = await self._html_to_markdown(soup)
-        return FetchedDocument(url=url, meta_tags=tags, html_content=html_content, markdown_content=markdown_content)
-
-    async def _fetch_document(
-        self,
-        url: str,
-    ) -> str:
-        response = await self.client.get(url, timeout=10.0, follow_redirects=True)
-        response.raise_for_status()
-        return response.text
-
-    @get_tracer(__name__).start_as_current_span("preprocess_html")
-    async def _preprocess_html(self, url: str, html_content: str) -> BeautifulSoup:
-        soup = BeautifulSoup(html_content, "html.parser")
-        for script_or_style in soup(["script", "style"]):
-            script_or_style.decompose()
-        iframes = [iframe for iframe in soup.find_all("iframe") if isinstance(iframe.get("src"), str)]  # pyright: ignore[reportAttributeAccessIssue]
-        if iframes:
-            async with httpx.AsyncClient() as iframe_client:
-                iframe_links = [urljoin(url, iframe.get("src")) for iframe in iframes]  # pyright: ignore[reportArgumentType, reportAttributeAccessIssue]
-                iframe_htmls = await asyncio.gather(
-                    *(iframe_client.get(link) for link in iframe_links),
-                    return_exceptions=True,
-                )
-            for iframe, iframe_resp in zip(iframes, iframe_htmls, strict=False):
-                if isinstance(iframe_resp, httpx.Response):
-                    iframe_soup = BeautifulSoup(iframe_resp.text, "html.parser")
-                    iframe.replace_with(iframe_soup)
-        for tag in ["a", "button", "iframe"]:
-            for element in soup.find_all(tag):
-                element.decompose()
-        return soup
-
-    @get_tracer(__name__).start_as_current_span("html_to_markdown")
-    async def _html_to_markdown(
-        self,
-        soup: BeautifulSoup,
-    ) -> str:
-        markdown_content = convert(
-            soup.prettify(),
-            preprocessing=PreprocessingOptions(
-                enabled=True,
-                preset="aggressive",
-            ),
-        )
-        return markdown_content
+        return await url_to_text(url)

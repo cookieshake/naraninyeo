@@ -1,10 +1,8 @@
 from typing import List, Literal, TypeAlias
 
 from pydantic import BaseModel
-from pydantic_ai import ModelSettings, RunContext
-from pydantic_ai.models.fallback import FallbackModel
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openrouter import OpenRouterProvider
+from pydantic_ai import RunContext
+from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings, OpenRouterReasoning
 
 from naraninyeo.api.agents.base import StructuredAgent
 from naraninyeo.core.models import MemoryItem
@@ -29,17 +27,12 @@ MemoryPrunerAction: TypeAlias = MemoryMergeAction | MemoryDeleteAction
 
 memory_pruner = StructuredAgent(
     name="Memory Pruner",
-    model=FallbackModel(
-        OpenAIChatModel("openai/gpt-oss-120b", provider=OpenRouterProvider()),
-        OpenAIChatModel("google/gemini-2.5-flash-lite", provider=OpenRouterProvider()),
-    ),
-    model_settings=ModelSettings(
-        extra_body={
-            "reasoning": {
-                "effort": "none",
-                "enabled": False,
-            },
-        }
+    model=OpenRouterModel("openai/gpt-4.1-nano"),
+    model_settings=OpenRouterModelSettings(
+        openrouter_reasoning=OpenRouterReasoning(
+            effort="low",
+            enabled=False,
+        ),
     ),
     deps_type=MemoryPrunerDeps,
     output_type=List[MemoryPrunerAction],

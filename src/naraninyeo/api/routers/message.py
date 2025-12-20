@@ -9,15 +9,15 @@ from pydantic import BaseModel
 
 from naraninyeo.api.graphs.manage_memory import ManageMemoryGraphContext, ManageMemoryGraphState, manage_memory_graph
 from naraninyeo.api.graphs.new_message import NewMessageGraphContext, NewMessageGraphState, new_message_graph
+from naraninyeo.api.infrastructure.adapter.naver_search import NaverSearchClient
 from naraninyeo.api.infrastructure.interfaces import (
     BotRepository,
     Clock,
     IdGenerator,
     MemoryRepository,
     MessageRepository,
-    PlanActionExecutor,
 )
-from naraninyeo.core.models import BotMessage, Message, TenancyContext
+from naraninyeo.core.models import BotMessage, Message, MessageContent, TenancyContext
 from naraninyeo.core.settings import Settings
 
 message_router = APIRouter()
@@ -46,7 +46,6 @@ async def new_message(
     bot_repo: FromDishka[BotRepository],
     clock: FromDishka[Clock],
     id_generator: FromDishka[IdGenerator],
-    plan_executor: FromDishka[PlanActionExecutor],
 ):
     tctx = TenancyContext(tenant_id="default")
     bot = await bot_repo.get(tctx, new_message_request.bot_id)
@@ -125,23 +124,30 @@ async def new_message(
             clock=clock,
             message_repository=message_repo,
             memory_repository=memory_repo,
-            plan_action_executor=plan_executor,
+            naver_search_client=NaverSearchClient(settings),
         )
 
         async def message_stream_generator():
-            current_state = init_state.model_copy()
-            async for state in new_message_graph.astream(init_state, context=graph_context, stream_mode="updates"):
-                state = state.popitem()[1]
-                if not state:
-                    continue
-                for key, value in state.items():
-                    current_state.__setattr__(key, value)
-                if "outgoing_messages" in state and state["outgoing_messages"] is not None:
-                    generated_message = state["outgoing_messages"]
-                    for msg in generated_message:
+            current_state: dict = init_state.model_dump()
+            async for tpl in new_message_graph.astream(  # pyright: ignore[reportAssignmentType]
+                init_state, context=graph_context, stream_mode=["values", "custom"]
+            ):
+                tpl: tuple[str, dict] = tpl
+                mode, state = tpl
+                if mode == "values":
+                    current_state = state  # pyright: ignore[reportAssignmentType]
+                elif mode == "custom":
+                    if state.get("type") == "response":
+                        text: str = state.get("text", "")
                         yield (
                             NewMessageResponseChunk(
-                                is_final=False, generated_message=msg, last_state=current_state.model_dump()
+                                is_final=False,
+                                generated_message=BotMessage(
+                                    bot=bot,
+                                    channel=new_message_request.message.channel,
+                                    content=MessageContent(text=text),
+                                ),
+                                last_state=current_state,
                             ).model_dump_json()
                             + "\n"
                         )
