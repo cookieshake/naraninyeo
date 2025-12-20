@@ -27,11 +27,11 @@ MemoryPrunerAction: TypeAlias = MemoryMergeAction | MemoryDeleteAction
 
 memory_pruner = StructuredAgent(
     name="Memory Pruner",
-    model=OpenRouterModel("openai/gpt-oss-120b"),
+    model=OpenRouterModel("openai/gpt-4.1-nano"),
     model_settings=OpenRouterModelSettings(
-        openrouter_models=["google/gemini-2.5-flash-lite"],
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",
+            enabled=False,
         ),
     ),
     deps_type=MemoryPrunerDeps,

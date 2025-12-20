@@ -12,13 +12,11 @@ class MemoryExtractorDeps(BaseModel):
 
 memory_extractor = StructuredAgent(
     name="Memory Extractor",
-    model=OpenRouterModel("openai/gpt-oss-120b"),
+    model=OpenRouterModel("openai/gpt-4.1-nano"),
     model_settings=OpenRouterModelSettings(
-        openrouter_models=[
-            "openai/gpt-oss-20b",
-        ],
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",
+            enabled=False,
         ),
     ),
     deps_type=MemoryExtractorDeps,

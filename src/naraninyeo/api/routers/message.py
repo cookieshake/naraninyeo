@@ -16,7 +16,6 @@ from naraninyeo.api.infrastructure.interfaces import (
     IdGenerator,
     MemoryRepository,
     MessageRepository,
-    PlanActionExecutor,
 )
 from naraninyeo.core.models import BotMessage, Message, MessageContent, TenancyContext
 from naraninyeo.core.settings import Settings
@@ -47,7 +46,6 @@ async def new_message(
     bot_repo: FromDishka[BotRepository],
     clock: FromDishka[Clock],
     id_generator: FromDishka[IdGenerator],
-    plan_executor: FromDishka[PlanActionExecutor],
 ):
     tctx = TenancyContext(tenant_id="default")
     bot = await bot_repo.get(tctx, new_message_request.bot_id)
@@ -126,7 +124,6 @@ async def new_message(
             clock=clock,
             message_repository=message_repo,
             memory_repository=memory_repo,
-            plan_action_executor=plan_executor,
             naver_search_client=NaverSearchClient(settings),
         )
 

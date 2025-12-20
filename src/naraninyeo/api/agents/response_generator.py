@@ -26,7 +26,7 @@ response_generator = StructuredAgent(
         parallel_tool_calls=True,
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",
-            enabled=True,
+            enabled=False,
         ),
     ),
     deps_type=ResponseGeneratorDeps,

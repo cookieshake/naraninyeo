@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from naraninyeo.api.agents.information_gatherer import InformationGathererOutput
 from naraninyeo.api.infrastructure.adapter.naver_search import NaverSearchClient
-from naraninyeo.api.infrastructure.interfaces import Clock, MemoryRepository, MessageRepository, PlanActionExecutor
+from naraninyeo.api.infrastructure.interfaces import Clock, MemoryRepository, MessageRepository
 from naraninyeo.core.models import (
     Bot,
     BotMessage,
@@ -34,5 +34,4 @@ class NewMessageGraphContext(BaseModel):
     clock: Clock
     message_repository: MessageRepository
     memory_repository: MemoryRepository
-    plan_action_executor: PlanActionExecutor
     naver_search_client: NaverSearchClient
