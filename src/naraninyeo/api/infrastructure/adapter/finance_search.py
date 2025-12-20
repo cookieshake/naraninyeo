@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 from functools import reduce
 
@@ -112,9 +113,9 @@ class FinanceSearchClient:
 
     async def get_short_term_price(self, symbol: Ticker) -> list[PriceInfo]:
         """주어진 쿼리에 해당하는 종목에 대한 단기간의 종가를 검색합니다"""
-        df = fdr.DataReader(symbol.code, start=datetime.now() - timedelta(days=30))
+        df = await asyncio.to_thread(fdr.DataReader, symbol.code, start=datetime.now() - timedelta(days=30))
         result = []
-        for item in df.iloc[-15:-1].iterrows():
+        for item in df.iloc[-15:].iterrows():
             result.append(
                 PriceInfo(
                     local_date=item[0].strftime("%Y-%m-%d"),
@@ -127,7 +128,7 @@ class FinanceSearchClient:
 
     async def get_long_term_price(self, symbol: Ticker) -> list[PriceInfo]:
         """주어진 쿼리에 해당하는 종목에 대한 장기간의 종가를 검색합니다"""
-        df = fdr.DataReader(symbol.code, start="1990-01-01")
+        df = await asyncio.to_thread(fdr.DataReader, symbol.code, start="1990-01-01")
         result = []
         for item in df.iloc[:: max(1, int(len(df) / 100))].iterrows():
             result.append(
