@@ -138,19 +138,22 @@ async def new_message(
                 tpl: tuple[str, dict] = tpl
                 mode, state = tpl
                 if mode == "values":
-                    current_state = state # pyright: ignore[reportAssignmentType]
+                    current_state = state  # pyright: ignore[reportAssignmentType]
                 elif mode == "custom":
                     if state.get("type") == "response":
                         text: str = state.get("text", "")
-                        yield NewMessageResponseChunk(
-                            is_final=False,
-                            generated_message=BotMessage(
-                                bot=bot,
-                                channel=new_message_request.message.channel,
-                                content=MessageContent(text=text),
-                            ),
-                            last_state=current_state,
-                        ).model_dump_json() + "\n"
+                        yield (
+                            NewMessageResponseChunk(
+                                is_final=False,
+                                generated_message=BotMessage(
+                                    bot=bot,
+                                    channel=new_message_request.message.channel,
+                                    content=MessageContent(text=text),
+                                ),
+                                last_state=current_state,
+                            ).model_dump_json()
+                            + "\n"
+                        )
             yield NewMessageResponseChunk(is_final=True).model_dump_json()
 
         return StreamingResponse(content=message_stream_generator(), media_type="application/ld+json")

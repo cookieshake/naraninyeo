@@ -1,5 +1,7 @@
+from datetime import datetime, timedelta
 from functools import reduce
 
+import FinanceDataReader as fdr
 import httpx
 from cachetools import TTLCache, cached
 from pydantic import BaseModel
@@ -10,6 +12,8 @@ class Ticker(BaseModel):
     type: str
     name: str
     nation: str
+    url: str
+    category: str
 
 
 class NewsSearchResult(BaseModel):
@@ -32,7 +36,7 @@ class FinanceSearchClient:
                 "https://m.stock.naver.com/front-api/search/autoComplete",
                 params={
                     "query": query,
-                    "target": "stock",
+                    "target": "stock,index,marketindicator,coin,ipo",
                 },
             )
         if response.status_code != 200:
@@ -46,6 +50,8 @@ class FinanceSearchClient:
                     type=item["typeCode"],
                     name=item["name"],
                     nation=item["nationCode"],
+                    url=item["url"],
+                    category=item["category"],
                 )
             )
         if not result:
@@ -89,10 +95,10 @@ class FinanceSearchClient:
         return result
 
     async def search_current_price(self, symbol: Ticker) -> str | None:
-        if symbol.nation == "KOR":
-            url = f"https://polling.finance.naver.com/api/realtime/domestic/stock/{symbol.code}"
+        if "domestic" in symbol.url.lower():
+            url = f"https://polling.finance.naver.com/api/realtime/domestic/{symbol.category}/{symbol.code}"
         else:
-            url = f"https://polling.finance.naver.com/api/realtime/worldstock/stock/{symbol.code}"
+            url = f"https://polling.finance.naver.com/api/realtime/worldstock/{symbol.category}/{symbol.code}"
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 url,
@@ -105,24 +111,14 @@ class FinanceSearchClient:
         return response["datas"][0]["closePrice"]
 
     async def get_short_term_price(self, symbol: Ticker) -> list[PriceInfo]:
-        """주어진 쿼리에 해당하는 종목에 대한 장기간의 종가를 검색합니다"""
-        if symbol.nation == "KOR":
-            url = f"https://api.stock.naver.com/chart/domestic/item/{symbol.code}?periodType=dayCandle"
-        else:
-            url = f"https://api.stock.naver.com/chart/foreign/item/{symbol.code}?periodType=dayCandle&stockExchangeType={symbol.type}"
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                url,
-            )
-            if response.status_code != 200:
-                raise Exception(f"Failed to get short term price: {response.status_code}, {response.text}")
-            response = response.json()
+        """주어진 쿼리에 해당하는 종목에 대한 단기간의 종가를 검색합니다"""
+        df = fdr.DataReader(symbol.code.strip("."), start=datetime.now() - timedelta(days=30))
         result = []
-        for item in response["priceInfos"][-15:]:
+        for item in df.iloc[-15:-1].iterrows():
             result.append(
                 PriceInfo(
-                    local_date=item["localDate"],
-                    close_price=item["closePrice"],
+                    local_date=item[0].strftime("%Y-%m-%d"),
+                    close_price=item[1].Close,
                 )
             )
         if not result:
@@ -131,23 +127,13 @@ class FinanceSearchClient:
 
     async def get_long_term_price(self, symbol: Ticker) -> list[PriceInfo]:
         """주어진 쿼리에 해당하는 종목에 대한 장기간의 종가를 검색합니다"""
-        if symbol.nation == "KOR":
-            url = f"https://api.stock.naver.com/chart/domestic/item/{symbol.code}?periodType=year&range=10"
-        else:
-            url = f"https://api.stock.naver.com/chart/foreign/item/{symbol.code}?periodType=year&range=10&stockExchangeType={symbol.type}"
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                url,
-            )
-            if response.status_code != 200:
-                raise Exception(f"Failed to get short term price: {response.status_code}, {response.text}")
-            response = response.json()
+        df = fdr.DataReader(symbol.code.strip("."), start="1990-01-01")
         result = []
-        for item in response["priceInfos"][::10]:
+        for item in df.iloc[:: int(len(df) / 100)].iterrows():
             result.append(
                 PriceInfo(
-                    local_date=item["localDate"],
-                    close_price=item["closePrice"],
+                    local_date=item[0].strftime("%Y-%m-%d"),
+                    close_price=item[1].Close,
                 )
             )
         if not result:

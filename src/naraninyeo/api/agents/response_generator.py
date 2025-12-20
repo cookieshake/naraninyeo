@@ -21,7 +21,7 @@ class ResponseGeneratorDeps(BaseModel):
 
 response_generator = StructuredAgent(
     name="Response Generator",
-    model=OpenRouterModel("google/gemini-3-pro-preview"),
+    model=OpenRouterModel("openai/gpt-5.2-chat"),
     model_settings=OpenRouterModelSettings(
         parallel_tool_calls=True,
         openrouter_reasoning=OpenRouterReasoning(
