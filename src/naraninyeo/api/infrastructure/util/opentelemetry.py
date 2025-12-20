@@ -12,8 +12,7 @@ from opentelemetry.instrumentation.aiokafka import AIOKafkaInstrumentor
 from opentelemetry.instrumentation.asyncpg import AsyncPGInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrumentor
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs._internal import LogRecord
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler, ReadableLogRecord
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, ConsoleLogExporter, SimpleLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
@@ -40,7 +39,8 @@ class OpenTelemetryLog:
         handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
         logging.basicConfig(handlers=[handler], level=logging.INFO)
 
-    def log_formatter(self, record: LogRecord) -> str:
+    def log_formatter(self, readable_log_record: ReadableLogRecord) -> str:
+        record = readable_log_record.log_record
         ts = datetime.fromtimestamp((record.timestamp or 1) / 1e9)
         att = record.attributes or {}
         filepath = att.get("code.file.path", "")

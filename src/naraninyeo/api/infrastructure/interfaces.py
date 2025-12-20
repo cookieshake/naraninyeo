@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Protocol, Sequence, runtime_checkable
 
-from naraninyeo.core.models import Bot, MemoryItem, Message, PlanAction, PlanActionResult, TenancyContext
+from naraninyeo.core.models import Bot, MemoryItem, Message, TenancyContext
 
 
 @runtime_checkable
@@ -41,18 +41,6 @@ class MemoryRepository(Protocol):
 @runtime_checkable
 class Clock(Protocol):
     def now(self) -> datetime: ...
-
-
-@runtime_checkable
-class PlanActionExecutor(Protocol):
-    async def execute_actions(
-        self,
-        tctx: TenancyContext,
-        incoming_message: Message,
-        latest_history: list[Message],
-        memories: list[MemoryItem],
-        actions: list[PlanAction],
-    ) -> list[PlanActionResult]: ...
 
 
 @runtime_checkable

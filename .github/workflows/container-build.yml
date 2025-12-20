@@ -85,6 +85,8 @@ jobs:
   cleanup:
     needs: deploy
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     steps:
       - name: Delete all containers from package without tags
         uses: Chizkiyahu/delete-untagged-ghcr-action@v6

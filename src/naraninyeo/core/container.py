@@ -4,14 +4,12 @@ from asyncpg import Pool, create_pool
 from dishka import Provider, Scope, make_async_container, provide
 
 from naraninyeo.api.infrastructure.adapter.llamacpp_gemma_embedder import LlamaCppGemmaEmbedder
-from naraninyeo.api.infrastructure.adapter.plan_executor import DefaultPlanActionExecutor
 from naraninyeo.api.infrastructure.interfaces import (
     BotRepository,
     Clock,
     IdGenerator,
     MemoryRepository,
     MessageRepository,
-    PlanActionExecutor,
     TextEmbedder,
 )
 from naraninyeo.api.infrastructure.repository.vchord_bot import VchordBotRepository
@@ -55,7 +53,6 @@ class UtilProvider(Provider):
     clock = provide(source=SimpleClock, provides=Clock)
     id_generator = provide(source=NanoidGenerator, provides=IdGenerator)
     text_embedder = provide(source=LlamaCppGemmaEmbedder, provides=TextEmbedder)
-    plan_action_executor = provide(source=DefaultPlanActionExecutor, provides=PlanActionExecutor)
 
 
 container = make_async_container(

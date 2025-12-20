@@ -13,9 +13,6 @@ from naraninyeo.core.models import BotMessage, MessageContent
 async def generate_response(
     state: NewMessageGraphState, runtime: Runtime[NewMessageGraphContext]
 ) -> NewMessageGraphState:
-    state.outgoing_messages = []
-    if state.response_plan is None or state.incoming_message is None:
-        return state
     if state.draft_messages is None:
         state.draft_messages = []
 
@@ -23,8 +20,7 @@ async def generate_response(
         bot=state.current_bot,
         incoming_message=state.incoming_message,
         latest_messages=state.latest_history or [],
-        plan=state.response_plan,
-        plan_action_results=state.plan_action_results or [],
+        information_gathering_results=state.information_gathering_results or [],
         clock=runtime.context.clock,
         memories=state.memories,
     )
