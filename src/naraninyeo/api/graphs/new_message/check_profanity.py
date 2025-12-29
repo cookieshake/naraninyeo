@@ -14,7 +14,7 @@ async def check_profanity(
     state: NewMessageGraphState, runtime: Runtime[NewMessageGraphContext]
 ) -> NewMessageGraphState:
     logging.info("Checking profanity")
-    
+
     deps = ProfanityCheckerDeps(
         incoming_message=state.incoming_message,
     )
@@ -22,11 +22,11 @@ async def check_profanity(
     result = await profanity_checker.run_with_generator(deps)
     state.is_profane = result.output.is_profane
     state.profanity_reason = result.output.reason
-    
+
     if state.is_profane:
         logging.info(f"Profanity detected: {state.profanity_reason}")
         state.status = "completed"
-        
+
         writer = get_stream_writer()
         writer(
             {
@@ -34,5 +34,5 @@ async def check_profanity(
                 "text": f"부적절한 언어나 요청 감지.\n({state.profanity_reason})",
             }
         )
-    
+
     return state
