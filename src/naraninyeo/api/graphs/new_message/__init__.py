@@ -1,5 +1,6 @@
-from langgraph.graph import START, StateGraph
+from langgraph.graph import END, START, StateGraph
 
+from naraninyeo.api.graphs.new_message.check_profanity import check_profanity
 from naraninyeo.api.graphs.new_message.evaluate_response import evaluate_response
 from naraninyeo.api.graphs.new_message.finalize_response import finalize_response
 from naraninyeo.api.graphs.new_message.gather_information import gather_information
@@ -15,12 +16,22 @@ _new_message_graph = StateGraph(
     context_schema=NewMessageGraphContext,
 )
 
+_new_message_graph.add_node("check_profanity", check_profanity)
 _new_message_graph.add_node("gather_information", gather_information)
 _new_message_graph.add_node("generate_response", generate_response)
 _new_message_graph.add_node("evaluate_response", evaluate_response)
 _new_message_graph.add_node("finalize_response", finalize_response)
 
-_new_message_graph.add_edge(START, "gather_information")
+_new_message_graph.add_edge(START, "check_profanity")
+
+
+def route_after_profanity_check(state: NewMessageGraphState) -> str:
+    if state.is_profane:
+        return END
+    return "gather_information"
+
+
+_new_message_graph.add_conditional_edges("check_profanity", route_after_profanity_check)
 _new_message_graph.add_edge("gather_information", "generate_response")
 _new_message_graph.add_edge("generate_response", "evaluate_response")
 
