@@ -27,12 +27,12 @@ async def check_profanity(
         logging.info(f"Profanity detected: {state.profanity_reason}")
         state.status = "completed"
 
-        writer = get_stream_writer()
-        writer(
-            {
-                "type": "response",
-                "text": f"부적절한 언어나 요청 감지.\n({state.profanity_reason})",
-            }
-        )
+        # writer = get_stream_writer()
+        # writer(
+        #     {
+        #         "type": "response",
+        #         "text": f"부적절한 언어나 요청 감지.\n({state.profanity_reason})",
+        #     }
+        # )
 
     return state
