@@ -25,6 +25,8 @@ class NewMessageGraphState(BaseModel):
     evaluation_count: int = 0
     information_gathering_results: List[InformationGathererOutput] = Field(default_factory=list)
     latest_evaluation_feedback: Optional[EvaluationFeedback] = None
+    is_profane: bool = False
+    profanity_reason: Optional[str] = None
     draft_messages: List[BotMessage] = Field(default_factory=list)
 
 
