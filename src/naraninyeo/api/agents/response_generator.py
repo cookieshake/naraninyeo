@@ -21,7 +21,7 @@ class ResponseGeneratorDeps(BaseModel):
 
 response_generator = StructuredAgent(
     name="Response Generator",
-    model=OpenRouterModel("x-ai/grok-4.1-fast"),
+    model=OpenRouterModel("moonshotai/kimi-k2.5"),
     model_settings=OpenRouterModelSettings(
         parallel_tool_calls=True,
         openrouter_reasoning=OpenRouterReasoning(
