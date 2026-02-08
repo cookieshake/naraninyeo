@@ -38,6 +38,7 @@ dependencies = [
     "cachetools>=6.2.1",
     "finance-datareader>=0.9.96",
     "opentelemetry-instrumentation-fastapi>=0.59b0",
+    "pydantic-monty>=0.0.4",
 ]
 
 [project.scripts]
