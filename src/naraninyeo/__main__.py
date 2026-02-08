@@ -2,7 +2,6 @@ import asyncio
 import os
 
 from dishka.integrations.fastapi import setup_dishka
-from dotenv import load_dotenv
 
 from naraninyeo.api import create_app
 from naraninyeo.api.container import container
@@ -16,7 +15,6 @@ from naraninyeo.router import get_router
 
 
 async def main() -> None:
-    load_dotenv()
     OpenTelemetryLog().configure()
     OpenTelemetryTracer().configure()
     OpenTelemetryMetrics().configure()
