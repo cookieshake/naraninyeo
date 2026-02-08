@@ -1,39 +1,36 @@
 import asyncio
 import logging
-from typing import Optional
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Response
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 
-from naraninyeo.api.graphs.manage_memory import ManageMemoryGraphContext, ManageMemoryGraphState, manage_memory_graph
-from naraninyeo.api.graphs.new_message import NewMessageGraphContext, NewMessageGraphState, new_message_graph
-from naraninyeo.api.infrastructure.adapter.naver_search import NaverSearchClient
-from naraninyeo.api.infrastructure.interfaces import (
+from naraninyeo.application.graphs.manage_memory import (
+    ManageMemoryGraphContext,
+    ManageMemoryGraphState,
+    manage_memory_graph,
+)
+from naraninyeo.application.graphs.new_message import NewMessageGraphContext, NewMessageGraphState, new_message_graph
+from naraninyeo.core.interfaces import (
     BotRepository,
     Clock,
+    FinanceSearch,
     IdGenerator,
     MemoryRepository,
     MessageRepository,
+    NaverSearch,
+    WebDocumentFetch,
 )
-from naraninyeo.core.models import BotMessage, Message, MessageContent, TenancyContext
+from naraninyeo.core.models import (
+    BotMessage,
+    MessageContent,
+    NewMessageRequest,
+    NewMessageResponseChunk,
+    TenancyContext,
+)
 from naraninyeo.core.settings import Settings
 
 message_router = APIRouter()
-
-
-class NewMessageRequest(BaseModel):
-    bot_id: str
-    message: Message
-    reply_needed: bool = False
-
-
-class NewMessageResponseChunk(BaseModel):
-    is_final: bool
-    error: str | None = None
-    generated_message: BotMessage | None = None
-    last_state: Optional[dict] = None
 
 
 @message_router.post("/new_message")
@@ -46,6 +43,9 @@ async def new_message(
     bot_repo: FromDishka[BotRepository],
     clock: FromDishka[Clock],
     id_generator: FromDishka[IdGenerator],
+    naver_search: FromDishka[NaverSearch],
+    finance_search: FromDishka[FinanceSearch],
+    web_document_fetch: FromDishka[WebDocumentFetch],
 ):
     tctx = TenancyContext(tenant_id="default")
     bot = await bot_repo.get(tctx, new_message_request.bot_id)
@@ -124,7 +124,9 @@ async def new_message(
             clock=clock,
             message_repository=message_repo,
             memory_repository=memory_repo,
-            naver_search_client=NaverSearchClient(settings),
+            naver_search_client=naver_search,
+            finance_search_client=finance_search,
+            web_document_fetcher=web_document_fetch,
         )
 
         async def message_stream_generator():

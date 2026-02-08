@@ -1,0 +1,47 @@
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from naraninyeo.application.agents.information_gatherer import InformationGathererOutput
+from naraninyeo.core.interfaces import (
+    Clock,
+    FinanceSearch,
+    MemoryRepository,
+    MessageRepository,
+    NaverSearch,
+    WebDocumentFetch,
+)
+from naraninyeo.core.models import (
+    Bot,
+    BotMessage,
+    EvaluationFeedback,
+    MemoryItem,
+    Message,
+    TenancyContext,
+)
+
+
+class NewMessageGraphState(BaseModel):
+    current_tctx: TenancyContext
+    current_bot: Bot
+    memories: List[MemoryItem]
+    status: Literal["processing", "completed", "failed"]
+    incoming_message: Message
+    latest_history: List[Message]
+    evaluation_count: int = 0
+    information_gathering_results: List[InformationGathererOutput] = Field(default_factory=list)
+    latest_evaluation_feedback: Optional[EvaluationFeedback] = None
+    is_profane: bool = False
+    profanity_reason: Optional[str] = None
+    draft_messages: List[BotMessage] = Field(default_factory=list)
+
+
+class NewMessageGraphContext(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    clock: Clock
+    message_repository: MessageRepository
+    memory_repository: MemoryRepository
+    naver_search_client: NaverSearch
+    finance_search_client: FinanceSearch
+    web_document_fetcher: WebDocumentFetch
