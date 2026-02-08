@@ -2,8 +2,12 @@ from typing import AsyncGenerator
 
 import httpx
 
-from naraninyeo.api.routers.message import NewMessageRequest, NewMessageResponseChunk
-from naraninyeo.core.models import BotMessage, Message
+from naraninyeo.core.models import (
+    BotMessage,
+    Message,
+    NewMessageRequest,
+    NewMessageResponseChunk,
+)
 
 
 class APIClient:

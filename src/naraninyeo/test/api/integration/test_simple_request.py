@@ -4,8 +4,14 @@ import pytest  # noqa: F401
 from fastapi.testclient import TestClient
 
 from naraninyeo.api.routers.bot import CreateBotRequest
-from naraninyeo.api.routers.message import NewMessageRequest
-from naraninyeo.core.models import Attachment, Author, Channel, Message, MessageContent
+from naraninyeo.core.models import (
+    Attachment,
+    Author,
+    Channel,
+    Message,
+    MessageContent,
+    NewMessageRequest,
+)
 
 
 async def test_simple_request(test_client: TestClient) -> None:

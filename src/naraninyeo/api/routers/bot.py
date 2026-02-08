@@ -2,7 +2,7 @@ from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from naraninyeo.api.infrastructure.interfaces import BotRepository, Clock, IdGenerator
+from naraninyeo.core.interfaces import BotRepository, Clock, IdGenerator
 from naraninyeo.core.models import Bot, TenancyContext
 
 bot_router = APIRouter()
