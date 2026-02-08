@@ -4,16 +4,16 @@ from datetime import datetime
 
 from openinference.instrumentation.pydantic_ai import OpenInferenceSpanProcessor
 from opentelemetry import metrics, trace
-from opentelemetry._logs import set_logger_provider
-from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from opentelemetry._logs import set_logger_provider  # pyright: ignore[reportPrivateImportUsage]
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter  # pyright: ignore[reportPrivateImportUsage]
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.aiokafka import AIOKafkaInstrumentor
 from opentelemetry.instrumentation.asyncpg import AsyncPGInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrumentor
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler, ReadableLogRecord
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, ConsoleLogExporter, SimpleLogRecordProcessor
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler, ReadableLogRecord  # pyright: ignore[reportPrivateImportUsage]
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, ConsoleLogExporter, SimpleLogRecordProcessor  # pyright: ignore[reportPrivateImportUsage]
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource

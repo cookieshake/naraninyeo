@@ -10,7 +10,7 @@ from shiny.express import render, ui
 from naraninyeo.api.routers.bot import CreateBotRequest
 from naraninyeo.api.routers.message import NewMessageRequest, NewMessageResponseChunk
 from naraninyeo.core.models import Author, Channel, Message, MessageContent
-from naraninyeo.test.conftest import _test_app, _test_container
+from naraninyeo.conftest import _test_app, _test_container
 
 ui.page_opts(
     title="Hello Demo Chat",
