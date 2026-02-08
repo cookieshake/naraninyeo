@@ -3,7 +3,6 @@ from collections.abc import AsyncIterable
 from asyncpg import Pool, create_pool
 from dishka import Provider, Scope, make_async_container, provide
 
-from naraninyeo.infrastructure.adapter.llamacpp_gemma_embedder import LlamaCppGemmaEmbedder
 from naraninyeo.core.interfaces import (
     BotRepository,
     Clock,
@@ -15,7 +14,9 @@ from naraninyeo.core.interfaces import (
     TextEmbedder,
     WebDocumentFetch,
 )
+from naraninyeo.core.settings import Settings
 from naraninyeo.infrastructure.adapter.finance_search import FinanceSearchClient
+from naraninyeo.infrastructure.adapter.llamacpp_gemma_embedder import LlamaCppGemmaEmbedder
 from naraninyeo.infrastructure.adapter.naver_search import NaverSearchClient
 from naraninyeo.infrastructure.adapter.web_document import WebDocumentFetcher
 from naraninyeo.infrastructure.repository.vchord_bot import VchordBotRepository
@@ -23,7 +24,6 @@ from naraninyeo.infrastructure.repository.vchord_memory import VchordMemoryRepos
 from naraninyeo.infrastructure.repository.vchord_message import VchordMessageRepository
 from naraninyeo.infrastructure.util.nanoid_generator import NanoidGenerator
 from naraninyeo.infrastructure.util.simple_clock import SimpleClock
-from naraninyeo.core.settings import Settings
 
 
 class CoreProvider(Provider):
