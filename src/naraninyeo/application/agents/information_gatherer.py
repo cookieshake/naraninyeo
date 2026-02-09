@@ -253,7 +253,7 @@ async def execute_python_code(
     try:
         m = pydantic_monty.Monty(code)
         result = m.run()
-        
+
         if result is not None:
             content = f"Result: {result}"
         else:
