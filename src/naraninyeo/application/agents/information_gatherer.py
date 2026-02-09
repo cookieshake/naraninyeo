@@ -248,18 +248,36 @@ async def execute_python_code(
 
     code: 실행할 Python 코드
     """
+    import asyncio
+    import traceback
+
     import pydantic_monty
+
+    m = None
+    stdout_parts = []
+
+    def print_callback(stream: str, text: str) -> None:
+        if stream == "stdout":
+            stdout_parts.append(text)
 
     try:
         m = pydantic_monty.Monty(code)
-        result = m.run()
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(None, lambda: m.run(print_callback=print_callback))
 
+        output_parts = []
+        stdout_content = "".join(stdout_parts).strip()
+        if stdout_content:
+            output_parts.append(f"STDOUT:\n{stdout_content}")
         if result is not None:
-            content = f"Result: {result}"
-        else:
-            content = "Code executed successfully (no result)"
-    except Exception as e:
-        content = f"Error: {e}"
+            output_parts.append(f"Result: {result}")
+
+        content = "\n".join(output_parts) if output_parts else "Code executed successfully (no result)"
+    except pydantic_monty.MontyError as e:
+        error_msg = e.display() if hasattr(e, "display") else str(e)
+        content = f"Error:\n```\n{error_msg}\n```"
+    except Exception:
+        content = f"Error:\n```\n{traceback.format_exc()}\n```"
 
     return InformationGathererOutput(
         source="Python Code Execution (Sandbox)",

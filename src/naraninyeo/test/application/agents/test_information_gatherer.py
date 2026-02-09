@@ -29,6 +29,8 @@ async def test_execute_python_code_with_print(mock_ctx):
     result = await execute_python_code(mock_ctx, code)
 
     assert "Result: 20" in result.content
+    assert "STDOUT:" in result.content
+    assert "hello world" in result.content
 
 
 @pytest.mark.asyncio
