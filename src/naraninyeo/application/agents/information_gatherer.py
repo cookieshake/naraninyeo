@@ -65,6 +65,7 @@ async def instructions(ctx: RunContext[InformationGathererDeps]) -> str:
 현재 시간은 {ctx.deps.incoming_message.timestamp_iso} 입니다.
 
 아래의 지침을 따르세요:
+- 수학 계산, 단위 변환, 데이터 변환 등 연산이 필요하면 Python 코드 실행 도구를 활용하세요.
 - 쿼리에 현재 시간이 필요할 경우 이를 반영하세요.
 - '오늘', '최근' 등의 표현은 사용하지 말고 구체적인 날짜를 명시하세요.
 - 날짜는 년, 월 등의 인간에게 친숙한 형식을 사용하세요.
@@ -231,3 +232,54 @@ async def chat_history_lookup(
         )
         for msg in results
     ]
+
+
+@information_gatherer.tool
+async def execute_python_code(
+    ctx: RunContext[InformationGathererDeps],
+    code: str,
+) -> InformationGathererOutput:
+    """
+    Python 코드를 안전한 샌드박스에서 실행하는 도구입니다.
+    수학 계산, 단위 변환, 데이터 처리 등 순수 연산이 필요할 때 사용하세요.
+    코드의 마지막 표현식의 값이 결과로 반환됩니다.
+    print() 출력도 함께 캡처됩니다.
+    외부 네트워크나 파일시스템에는 접근할 수 없습니다.
+
+    code: 실행할 Python 코드
+    """
+    import asyncio
+    import traceback
+
+    import pydantic_monty
+
+    m = None
+    stdout_parts = []
+
+    def print_callback(stream: str, text: str) -> None:
+        if stream == "stdout":
+            stdout_parts.append(text)
+
+    try:
+        m = pydantic_monty.Monty(code)
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(None, lambda: m.run(print_callback=print_callback))
+
+        output_parts = []
+        stdout_content = "".join(stdout_parts).strip()
+        if stdout_content:
+            output_parts.append(f"STDOUT:\n{stdout_content}")
+        if result is not None:
+            output_parts.append(f"Result: {result}")
+
+        content = "\n".join(output_parts) if output_parts else "Code executed successfully (no result)"
+    except pydantic_monty.MontyError as e:
+        error_msg = e.display() if hasattr(e, "display") else str(e)
+        content = f"Error:\n```\n{error_msg}\n```"
+    except Exception:
+        content = f"Error:\n```\n{traceback.format_exc()}\n```"
+
+    return InformationGathererOutput(
+        source="Python Code Execution (Sandbox)",
+        content=content,
+    )
