@@ -2,133 +2,143 @@ import asyncio
 import uuid
 from datetime import UTC, datetime
 
+import chainlit as cl
 import httpx
 import uvicorn
-from shiny import reactive
-from shiny.express import render, ui
 
 from naraninyeo.api.routers.bot import CreateBotRequest
 from naraninyeo.api.routers.message import NewMessageRequest, NewMessageResponseChunk
 from naraninyeo.conftest import _test_app, _test_container
 from naraninyeo.core.models import Author, Channel, Message, MessageContent
 
-ui.page_opts(
-    title="Hello Demo Chat",
-    fillable=True,
-    fillable_mobile=True,
-)
+SERVER_URL = "http://127.0.0.1:32919"
 
-rtest = reactive.Value("Empty")
-
-with ui.layout_column_wrap():
-    with ui.card():
-        chat = ui.Chat(id="chat")
-        chat.ui(messages=["Hello! How can I help you today?"])
-    with ui.card():
-
-        @render.code
-        def display_test():
-            return rtest()
+_container = None
+_app = None
+_server_task = None
 
 
-container = None
-app = None
-client = None
-bot_id = None
-server_url = "http://127.0.0.1:32919"  # FastAPI 서버 주소
-server_task = None
+async def _ensure_server():
+    global _container, _app, _server_task
 
+    if _server_task is not None:
+        return
 
-async def start_fastapi_server():
-    """FastAPI 서버를 백그라운드에서 시작"""
-    global container, app
-    if container is None:
-        container = await _test_container()
-    if app is None:
-        app = await _test_app(container)
+    if _container is None:
+        _container = await _test_container()
+    if _app is None:
+        _app = await _test_app(_container)
 
-    # uvicorn 설정
-    config = uvicorn.Config(
-        app,
-        host="127.0.0.1",
-        port=32919,
-        log_level="warning",  # 로그 줄이기
-    )
+    config = uvicorn.Config(_app, host="127.0.0.1", port=32919, log_level="warning")
     server = uvicorn.Server(config)
-    await server.serve()
+    _server_task = asyncio.create_task(server.serve())
+
+    for _ in range(30):
+        await asyncio.sleep(1)
+        try:
+            async with httpx.AsyncClient() as c:
+                await c.get(SERVER_URL)
+            break
+        except Exception:
+            continue
 
 
-@chat.on_user_submit  # pyright: ignore[reportPossiblyUnboundVariable]
-async def handle_user_input(user_input: str):
-    global container, app, client, bot_id, server_task, rtest
+@cl.on_chat_start
+async def on_chat_start():
+    async with cl.Step(name="서버 초기화") as step:
+        step.output = "testcontainers 시작 중..."
+        async with cl.Step(name="Step 1: testcontainers"):
+            global _container
+            if _container is None:
+                _container = await _test_container()
 
-    # 첫 메시지일 때 서버 시작
-    if server_task is None:
-        await chat.append_message("서버를 시작합니다...")
-        server_task = asyncio.create_task(start_fastapi_server())
-        for _ in range(30):
-            await asyncio.sleep(1)
-            try:
-                async with httpx.AsyncClient() as _client:
-                    await _client.get(server_url)
-                break
-            except Exception:
-                continue
-        await chat.append_message("서버가 시작되었습니다!")
+        async with cl.Step(name="Step 2: FastAPI 앱 생성"):
+            global _app
+            if _app is None:
+                _app = await _test_app(_container)
 
-    if client is None:
-        # Create AsyncClient for HTTP requests to FastAPI server
-        client = httpx.AsyncClient(base_url=server_url, timeout=httpx.Timeout(120.0))
-    if bot_id is None:
-        bot = CreateBotRequest(name="Test Bot", author_id="user_123")
-        response = await client.post("/bots", content=bot.model_dump_json())
-        bot = response.json()
-        bot_id = bot["bot_id"]
+        async with cl.Step(name="Step 3: uvicorn 서버 기동") as s3:
+            global _server_task
+            if _server_task is None:
+                config = uvicorn.Config(_app, host="127.0.0.1", port=32919, log_level="warning")
+                server = uvicorn.Server(config)
+                _server_task = asyncio.create_task(server.serve())
+                for _ in range(30):
+                    await asyncio.sleep(1)
+                    try:
+                        async with httpx.AsyncClient() as c:
+                            await c.get(SERVER_URL)
+                        break
+                    except Exception:
+                        continue
+            s3.output = "서버 준비 완료"
 
-    msg = NewMessageRequest(
+        async with cl.Step(name="Step 4: 봇 생성") as s4:
+            client = httpx.AsyncClient(base_url=SERVER_URL, timeout=httpx.Timeout(120.0))
+            bot_req = CreateBotRequest(name="Test Bot", author_id="user_123")
+            response = await client.post("/bots", content=bot_req.model_dump_json())
+            bot = response.json()
+            bot_id = bot["bot_id"]
+            cl.user_session.set("client", client)
+            cl.user_session.set("bot_id", bot_id)
+            s4.output = f"봇 생성 완료: {bot_id}"
+
+        step.output = "초기화 완료"
+
+    await cl.Message(content="안녕하세요! 무엇을 도와드릴까요?").send()
+
+
+@cl.on_message
+async def on_message(message: cl.Message):
+    client: httpx.AsyncClient = cl.user_session.get("client")
+    bot_id: str = cl.user_session.get("bot_id")
+
+    msg_req = NewMessageRequest(
         bot_id=bot_id,
         message=Message(
             message_id=uuid.uuid4().hex,
             channel=Channel(channel_id="channel_123", channel_name="text"),
             author=Author(author_id="user_456", author_name="Test User"),
-            content=MessageContent(
-                text=user_input,
-                attachments=[],
-            ),
+            content=MessageContent(text=message.content, attachments=[]),
             timestamp=datetime.now(UTC),
         ),
         reply_needed=True,
     )
+
+    reply = cl.Message(content="")
+    await reply.send()
+
     try:
         async with client.stream(
-            "POST", "/new_message", content=msg.model_dump_json(), headers={"Content-Type": "application/json"}
+            "POST", "/new_message", content=msg_req.model_dump_json(), headers={"Content-Type": "application/json"}
         ) as response:
             if response.status_code != 200:
                 response_text = await response.aread()
-                msg = f"Unexpected status code: {response.status_code}, response: {response_text.decode()}"
-                await chat.append_message(msg)
-                raise AssertionError(msg)
+                err = f"Unexpected status code: {response.status_code}, response: {response_text.decode()}"
+                await reply.update()
+                raise AssertionError(err)
 
+            full_text = ""
             async for line in response.aiter_lines():
-                if line.strip():  # 빈 줄 무시
+                if line.strip():
                     res = NewMessageResponseChunk.model_validate_json(line)
                     if res.generated_message:
-                        await chat.append_message(res.generated_message.content.text)
-                        rtest.set(res.model_dump_json(indent=2))
-                        r = NewMessageRequest(
+                        full_text = res.generated_message.content.text
+                        reply.content = full_text
+                        await reply.update()
+
+                        echo = NewMessageRequest(
                             bot_id=bot_id,
                             message=Message(
                                 message_id=uuid.uuid4().hex,
                                 channel=Channel(channel_id="channel_123", channel_name="text"),
                                 author=Author(author_id="user_123", author_name="Test Bot"),
-                                content=MessageContent(
-                                    text=res.generated_message.content.text,
-                                    attachments=[],
-                                ),
+                                content=MessageContent(text=full_text, attachments=[]),
                                 timestamp=datetime.now(UTC),
                             ),
                             reply_needed=False,
                         )
-                        await client.post("/new_message", content=r.model_dump_json())
+                        await client.post("/new_message", content=echo.model_dump_json())
     except Exception as e:
-        await chat.append_message(str(e))
+        reply.content = str(e)
+        await reply.update()
