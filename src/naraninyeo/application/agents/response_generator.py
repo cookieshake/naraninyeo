@@ -21,7 +21,7 @@ class ResponseGeneratorDeps(BaseModel):
 
 response_generator = StructuredAgent(
     name="Response Generator",
-    model=OpenRouterModel("qwen/qwen3.5-397b-a17b"),
+    model=OpenRouterModel("google/gemini-3-flash-preview"),
     model_settings=OpenRouterModelSettings(
         parallel_tool_calls=True,
         openrouter_reasoning=OpenRouterReasoning(

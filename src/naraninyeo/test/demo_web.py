@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import uuid
 from datetime import UTC, datetime
 
@@ -17,7 +18,7 @@ _container = None
 _app = None
 _server_task = None
 _client = None
-_bot_id = None
+_bot_id: str | None = None
 
 
 async def _ensure_server():
@@ -31,7 +32,8 @@ async def _ensure_server():
     if _app is None:
         _app = await _test_app(_container)
 
-    config = uvicorn.Config(_app, host="127.0.0.1", port=32919, log_level="warning")
+    logging.basicConfig(level=logging.INFO)
+    config = uvicorn.Config(_app, host="127.0.0.1", port=32919, log_level="info")
     server = uvicorn.Server(config)
     _server_task = asyncio.create_task(server.serve())
 
@@ -58,6 +60,7 @@ async def chat(message: str, history: list):
 
     await _ensure_server()
 
+    assert _bot_id is not None
     msg_req = NewMessageRequest(
         bot_id=_bot_id,
         message=Message(
@@ -70,8 +73,9 @@ async def chat(message: str, history: list):
         reply_needed=True,
     )
 
-    history = history + [{"role": "user", "content": message}, {"role": "assistant", "content": ""}]
+    history = history + [{"role": "user", "content": message}]
     last_chunk_json = None
+    bot_texts: list[str] = []
 
     try:
         async with _client.stream(  # type: ignore[union-attr]
@@ -80,21 +84,23 @@ async def chat(message: str, history: list):
             if response.status_code != 200:
                 response_text = await response.aread()
                 err = f"Unexpected status code: {response.status_code}, response: {response_text.decode()}"
-                history[-1]["content"] = err
+                history.append({"role": "assistant", "content": err})
                 yield history, None
                 return
 
-            full_text = ""
             async for line in response.aiter_lines():
                 if line.strip():
                     res = NewMessageResponseChunk.model_validate_json(line)
                     if res.generated_message:
-                        full_text = res.generated_message.content.text
-                        history[-1]["content"] = full_text
+                        bot_texts.append(res.generated_message.content.text)
+                        current_history = history + [{"role": "assistant", "content": t} for t in bot_texts]
                         last_chunk_json = res.model_dump()
-                        yield history, last_chunk_json
+                        yield current_history, last_chunk_json
 
+        history = history + [{"role": "assistant", "content": t} for t in bot_texts]
+        full_text = "\n".join(bot_texts)
         if full_text:
+            assert _bot_id is not None
             echo = NewMessageRequest(
                 bot_id=_bot_id,
                 message=Message(
@@ -114,7 +120,7 @@ async def chat(message: str, history: list):
 
 
 with gr.Blocks(title="나란이녀 Demo") as demo:
-    chatbot = gr.Chatbot(label="Chat", type="messages")
+    chatbot = gr.Chatbot(label="Chat")
     pending_msg = gr.State("")
     with gr.Row():
         txt = gr.Textbox(show_label=False, placeholder="메시지를 입력하세요...", scale=8)

@@ -12,7 +12,7 @@ class MemoryExtractorDeps(BaseModel):
 
 memory_extractor = StructuredAgent(
     name="Memory Extractor",
-    model=OpenRouterModel("deepseek/deepseek-v3.2"),
+    model=OpenRouterModel("moonshotai/kimi-k2.5"),
     model_settings=OpenRouterModelSettings(
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",
