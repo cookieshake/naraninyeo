@@ -24,7 +24,7 @@ _bot_id: str | None = None
 async def _ensure_server():
     global _container, _app, _server_task, _client, _bot_id
 
-    if _server_task is not None:
+    if _server_task is not None and _client is not None and _bot_id is not None:
         return
 
     if _container is None:
@@ -115,7 +115,7 @@ async def chat(message: str, history: list):
             await _client.post("/new_message", content=echo.model_dump_json())  # type: ignore[union-attr]
 
     except Exception as e:
-        history[-1]["content"] = str(e)
+        history.append({"role": "assistant", "content": str(e)})
         yield history, last_chunk_json
 
 

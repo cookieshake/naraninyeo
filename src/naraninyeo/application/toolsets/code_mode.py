@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import traceback
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -191,4 +190,4 @@ class CodeModeToolset(AbstractToolset[AgentDepsT]):
             error_msg = e.display() if hasattr(e, "display") else str(e)  # type: ignore
             return f"Error:\n```\n{error_msg}\n```"
         except Exception:
-            return f"Error:\n```\n{traceback.format_exc()}\n```"
+            return "Error: An unexpected error occurred during code execution."
