@@ -5,12 +5,12 @@ from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Response
 from fastapi.responses import StreamingResponse
 
-from naraninyeo.application.graphs.manage_memory import (
+from naraninyeo.graphs.manage_memory import (
     ManageMemoryGraphContext,
     ManageMemoryGraphState,
     manage_memory_graph,
 )
-from naraninyeo.application.graphs.new_message import NewMessageGraphContext, NewMessageGraphState, new_message_graph
+from naraninyeo.graphs.new_message import NewMessageGraphContext, NewMessageGraphState, new_message_graph
 from naraninyeo.core.interfaces import (
     BotRepository,
     Clock,

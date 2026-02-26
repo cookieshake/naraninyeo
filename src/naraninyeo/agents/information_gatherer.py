@@ -7,8 +7,8 @@ from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettin
 from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.toolsets.function import FunctionToolset
 
-from naraninyeo.application.agents.base import StructuredAgent
-from naraninyeo.application.toolsets.code_mode import CodeModeToolset
+from naraninyeo.agents.base import StructuredAgent
+from naraninyeo.toolsets.code_mode import CodeModeToolset
 from naraninyeo.core.interfaces import FinanceSearch, MessageRepository, NaverSearch, WebDocumentFetch
 from naraninyeo.core.models import Bot, MemoryItem, Message, TenancyContext
 

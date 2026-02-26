@@ -2,8 +2,8 @@ from pydantic import BaseModel, ConfigDict
 from pydantic_ai import RunContext
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings, OpenRouterReasoning
 
-from naraninyeo.application.agents.base import StructuredAgent
-from naraninyeo.application.agents.information_gatherer import InformationGathererOutput
+from naraninyeo.agents.base import StructuredAgent
+from naraninyeo.agents.information_gatherer import InformationGathererOutput
 from naraninyeo.core.interfaces import Clock
 from naraninyeo.core.models import Bot, MemoryItem, Message
 
