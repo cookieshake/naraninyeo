@@ -4,6 +4,7 @@ import logging
 import os
 import random
 from datetime import datetime
+from typing import Literal
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -90,7 +91,11 @@ class MessageRouter:
         text = message_data["json"]["message"]
 
         # type → attachment_type mapping for single-attachment messages
-        single_attachment_types = {"2": "image", "3": "video", "18": "file"}
+        single_attachment_types: dict[str, Literal["image", "video", "file"]] = {
+            "2": "image",
+            "3": "video",
+            "18": "file",
+        }
         msg_type = message_data["json"]["type"]
 
         if msg_type in single_attachment_types:

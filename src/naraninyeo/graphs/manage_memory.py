@@ -70,9 +70,7 @@ async def add_memory(
         return state
 
     repo = runtime.context.memory_repository
-    memory_items = await _extract_memory_items(
-        state, runtime, state.latest_history + [state.incoming_message]
-    )
+    memory_items = await _extract_memory_items(state, runtime, state.latest_history + [state.incoming_message])
     await repo.upsert_many(state.current_tctx, memory_items)
     return state
 

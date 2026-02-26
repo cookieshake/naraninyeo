@@ -24,7 +24,11 @@ from pydantic_ai import (
 )
 from pydantic_ai.exceptions import UsageLimitExceeded
 
-from naraninyeo.agents.information_gatherer import InformationGathererDeps, InformationGathererOutput, information_gatherer
+from naraninyeo.agents.information_gatherer import (
+    InformationGathererDeps,
+    InformationGathererOutput,
+    information_gatherer,
+)
 from naraninyeo.agents.profanity_checker import ProfanityCheckerDeps, profanity_checker
 from naraninyeo.agents.response_evaluator import ResponseEvaluatorDeps, response_evaluator
 from naraninyeo.agents.response_generator import ResponseGeneratorDeps, response_generator

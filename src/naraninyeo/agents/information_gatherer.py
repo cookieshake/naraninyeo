@@ -8,9 +8,9 @@ from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.toolsets.function import FunctionToolset
 
 from naraninyeo.agents.base import StructuredAgent
-from naraninyeo.toolsets.code_mode import CodeModeToolset
 from naraninyeo.core.interfaces import FinanceSearch, MessageRepository, NaverSearch, WebDocumentFetch
 from naraninyeo.core.models import Bot, MemoryItem, Message, TenancyContext
+from naraninyeo.toolsets.code_mode import CodeModeToolset
 
 
 class InformationGathererDeps(BaseModel):
@@ -113,9 +113,7 @@ async def financial_data_lookup(
     if news.exception():
         news_str = f"Error fetching news: {news.exception()}"
     else:
-        news_str = "\n".join(
-            f"[{item.source}, {item.timestamp}] {item.title}\n{item.body}" for item in news.result()
-        )
+        news_str = "\n".join(f"[{item.source}, {item.timestamp}] {item.title}\n{item.body}" for item in news.result())
     return (
         f"Ticker Info:\n"
         f"Code: {ticker.code}\n"
