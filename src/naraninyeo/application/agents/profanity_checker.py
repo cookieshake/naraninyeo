@@ -17,7 +17,7 @@ class ProfanityCheckerOutput(BaseModel):
 
 profanity_checker = StructuredAgent(
     name="Profanity Checker",
-    model=OpenRouterModel("openai/gpt-4.1-nano"),
+    model=OpenRouterModel("x-ai/grok-4.1-fast"),
     model_settings=OpenRouterModelSettings(
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",

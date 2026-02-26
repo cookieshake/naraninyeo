@@ -15,15 +15,12 @@ class ResponseEvaluatorDeps(BaseModel):
 
 response_evaluator = StructuredAgent(
     name="Response Evaluator",
-    model=OpenRouterModel("openai/gpt-4.1-nano"),
+    model=OpenRouterModel("x-ai/grok-4.1-fast"),
     model_settings=OpenRouterModelSettings(
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",
             enabled=False,
         ),
-        openrouter_models=[
-            "google/gemini-2.5-flash-lite",
-        ],
     ),
     deps_type=ResponseEvaluatorDeps,
     output_type=EvaluationFeedback,

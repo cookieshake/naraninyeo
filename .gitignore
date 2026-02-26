@@ -367,3 +367,7 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/venv,python,pycharm+all,visualstudiocode,linux,windows,macos
+
+# Chainlit
+.chainlit/
+chainlit.md
