@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from pydantic_ai import RunContext
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings, OpenRouterReasoning
 
-from naraninyeo.application.agents.base import StructuredAgent
+from naraninyeo.agents.base import StructuredAgent
 from naraninyeo.core.models import Message
 
 

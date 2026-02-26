@@ -4,6 +4,7 @@ import logging
 import os
 import random
 from datetime import datetime
+from typing import Literal
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -87,64 +88,48 @@ class MessageRouter:
             author_name=message_data["sender"] or "unknown",
         )
         attachment = json.loads(message_data["json"]["attachment"])
-        match message_data["json"]["type"]:
-            case "2":
-                content = MessageContent(
-                    text=message_data["json"]["message"],
-                    attachments=[
-                        await self.upload_attachment(
+        text = message_data["json"]["message"]
+
+        # type → attachment_type mapping for single-attachment messages
+        single_attachment_types: dict[str, Literal["image", "video", "file"]] = {
+            "2": "image",
+            "3": "video",
+            "18": "file",
+        }
+        msg_type = message_data["json"]["type"]
+
+        if msg_type in single_attachment_types:
+            content = MessageContent(
+                text=text,
+                attachments=[
+                    await self.upload_attachment(
+                        Attachment(
+                            attachment_id=nanoid.generate(),
+                            attachment_type=single_attachment_types[msg_type],
+                            url=attachment["url"],
+                        )
+                    )
+                ],
+            )
+        elif msg_type == "27":
+            content = MessageContent(
+                text=text,
+                attachments=await asyncio.gather(
+                    *[
+                        self.upload_attachment(
                             Attachment(
                                 attachment_id=nanoid.generate(),
                                 attachment_type="image",
-                                url=attachment["url"],
+                                url=url,
                             )
                         )
-                    ],
-                )
-            case "3":
-                content = MessageContent(
-                    text=message_data["json"]["message"],
-                    attachments=[
-                        await self.upload_attachment(
-                            Attachment(
-                                attachment_id=nanoid.generate(),
-                                attachment_type="video",
-                                url=attachment["url"],
-                            )
-                        )
-                    ],
-                )
-            case "18":
-                content = MessageContent(
-                    text=message_data["json"]["message"],
-                    attachments=[
-                        await self.upload_attachment(
-                            Attachment(
-                                attachment_id=nanoid.generate(),
-                                attachment_type="file",
-                                url=attachment["url"],
-                            )
-                        )
-                    ],
-                )
-            case "27":
-                content = MessageContent(
-                    text=message_data["json"]["message"],
-                    attachments=await asyncio.gather(
-                        *[
-                            self.upload_attachment(
-                                Attachment(
-                                    attachment_id=nanoid.generate(),
-                                    attachment_type="image",
-                                    url=url,
-                                )
-                            )
-                            for url in attachment["imageUrls"]
-                        ]
-                    ),
-                )
-            case _:
-                content = MessageContent(text=message_data["json"]["message"], attachments=[])
+                        for url in attachment["imageUrls"]
+                    ]
+                ),
+            )
+        else:
+            content = MessageContent(text=text, attachments=[])
+
         timestamp = datetime.fromtimestamp(int(message_data["json"]["created_at"]), tz=ZoneInfo("Asia/Seoul"))
 
         return Message(

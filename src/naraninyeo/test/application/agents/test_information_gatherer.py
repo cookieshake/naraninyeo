@@ -7,7 +7,7 @@ async def _run_code(code: str) -> str:
     """Helper to run code via CodeModeToolset with no inner tools."""
     from pydantic_ai.toolsets.function import FunctionToolset
 
-    from naraninyeo.application.toolsets.code_mode import CodeModeToolset
+    from naraninyeo.toolsets.code_mode import CodeModeToolset
 
     empty_toolset: FunctionToolset = FunctionToolset()
     toolset = CodeModeToolset(empty_toolset)

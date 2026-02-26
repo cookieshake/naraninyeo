@@ -18,7 +18,7 @@ from naraninyeo.api.container import (
     UtilProvider,
 )
 from naraninyeo.core.settings import Settings
-from naraninyeo.infrastructure.repository.vchord_init import VchordInit
+from naraninyeo.infrastructure.repository.init_db import VchordInit
 
 
 class LlamaCppContainer(DockerContainer):
