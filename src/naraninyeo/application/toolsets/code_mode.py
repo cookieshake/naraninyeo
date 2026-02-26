@@ -5,12 +5,11 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 import pydantic_monty
-from pydantic_core import SchemaValidator, core_schema
-
 from pydantic_ai._run_context import AgentDepsT, RunContext
 from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.toolsets.abstract import AbstractToolset, ToolsetTool
 from pydantic_ai.toolsets.function import FunctionToolset
+from pydantic_core import SchemaValidator, core_schema
 
 
 @dataclass(kw_only=True)
