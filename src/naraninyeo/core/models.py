@@ -153,3 +153,51 @@ class EvaluationFeedback(str, Enum):
     EXECUTE_AGAIN = "execute_again"
     GENERATE_AGAIN = "generate_again"
     FINALIZE = "finalize"
+
+
+class NewMessageRequest(BaseModel):
+    bot_id: str
+    message: Message
+    reply_needed: bool = False
+
+
+class NewMessageResponseChunk(BaseModel):
+    is_final: bool
+    error: str | None = None
+    generated_message: BotMessage | None = None
+    last_state: Optional[dict] = None
+
+
+class SearchResult(BaseModel):
+    link: str | None
+    title: str
+    description: str
+    published_at: str | None
+
+
+class Ticker(BaseModel):
+    code: str
+    reuter_code: str
+    type: str
+    name: str
+    url: str
+    category: str
+
+
+class NewsSearchResult(BaseModel):
+    source: str
+    timestamp: str
+    title: str
+    body: str
+
+
+class PriceInfo(BaseModel):
+    local_date: str
+    close_price: float
+
+
+class FetchedDocument(BaseModel):
+    url: str
+    meta_tags: dict[str, str]
+    html_content: str
+    markdown_content: str

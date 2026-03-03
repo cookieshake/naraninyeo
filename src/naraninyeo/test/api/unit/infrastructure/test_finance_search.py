@@ -1,6 +1,6 @@
 import pytest
 
-from naraninyeo.api.infrastructure.adapter.finance_search import FinanceSearchClient
+from naraninyeo.infrastructure.adapter.finance_search import FinanceSearchClient
 
 
 @pytest.fixture

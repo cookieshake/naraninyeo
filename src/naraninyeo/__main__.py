@@ -4,11 +4,22 @@ import os
 from dishka.integrations.fastapi import setup_dishka
 
 from naraninyeo.api import create_app
-from naraninyeo.core.container import container
+from naraninyeo.api.container import container
+from naraninyeo.infrastructure.util.opentelemetry import (
+    OpenTelemetryInstrumentation,
+    OpenTelemetryLog,
+    OpenTelemetryMetrics,
+    OpenTelemetryTracer,
+)
 from naraninyeo.router import get_router
 
 
 async def main() -> None:
+    OpenTelemetryLog().configure()
+    OpenTelemetryTracer().configure()
+    OpenTelemetryMetrics().configure()
+    OpenTelemetryInstrumentation().configure()
+
     entrypoint = os.environ.get("NRIY_ENTRYPOINT", "api")
     if entrypoint == "api":
         app = create_app()
