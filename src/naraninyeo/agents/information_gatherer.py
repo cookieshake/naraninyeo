@@ -89,9 +89,9 @@ async def financial_data_lookup(
     stock_name: str,
 ) -> str:
     """
-    금융 데이터 조회 도구입니다. 주식, 코인, ETF, 환율 등 금융 데이터가 필요할 때 사용합니다.
+    금융 데이터 조회 도구입니다. 주식, 지수, ETF 등 금융 데이터가 필요할 때 사용합니다.
     현재 가격, 단기/장기 가격 추이, 관련 뉴스를 함께 반환합니다.
-    stock_name: 종목명 (예: "삼성전자", "비트코인", "달러")
+    stock_name: 종목명 또는 회사명 (예: "삼성전자", "KODEX 200", "S&P500"). 코인·환율은 지원하지 않습니다.
     """
     fsc = ctx.deps.finance_search_client
     ticker = await fsc.search_symbol(stock_name)
@@ -201,7 +201,7 @@ async def instructions(ctx: RunContext[InformationGathererDeps]) -> str:
 
 ## 도구 선택 가이드
 - 이전 대화 언급 ("아까", "전에 말한", "그거", "우리가 얘기한") → chat_history_lookup 먼저
-- 주식/코인/ETF/환율 질문 → financial_data_lookup
+- 주식/지수/ETF 질문 → financial_data_lookup (코인·환율은 지원 안 함, 대신 naver_search 사용)
 - 시사/뉴스/최근 사건 → naver_search(search_type="news", order="date")
 - 사실/개념/정의/인물 → naver_search(search_type="encyclopedia")
 - 후기/리뷰/맛집/여행 → naver_search(search_type="blog")
