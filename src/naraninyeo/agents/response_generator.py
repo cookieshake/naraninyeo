@@ -1,6 +1,11 @@
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import RunContext
-from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings, OpenRouterReasoning
+from pydantic_ai.models.openrouter import (
+    OpenRouterModel,
+    OpenRouterModelSettings,
+    OpenRouterProviderConfig,
+    OpenRouterReasoning,
+)
 
 from naraninyeo.agents.base import StructuredAgent
 from naraninyeo.agents.information_gatherer import InformationGathererOutput
@@ -26,7 +31,10 @@ response_generator = StructuredAgent(
         parallel_tool_calls=True,
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",
-            enabled=False,
+            enabled=True,
+        ),
+        openrouter_provider=OpenRouterProviderConfig(
+            zdr=True, quantizations=["fp8", "fp16", "bf16", "int8", "int4", "unknown"]
         ),
     ),
     deps_type=ResponseGeneratorDeps,
