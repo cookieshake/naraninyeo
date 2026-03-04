@@ -94,7 +94,7 @@ class FinanceSearchClient:
 
     async def get_short_term_price(self, symbol: Ticker) -> list[PriceInfo]:
         """주어진 쿼리에 해당하는 종목에 대한 단기간의 종가를 검색합니다"""
-        if symbol.nation_code == "KOR":
+        if "domestic" in symbol.url.lower():
             code = f"NAVER:{symbol.code}"
         else:
             code = symbol.code
@@ -113,7 +113,7 @@ class FinanceSearchClient:
 
     async def get_long_term_price(self, symbol: Ticker) -> list[PriceInfo]:
         """주어진 쿼리에 해당하는 종목에 대한 장기간의 종가를 검색합니다"""
-        if symbol.nation_code == "KOR":
+        if "domestic" in symbol.url.lower():
             code = f"NAVER:{symbol.code}"
         else:
             code = symbol.code
