@@ -29,6 +29,7 @@ class FinanceSearchClient:
                 Ticker(
                     code=item["code"],
                     reuter_code=item["reutersCode"],
+                    nation_code=item["nationCode"],
                     type=item["typeCode"],
                     name=item["name"],
                     url=item["url"],
@@ -93,7 +94,11 @@ class FinanceSearchClient:
 
     async def get_short_term_price(self, symbol: Ticker) -> list[PriceInfo]:
         """주어진 쿼리에 해당하는 종목에 대한 단기간의 종가를 검색합니다"""
-        df = await asyncio.to_thread(fdr.DataReader, f"NAVER:{symbol.code}", start=datetime.now() - timedelta(days=30))
+        if symbol.nation_code == "KOR":
+            code = f"NAVER:{symbol.code}"
+        else:
+            code = symbol.code
+        df = await asyncio.to_thread(fdr.DataReader, code, start=datetime.now() - timedelta(days=30))
         result = []
         for item in df.iloc[-15:].iterrows():
             result.append(
@@ -108,7 +113,11 @@ class FinanceSearchClient:
 
     async def get_long_term_price(self, symbol: Ticker) -> list[PriceInfo]:
         """주어진 쿼리에 해당하는 종목에 대한 장기간의 종가를 검색합니다"""
-        df = await asyncio.to_thread(fdr.DataReader, f"NAVER:{symbol.code}", start="1990-01-01")
+        if symbol.nation_code == "KOR":
+            code = f"NAVER:{symbol.code}"
+        else:
+            code = symbol.code
+        df = await asyncio.to_thread(fdr.DataReader, code, start="1990-01-01")
         result = []
         for item in df.iloc[:: max(1, int(len(df) / 100))].iterrows():
             result.append(
