@@ -158,9 +158,8 @@ _code_mode_toolset = CodeModeToolset(_tools).prepared(_block_toolset_if_needed)
 
 information_gatherer = StructuredAgent(
     name="Information Gatherer",
-    model=OpenRouterModel("google/gemini-3.1-flash-lite-preview"),
+    model=OpenRouterModel("z-ai/glm-5"),
     model_settings=OpenRouterModelSettings(
-        parallel_tool_calls=True,
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",
             enabled=False,
