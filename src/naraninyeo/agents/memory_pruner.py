@@ -27,7 +27,7 @@ MemoryPrunerAction: TypeAlias = MemoryMergeAction | MemoryDeleteAction
 
 memory_pruner = StructuredAgent(
     name="Memory Pruner",
-    model=OpenRouterModel("moonshotai/kimi-k2.5"),
+    model=OpenRouterModel("x-ai/grok-4.1-fast"),
     model_settings=OpenRouterModelSettings(
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",
