@@ -178,6 +178,7 @@ class SearchResult(BaseModel):
 class Ticker(BaseModel):
     code: str
     reuter_code: str
+    nation_code: str | None = None
     type: str
     name: str
     url: str
