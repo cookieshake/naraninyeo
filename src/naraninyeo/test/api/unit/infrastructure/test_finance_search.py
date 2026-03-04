@@ -1,12 +1,15 @@
+import httpx
 import pytest
 
 from naraninyeo.infrastructure.adapter.finance_search import FinanceSearchClient
 
+pytestmark = pytest.mark.external
+
 
 @pytest.fixture
 async def finance_search_client():
-    client = FinanceSearchClient()
-    return client
+    async with httpx.AsyncClient() as client:
+        yield FinanceSearchClient(client)
 
 
 test_queries = [

@@ -1,5 +1,6 @@
 from collections.abc import AsyncIterable
 
+import httpx
 from asyncpg import Pool, create_pool
 from dishka import Provider, Scope, make_async_container, provide
 
@@ -43,6 +44,11 @@ class ConnectionProvider(Provider):
         pool = await create_pool(dsn=settings.VCHORD_URI, min_size=5, max_size=20, command_timeout=30.0)
         yield pool
         await pool.close()
+
+    @provide
+    async def http_client(self) -> AsyncIterable[httpx.AsyncClient]:
+        async with httpx.AsyncClient() as client:
+            yield client
 
 
 class RepositoryProvider(Provider):

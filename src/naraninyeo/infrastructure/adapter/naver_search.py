@@ -1,3 +1,4 @@
+import asyncio
 import math
 from datetime import datetime
 from typing import List, Literal, Optional
@@ -12,8 +13,9 @@ from naraninyeo.core.settings import Settings
 
 
 class NaverSearchClient:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, client: httpx.AsyncClient) -> None:
         self.settings = settings
+        self._client = client
 
     @get_tracer(__name__).start_as_current_span("naver_search")
     async def search(
@@ -77,14 +79,14 @@ class NaverSearchClient:
             "X-Naver-Client-Id": self.settings.NAVER_CLIENT_ID,
             "X-Naver-Client-Secret": self.settings.NAVER_CLIENT_SECRET,
         }
-        result = []
-        async with httpx.AsyncClient() as client:
-            for param in params:
-                response = await client.get(url, headers=headers, params=param, timeout=10)
-                response.raise_for_status()
-                payload = response.json()
-                result.extend(payload.get("items", []))
-        return result
+
+        async def _single_request(param: dict) -> list[dict]:
+            response = await self._client.get(url, headers=headers, params=param, timeout=10)
+            response.raise_for_status()
+            return response.json().get("items", [])
+
+        results = await asyncio.gather(*[_single_request(p) for p in params])
+        return [item for items in results for item in items]
 
     def _parse_result(self, item: dict[str, str]) -> SearchResult:
         title = BeautifulSoup(item.get("title", ""), "html.parser").get_text().strip()

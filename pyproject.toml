@@ -64,6 +64,10 @@ naraninyeo = { workspace = true }
 asyncio_mode = "auto"
 addopts = [
     "--import-mode=importlib",
+    "-m", "not external",
+]
+markers = [
+    "external: marks tests that call real external APIs (deselected by default)",
 ]
 
 [tool.ruff]
