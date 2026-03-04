@@ -53,7 +53,9 @@ async def test_new_message_simple(test_client: TestClient) -> None:
         reply_needed=False,
     )
 
-    response = test_client.post("/new_message", content=new_message_payload.model_dump_json(), headers={"Content-Type": "application/json"})
+    response = test_client.post(
+        "/new_message", content=new_message_payload.model_dump_json(), headers={"Content-Type": "application/json"}
+    )
     if response.status_code != 200:
         raise AssertionError(f"Unexpected status code: {response.status_code}, response: {response.text}")
     response_json = response.json()
@@ -79,6 +81,8 @@ async def test_generate_message_simple(test_client: TestClient) -> None:
         reply_needed=True,
     )
 
-    response = test_client.post("/new_message", content=new_message_payload.model_dump_json(), headers={"Content-Type": "application/json"})
+    response = test_client.post(
+        "/new_message", content=new_message_payload.model_dump_json(), headers={"Content-Type": "application/json"}
+    )
     if response.status_code != 200:
         raise AssertionError(f"Unexpected status code: {response.status_code}, response: {response.text}")
