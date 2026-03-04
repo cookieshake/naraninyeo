@@ -158,7 +158,7 @@ _code_mode_toolset = CodeModeToolset(_tools).prepared(_block_toolset_if_needed)
 
 information_gatherer = StructuredAgent(
     name="Information Gatherer",
-    model=OpenRouterModel("moonshotai/kimi-k2.5"),
+    model=OpenRouterModel("google/gemini-3.1-flash-lite-preview"),
     model_settings=OpenRouterModelSettings(
         parallel_tool_calls=True,
         openrouter_reasoning=OpenRouterReasoning(
