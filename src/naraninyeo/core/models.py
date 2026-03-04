@@ -149,8 +149,7 @@ class PlanActionResult(BaseModel):
 
 
 class EvaluationFeedback(str, Enum):
-    PLAN_AGAIN = "plan_again"
-    EXECUTE_AGAIN = "execute_again"
+    REGATHER = "regather"
     GENERATE_AGAIN = "generate_again"
     FINALIZE = "finalize"
 
