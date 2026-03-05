@@ -32,11 +32,9 @@ response_generator = StructuredAgent(
         parallel_tool_calls=True,
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",
-            enabled=True,
+            enabled=False,
         ),
-        openrouter_provider=OpenRouterProviderConfig(
-            zdr=True, quantizations=["fp8", "fp16", "bf16", "int8", "int4", "unknown"]
-        ),
+        openrouter_provider=OpenRouterProviderConfig(zdr=True, quantizations=["fp8", "fp16", "bf16", "int8"]),
     ),
     deps_type=ResponseGeneratorDeps,
     output_type=str,
@@ -114,5 +112,5 @@ async def user_prompt(deps: ResponseGeneratorDeps) -> str:
 반드시 메시지 내용만 작성하세요.
 "시간 이름: 내용" 형식이나 "나란잉여:" 같은 접두사를 절대 사용하지 마세요.
 짧고 간결하게, 핵심만 요약해서 전달하세요. 불필요한 미사여구나 설명은 생략하세요.
-{f"## 이전 평가 피드백\\n이전 응답이 부적절하여 재생성합니다. 형식(반말, 마크다운 미사용 등)과 내용을 다시 확인하세요." if deps.prior_evaluation_feedback else ""}
+{"## 이전 평가 피드백\\n이전 응답이 부적절하여 재생성합니다. 형식(반말, 마크다운 미사용 등)과 내용을 다시 확인하세요." if deps.prior_evaluation_feedback else ""}
 """

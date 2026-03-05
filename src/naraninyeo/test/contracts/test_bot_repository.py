@@ -21,9 +21,7 @@ async def test_get_returns_none_for_unknown_bot(bot_repository: BotRepository, d
 
 
 @pytest.mark.asyncio
-async def test_create_and_get_returns_same_bot(
-    bot_repository: BotRepository, default_tctx: TenancyContext, make_bot
-):
+async def test_create_and_get_returns_same_bot(bot_repository: BotRepository, default_tctx: TenancyContext, make_bot):
     """create 후 get하면 동일한 bot을 반환한다."""
     bot = make_bot()
     await bot_repository.create(default_tctx, bot)
@@ -37,9 +35,7 @@ async def test_create_and_get_returns_same_bot(
 
 
 @pytest.mark.asyncio
-async def test_list_all_includes_created_bots(
-    bot_repository: BotRepository, default_tctx: TenancyContext, make_bot
-):
+async def test_list_all_includes_created_bots(bot_repository: BotRepository, default_tctx: TenancyContext, make_bot):
     """create한 봇들이 list_all 결과에 포함된다."""
     bot1 = make_bot(bot_name="봇1")
     bot2 = make_bot(bot_name="봇2")

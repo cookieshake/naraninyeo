@@ -33,9 +33,9 @@ from naraninyeo.core.models import (
     TenancyContext,
 )
 from naraninyeo.graphs.new_message import (
+    _SIMPLE_MSG_PATTERN,
     NewMessageGraphContext,
     NewMessageGraphState,
-    _SIMPLE_MSG_PATTERN,
     new_message_graph,
     route_after_profanity_check,
     route_based_on_evaluation,

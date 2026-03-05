@@ -81,11 +81,13 @@ async def test_embed_queries_empty_list(text_embedder: TextEmbedder):
 @pytest.mark.asyncio
 async def test_similar_docs_have_high_cosine_similarity(text_embedder: TextEmbedder):
     """의미적으로 유사한 문장은 높은 코사인 유사도를 가진다."""
-    results = await text_embedder.embed_docs([
-        "삼성전자 주가가 올랐다",
-        "삼성전자 주식이 상승했다",
-        "오늘 날씨가 매우 맑다",
-    ])
+    results = await text_embedder.embed_docs(
+        [
+            "삼성전자 주가가 올랐다",
+            "삼성전자 주식이 상승했다",
+            "오늘 날씨가 매우 맑다",
+        ]
+    )
 
     similar_score = cosine_similarity(results[0], results[1])
     unrelated_score = cosine_similarity(results[0], results[2])

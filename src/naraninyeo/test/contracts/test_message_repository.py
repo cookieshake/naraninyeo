@@ -34,9 +34,7 @@ async def test_upsert_and_get_before_returns_message(
 
 
 @pytest.mark.asyncio
-async def test_upsert_is_idempotent(
-    message_repository: MessageRepository, default_tctx: TenancyContext, make_message
-):
+async def test_upsert_is_idempotent(message_repository: MessageRepository, default_tctx: TenancyContext, make_message):
     """동일 message_id를 두 번 upsert해도 중복 없이 덮어쓴다."""
     msg = make_message(channel_id="ch-msg-2", text="원본")
     await message_repository.upsert(default_tctx, msg)
@@ -44,9 +42,7 @@ async def test_upsert_is_idempotent(
     updated = msg.model_copy(update={"content": msg.content.model_copy(update={"text": "수정됨"})})
     await message_repository.upsert(default_tctx, updated)
 
-    results = await message_repository.get_channel_messages_before(
-        default_tctx, "ch-msg-2", "z" * 21, limit=10
-    )
+    results = await message_repository.get_channel_messages_before(default_tctx, "ch-msg-2", "z" * 21, limit=10)
     matching = [m for m in results if m.message_id == msg.message_id]
     assert len(matching) == 1
 
@@ -63,9 +59,7 @@ async def test_get_channel_messages_before_respects_limit(
         await message_repository.upsert(default_tctx, m)
     await message_repository.upsert(default_tctx, anchor)
 
-    results = await message_repository.get_channel_messages_before(
-        default_tctx, "ch-msg-3", anchor.message_id, limit=3
-    )
+    results = await message_repository.get_channel_messages_before(default_tctx, "ch-msg-3", anchor.message_id, limit=3)
 
     assert len(results) <= 3
 
@@ -81,9 +75,7 @@ async def test_get_channel_messages_after_returns_later_messages(
     await message_repository.upsert(default_tctx, anchor)
     await message_repository.upsert(default_tctx, later)
 
-    results = await message_repository.get_channel_messages_after(
-        default_tctx, "ch-msg-4", anchor.message_id, limit=10
-    )
+    results = await message_repository.get_channel_messages_after(default_tctx, "ch-msg-4", anchor.message_id, limit=10)
     ids = {m.message_id for m in results}
 
     assert later.message_id in ids
@@ -107,9 +99,7 @@ async def test_text_search_messages_finds_relevant_messages(
 
 
 @pytest.mark.asyncio
-async def test_tenant_isolation_in_messages(
-    message_repository: MessageRepository, make_message
-):
+async def test_tenant_isolation_in_messages(message_repository: MessageRepository, make_message):
     """다른 tenant의 메시지는 조회되지 않는다."""
     tenant_a = TenancyContext(tenant_id="tenant-msg-a")
     tenant_b = TenancyContext(tenant_id="tenant-msg-b")
@@ -117,8 +107,6 @@ async def test_tenant_isolation_in_messages(
     msg = make_message(channel_id="ch-isolated")
     await message_repository.upsert(tenant_a, msg)
 
-    results = await message_repository.get_channel_messages_before(
-        tenant_b, "ch-isolated", "z" * 21, limit=10
-    )
+    results = await message_repository.get_channel_messages_before(tenant_b, "ch-isolated", "z" * 21, limit=10)
     ids = {m.message_id for m in results}
     assert msg.message_id not in ids

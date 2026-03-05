@@ -166,7 +166,7 @@ _code_mode_toolset = CodeModeToolset(_tools).prepared(_block_toolset_if_needed)
 
 information_gatherer = StructuredAgent(
     name="Information Gatherer",
-    model=OpenRouterModel("z-ai/glm-5"),
+    model=OpenRouterModel("google/gemini-3.1-flash-lite-preview"),
     model_settings=OpenRouterModelSettings(
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",
@@ -240,5 +240,5 @@ async def user_prompt(deps: InformationGathererDeps) -> str:
 ```
 
 위 새로 들어온 메시지에 답하기 위해 필요한 모든 정보를 수집하세요.
-{f"## 이전 평가 피드백\\n이전 응답이 부적절하여 정보를 재수집합니다. 다른 검색어나 다른 도구를 활용하세요." if deps.prior_evaluation_feedback else ""}
+{"## 이전 평가 피드백\\n이전 응답이 부적절하여 정보를 재수집합니다. 다른 검색어나 다른 도구를 활용하세요." if deps.prior_evaluation_feedback else ""}
 """
