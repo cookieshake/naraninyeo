@@ -1,4 +1,5 @@
 import time
+from datetime import UTC, datetime
 from typing import AsyncIterable, Iterator
 
 import httpx
@@ -17,8 +18,30 @@ from naraninyeo.api.container import (
     RepositoryProvider,
     UtilProvider,
 )
+from naraninyeo.core.interfaces import (
+    BotRepository,
+    Clock,
+    FinanceSearch,
+    IdGenerator,
+    MemoryRepository,
+    MessageRepository,
+    NaverSearch,
+    TextEmbedder,
+    WebDocumentFetch,
+)
+from naraninyeo.core.models import (
+    Attachment,
+    Author,
+    Bot,
+    Channel,
+    MemoryItem,
+    Message,
+    MessageContent,
+    TenancyContext,
+)
 from naraninyeo.core.settings import Settings
 from naraninyeo.infrastructure.repository.init_db import VchordInit
+from naraninyeo.infrastructure.util.nanoid_generator import NanoidGenerator
 
 
 class LlamaCppContainer(DockerContainer):
@@ -137,3 +160,125 @@ def _test_client(test_app: FastAPI) -> TestClient:
 def test_client(test_app: FastAPI) -> Iterator[TestClient]:
     with _test_client(test_app) as client:
         yield client
+
+
+# Individual service fixtures (resolved from DI container)
+
+
+@pytest.fixture
+async def naver_search(test_container: AsyncContainer) -> NaverSearch:
+    return await test_container.get(NaverSearch)
+
+
+@pytest.fixture
+async def finance_search(test_container: AsyncContainer) -> FinanceSearch:
+    return await test_container.get(FinanceSearch)
+
+
+@pytest.fixture
+async def web_document_fetch(test_container: AsyncContainer) -> WebDocumentFetch:
+    return await test_container.get(WebDocumentFetch)
+
+
+@pytest.fixture
+async def text_embedder(test_container: AsyncContainer) -> TextEmbedder:
+    return await test_container.get(TextEmbedder)
+
+
+@pytest.fixture
+async def bot_repository(test_container: AsyncContainer) -> BotRepository:
+    return await test_container.get(BotRepository)
+
+
+@pytest.fixture
+async def memory_repository(test_container: AsyncContainer) -> MemoryRepository:
+    return await test_container.get(MemoryRepository)
+
+
+@pytest.fixture
+async def message_repository(test_container: AsyncContainer) -> MessageRepository:
+    return await test_container.get(MessageRepository)
+
+
+@pytest.fixture
+async def clock(test_container: AsyncContainer) -> Clock:
+    return await test_container.get(Clock)
+
+
+@pytest.fixture
+async def id_generator(test_container: AsyncContainer) -> IdGenerator:
+    return await test_container.get(IdGenerator)
+
+
+# Test data factories
+
+
+@pytest.fixture
+def default_tctx() -> TenancyContext:
+    return TenancyContext(tenant_id="test-tenant")
+
+
+def _nanoid() -> str:
+    return NanoidGenerator().generate_id()
+
+
+@pytest.fixture
+def make_bot():
+    def _make(*, bot_id: str | None = None, bot_name: str = "테스트봇") -> Bot:
+        return Bot(
+            bot_id=bot_id or _nanoid(),
+            bot_name=bot_name,
+            author_id="author-1",
+            created_at=datetime.now(UTC),
+        )
+
+    return _make
+
+
+@pytest.fixture
+def make_message():
+    def _make(
+        *,
+        message_id: str | None = None,
+        text: str = "안녕하세요",
+        channel_id: str = "channel-1",
+        author_id: str = "user-1",
+        author_name: str = "테스터",
+        timestamp: datetime | None = None,
+        attachments: list[Attachment] | None = None,
+    ) -> Message:
+        return Message(
+            message_id=message_id or _nanoid(),
+            channel=Channel(channel_id=channel_id, channel_name="테스트채널"),
+            author=Author(author_id=author_id, author_name=author_name),
+            content=MessageContent(text=text, attachments=attachments or []),
+            timestamp=timestamp or datetime.now(UTC),
+        )
+
+    return _make
+
+
+@pytest.fixture
+def make_memory_item():
+    def _make(
+        *,
+        memory_id: str | None = None,
+        bot_id: str = "bot-1",
+        channel_id: str = "channel-1",
+        kind: str = "short_term",
+        content: str = "테스트 메모리",
+        expires_at: datetime | None = None,
+    ) -> MemoryItem:
+        now = datetime.now(UTC)
+        return MemoryItem(
+            memory_id=memory_id or _nanoid(),
+            bot_id=bot_id,
+            channel_id=channel_id,
+            kind=kind,  # type: ignore[arg-type]
+            content=content,
+            created_at=now,
+            updated_at=now,
+            expires_at=expires_at,
+        )
+
+    return _make
