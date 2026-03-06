@@ -48,7 +48,9 @@ async def _ensure_server():
 
     _client = httpx.AsyncClient(base_url=SERVER_URL, timeout=httpx.Timeout(120.0))
     bot_req = CreateBotRequest(name="Test Bot", author_id="user_123")
-    response = await _client.post("/bots", content=bot_req.model_dump_json())
+    response = await _client.post(
+        "/bots", content=bot_req.model_dump_json(), headers={"Content-Type": "application/json"}
+    )
     bot = response.json()
     _bot_id = bot["bot_id"]
 

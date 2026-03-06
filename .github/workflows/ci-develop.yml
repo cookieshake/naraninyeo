@@ -15,6 +15,8 @@ jobs:
       TESTCONTAINERS_RYUK_DISABLED: "false"
       TESTCONTAINERS_CHECKS_DISABLE: "false"
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+      NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
 
     steps:
       - name: Checkout repository

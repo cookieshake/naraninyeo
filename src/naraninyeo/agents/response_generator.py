@@ -22,6 +22,7 @@ class ResponseGeneratorDeps(BaseModel):
     incoming_message: Message
     latest_messages: list[Message]
     memories: list[MemoryItem]
+    prior_evaluation_feedback: str | None = None
 
 
 response_generator = StructuredAgent(
@@ -31,11 +32,9 @@ response_generator = StructuredAgent(
         parallel_tool_calls=True,
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",
-            enabled=True,
+            enabled=False,
         ),
-        openrouter_provider=OpenRouterProviderConfig(
-            zdr=True, quantizations=["fp8", "fp16", "bf16", "int8", "int4", "unknown"]
-        ),
+        openrouter_provider=OpenRouterProviderConfig(zdr=True, quantizations=["fp8", "fp16", "bf16", "int8"]),
     ),
     deps_type=ResponseGeneratorDeps,
     output_type=str,
@@ -57,7 +56,8 @@ async def instructions(ctx: RunContext[ResponseGeneratorDeps]) -> str:
 
 [답변 규칙]
 - 간결하고 핵심만 말함
-- 한쪽에 치우치지 않고 다양한 관점 제시
+- 응답 길이 조절: 단순 인사/감정 표현에는 한두 문장, 복잡한 질문에는 상세하게
+- 다양한 관점 제시: 논쟁적이거나 의견이 갈리는 주제에만 적용. 사실 확인·단순 질문에는 직답
 - 무조건 한국어 반말 사용
 - "검색 결과에 따르면" 같은 표현 절대 사용 금지
 - "시간 이름: 메시지" 형식 사용 금지
@@ -73,7 +73,7 @@ async def instructions(ctx: RunContext[ResponseGeneratorDeps]) -> str:
 async def user_prompt(deps: ResponseGeneratorDeps) -> str:
     latest_messages_str = "\n".join(msg.preview for msg in deps.latest_messages)
     action_results = [
-        (f"{result.source}:\n{result.content.replace('\n', ' ') if result.content else 'No content'}")
+        (f"{result.source}:\n{result.content if result.content else 'No content'}")
         for result in deps.information_gathering_results
     ]
     return f"""
@@ -112,4 +112,9 @@ async def user_prompt(deps: ResponseGeneratorDeps) -> str:
 반드시 메시지 내용만 작성하세요.
 "시간 이름: 내용" 형식이나 "나란잉여:" 같은 접두사를 절대 사용하지 마세요.
 짧고 간결하게, 핵심만 요약해서 전달하세요. 불필요한 미사여구나 설명은 생략하세요.
+{
+        "## 이전 평가 피드백\\n이전 응답이 부적절하여 재생성합니다. 형식과 내용을 다시 확인하세요."
+        if deps.prior_evaluation_feedback
+        else ""
+    }
 """

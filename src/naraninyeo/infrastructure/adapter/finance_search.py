@@ -4,27 +4,39 @@ from functools import reduce
 
 import FinanceDataReader as fdr
 import httpx
-from cachetools import TTLCache, cached
+from cachetools import TTLCache
 
 from naraninyeo.core.models import NewsSearchResult, PriceInfo, Ticker
 
 
 class FinanceSearchClient:
-    @cached(cache=TTLCache(maxsize=100, ttl=86400))
+    def __init__(self, client: httpx.AsyncClient) -> None:
+        self._client = client
+        self._symbol_cache: TTLCache = TTLCache(maxsize=100, ttl=86400)
+        self._cache_lock = asyncio.Lock()
+
     async def search_symbol(self, query: str) -> Ticker | None:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                "https://m.stock.naver.com/front-api/search/autoComplete",
-                params={
-                    "query": query,
-                    "target": "stock,index,marketindicator,coin,ipo",
-                },
-            )
+        async with self._cache_lock:
+            if query in self._symbol_cache:
+                return self._symbol_cache[query]
+        result = await self._search_symbol_impl(query)
+        async with self._cache_lock:
+            self._symbol_cache[query] = result
+        return result
+
+    async def _search_symbol_impl(self, query: str) -> Ticker | None:
+        response = await self._client.get(
+            "https://m.stock.naver.com/front-api/search/autoComplete",
+            params={
+                "query": query,
+                "target": "stock,index,marketindicator,ipo",
+            },
+        )
         if response.status_code != 200:
             raise Exception(f"Failed to search symbol: {response.status_code}, {response.text}")
-        response = response.json()
+        data = response.json()
         result = []
-        for item in response["result"]["items"]:
+        for item in data["result"]["items"]:
             result.append(
                 Ticker(
                     code=item["code"],
@@ -46,23 +58,16 @@ class FinanceSearchClient:
             url = f"https://m.stock.naver.com/api/news/stock/{symbol.reuter_code}"
         else:
             url = f"https://api.stock.naver.com/news/worldStock/{symbol.reuter_code}"
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                url,
-                params={
-                    "pageSize": 20,
-                    "page": 1,
-                },
-            )
+        response = await self._client.get(url, params={"pageSize": 20, "page": 1})
         if response.status_code != 200:
             raise Exception(f"Failed to search news: {response.status_code}, {response.text}")
-        response = response.json()
+        data = response.json()
         result = []
         if "domestic" in symbol.url.lower():
-            items = [r["items"] for r in response]
+            items = [r["items"] for r in data]
             items = reduce(lambda x, y: x + y, items)
         else:
-            items = response
+            items = data
         for item in items:
             result.append(
                 NewsSearchResult(
@@ -81,16 +86,13 @@ class FinanceSearchClient:
             url = f"https://polling.finance.naver.com/api/realtime/domestic/{symbol.category}/{symbol.reuter_code}"
         else:
             url = f"https://polling.finance.naver.com/api/realtime/worldstock/{symbol.category}/{symbol.reuter_code}"
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                url,
-            )
-            if response.status_code != 200:
-                raise Exception(f"Failed to search current price: {response.status_code}, {response.text}")
-            response = response.json()
-        if len(response["datas"]) == 0:
+        response = await self._client.get(url)
+        if response.status_code != 200:
+            raise Exception(f"Failed to search current price: {response.status_code}, {response.text}")
+        data = response.json()
+        if len(data["datas"]) == 0:
             return None
-        return response["datas"][0]["closePrice"]
+        return data["datas"][0]["closePrice"]
 
     async def get_short_term_price(self, symbol: Ticker) -> list[PriceInfo]:
         """주어진 쿼리에 해당하는 종목에 대한 단기간의 종가를 검색합니다"""

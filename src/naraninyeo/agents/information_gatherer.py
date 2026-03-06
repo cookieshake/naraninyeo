@@ -25,6 +25,7 @@ class InformationGathererDeps(BaseModel):
     finance_search_client: FinanceSearch
     web_document_fetcher: WebDocumentFetch
     use_tool_calls: bool
+    prior_evaluation_feedback: str | None = None
 
 
 class InformationGathererOutput(BaseModel):
@@ -44,10 +45,15 @@ async def naver_search(
     order: Literal["sim", "date"] = "sim",
 ) -> str:
     """
-    네이버 검색 도구입니다.
-    search_type: 검색 유형 (general, news, blog, document, encyclopedia)
-    query: 검색 쿼리
-    limit: 검색 결과 수 (최대 30)
+    네이버 검색 도구입니다. 최신 뉴스, 백과사전 지식, 블로그 리뷰 등 외부 정보가 필요할 때 사용합니다.
+    search_type:
+      - "news": 시사, 사건, 최근 이슈 (order="date" 권장)
+      - "encyclopedia": 사실, 개념, 정의, 인물 정보
+      - "blog": 후기, 리뷰, 경험담, 맛집/여행 정보
+      - "general": 위 카테고리에 해당하지 않는 일반 검색
+      - "document": 공식 문서, 학술 자료
+    query: 검색 쿼리 (핵심 키워드만, 조사/어미 제거. 예: "삼성전자의 주가가" → "삼성전자 주가")
+    limit: 검색 결과 수 (최대 30, 보통 5-10이면 충분)
     order: 정렬 기준 (sim: 정확도순, date: 최신순)
     """
     nv_client = ctx.deps.naver_search_client
@@ -69,7 +75,7 @@ async def naver_search(
 @_tools.tool
 async def fetch_webpage(ctx: RunContext[InformationGathererDeps], url: str) -> str:
     """
-    웹페이지 내용을 가져오는 도구입니다.
+    웹페이지 내용을 가져오는 도구입니다. naver_search 결과의 링크를 열어 상세 내용을 확인할 때 사용합니다.
     url: 웹페이지 URL
     """
     fetcher = ctx.deps.web_document_fetcher
@@ -83,8 +89,9 @@ async def financial_data_lookup(
     stock_name: str,
 ) -> str:
     """
-    금융 데이터 조회 도구입니다.
-    stock_name: 종목명
+    금융 데이터 조회 도구입니다. 주식, 지수, ETF 등 금융 데이터가 필요할 때 사용합니다.
+    현재 가격, 단기/장기 가격 추이, 관련 뉴스를 함께 반환합니다.
+    stock_name: 종목명 또는 회사명 (예: "삼성전자", "KODEX 200", "S&P500"). 코인·환율은 지원하지 않습니다.
     """
     fsc = ctx.deps.finance_search_client
     ticker = await fsc.search_symbol(stock_name)
@@ -133,9 +140,10 @@ async def chat_history_lookup(
     limit: int,
 ) -> str:
     """
-    대화 기록 조회 도구입니다.
-    keyword: 검색 키워드
-    limit: 검색 결과 수
+    대화 기록 조회 도구입니다. 사용자가 이전 대화를 언급하거나 ("아까", "전에 말한", "그거"),
+    과거에 나눈 특정 주제에 대한 맥락이 필요할 때 사용합니다.
+    keyword: 검색 키워드 (핵심 단어)
+    limit: 검색 결과 수 (보통 5-10이면 충분)
     """
     results = await ctx.deps.message_repository.text_search_messages(
         tctx=ctx.deps.tctx,
@@ -160,7 +168,6 @@ information_gatherer = StructuredAgent(
     name="Information Gatherer",
     model=OpenRouterModel("google/gemini-3.1-flash-lite-preview"),
     model_settings=OpenRouterModelSettings(
-        parallel_tool_calls=True,
         openrouter_reasoning=OpenRouterReasoning(
             effort="low",
             enabled=False,
@@ -190,7 +197,20 @@ async def instructions(ctx: RunContext[InformationGathererDeps]) -> str:
 - 쿼리에 현재 시간이 필요할 경우 이를 반영하세요.
 - '오늘', '최근' 등의 표현은 사용하지 말고 구체적인 날짜를 명시하세요.
 - 날짜는 년, 월 등의 인간에게 친숙한 형식을 사용하세요.
-- 도구 실행 결과를 검토한 뒤,최종 답변에 필요한 핵심 정보만 주어진 형식의 목록으로 최종 반환하세요.
+- 도구 실행 결과를 검토한 뒤, 최종 답변에 필요한 핵심 정보만 주어진 형식의 목록으로 최종 반환하세요.
+
+## 도구 선택 가이드
+- 이전 대화 언급 ("아까", "전에 말한", "그거", "우리가 얘기한") → chat_history_lookup 먼저
+- 주식/지수/ETF 질문 → financial_data_lookup (코인·환율은 지원 안 함, 대신 naver_search 사용)
+- 시사/뉴스/최근 사건 → naver_search(search_type="news", order="date")
+- 사실/개념/정의/인물 → naver_search(search_type="encyclopedia")
+- 후기/리뷰/맛집/여행 → naver_search(search_type="blog")
+- 검색 결과에서 상세 내용이 필요하면 → fetch_webpage로 링크 열기
+
+## 도구가 불필요한 경우
+- 단순 인사, 감사, 감정 표현 (예: "ㅋㅋ", "ㄱㅅ", "ㅎㅇ", "안녕")
+- 대화 기록과 기억만으로 충분히 답변 가능한 경우
+→ 도구를 호출하지 말고 빈 목록([])을 바로 반환하세요.
 """
 
 
@@ -220,4 +240,9 @@ async def user_prompt(deps: InformationGathererDeps) -> str:
 ```
 
 위 새로 들어온 메시지에 답하기 위해 필요한 모든 정보를 수집하세요.
+{
+        "## 이전 평가 피드백\\n이전 응답이 부적절하여 정보를 재수집합니다. 다른 검색어나 다른 도구를 활용하세요."
+        if deps.prior_evaluation_feedback
+        else ""
+    }
 """

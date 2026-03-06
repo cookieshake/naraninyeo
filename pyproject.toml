@@ -39,6 +39,7 @@ dependencies = [
     "finance-datareader>=0.9.96",
     "opentelemetry-instrumentation-fastapi>=0.59b0",
     "pydantic-monty>=0.0.4",
+    "certifi>=2026.2.25",
 ]
 
 [project.scripts]
@@ -50,6 +51,7 @@ dev = [
     "pytest>=8.3.2",
     "pytest-asyncio>=1.2.0",
     "pytest-httpx>=0.30.0",
+    "pytest-cov>=6.0.0",
     "gradio>=5.0.0",
     "testcontainers>=4.12.0",
 ]
@@ -62,6 +64,8 @@ naraninyeo = { workspace = true }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 addopts = [
     "--import-mode=importlib",
 ]
