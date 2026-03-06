@@ -148,19 +148,18 @@ def to_markdown(html: str) -> str:
     )
 
 
-async def url_to_text(url: str, follow_redirect: bool = True) -> FetchedDocument:
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url, follow_redirects=follow_redirect)
-        response.raise_for_status()
+async def url_to_text(url: str, client: httpx.AsyncClient, follow_redirect: bool = True) -> FetchedDocument:
+    response = await client.get(url, follow_redirects=follow_redirect)
+    response.raise_for_status()
 
-        soup = BeautifulSoup(response.text, "html.parser")
-        iframe_metadata = await embed_iframes(soup, client, str(response.url))
-        rendered_html = soup.prettify()
-        metadata = extract_metadata(soup)
-        for key, value in iframe_metadata.items():
-            metadata.setdefault(key, value)
-        sanitized_soup = sanitize_content_tree(soup)
-        markdown_content = to_markdown(sanitized_soup.prettify())
+    soup = BeautifulSoup(response.text, "html.parser")
+    iframe_metadata = await embed_iframes(soup, client, str(response.url))
+    rendered_html = soup.prettify()
+    metadata = extract_metadata(soup)
+    for key, value in iframe_metadata.items():
+        metadata.setdefault(key, value)
+    sanitized_soup = sanitize_content_tree(soup)
+    markdown_content = to_markdown(sanitized_soup.prettify())
 
     return FetchedDocument(
         url=str(response.url),
@@ -171,9 +170,12 @@ async def url_to_text(url: str, follow_redirect: bool = True) -> FetchedDocument
 
 
 class WebDocumentFetcher:
+    def __init__(self, client: httpx.AsyncClient) -> None:
+        self._client = client
+
     @get_tracer(__name__).start_as_current_span("fetch_document")
     async def fetch_document(
         self,
         url: str,
     ) -> FetchedDocument:
-        return await url_to_text(url)
+        return await url_to_text(url, self._client)

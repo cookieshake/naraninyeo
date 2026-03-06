@@ -371,3 +371,6 @@ $RECYCLE.BIN/
 # Chainlit
 .chainlit/
 chainlit.md
+
+# Claude
+.claude/

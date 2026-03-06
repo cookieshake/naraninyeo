@@ -65,6 +65,7 @@ class NewMessageGraphState(BaseModel):
     evaluation_count: int = 0
     information_gathering_results: List[InformationGathererOutput] = Field(default_factory=list)
     latest_evaluation_feedback: Optional[EvaluationFeedback] = None
+    latest_evaluation_reason: Optional[str] = None
     is_profane: bool = False
     profanity_reason: Optional[str] = None
     draft_messages: List[BotMessage] = Field(default_factory=list)
@@ -120,6 +121,7 @@ async def gather_information(
         finance_search_client=runtime.context.finance_search_client,
         web_document_fetcher=runtime.context.web_document_fetcher,
         use_tool_calls=True,
+        prior_evaluation_feedback=state.latest_evaluation_feedback,
     )
 
     async def event_stream_handler(
@@ -141,7 +143,8 @@ async def gather_information(
                     event_stream_handler=event_stream_handler,
                     usage_limits=UsageLimits(tool_calls_limit=20),
                 ) as result:
-                    state.information_gathering_results = await result.get_output()
+                    new_results = await result.get_output()
+                    state.information_gathering_results = state.information_gathering_results + new_results
         except (UsageLimitExceeded, TimeoutError) as e:
             match e:
                 case UsageLimitExceeded():
@@ -158,7 +161,7 @@ async def gather_information(
                 deps=deps.model_copy(update={"use_tool_calls": False}),
                 message_history=messages,
             )
-            state.information_gathering_results = output.output
+            state.information_gathering_results = state.information_gathering_results + output.output
     return state
 
 
@@ -175,6 +178,7 @@ async def generate_response(
         information_gathering_results=state.information_gathering_results or [],
         clock=runtime.context.clock,
         memories=state.memories,
+        prior_evaluation_feedback=state.latest_evaluation_feedback,
     )
 
     generated_response = await response_generator.run_with_generator(deps)
@@ -222,6 +226,7 @@ async def finalize_response(
                 "text": msg.content.text,
             }
         )
+    state.status = "completed"
     return state
 
 
@@ -230,16 +235,24 @@ async def finalize_response(
 # ---------------------------------------------------------------------------
 
 
+_SIMPLE_MSG_PATTERN = re.compile(
+    r"^[ㄱ-ㅎㅏ-ㅣ]{1,5}$"
+    r"|^(안녕|ㄱㅅ|ㅎㅇ|ㅂㅂ|넵|네|응|ㅇㅋ|ok|감사|고마워|ㄳ|ㅊㅋ|축하|ㅠ+|ㅜ+|ㅎㅎ+|ㅋ+|ㅎ+)$",
+    re.IGNORECASE,
+)
+
+
 def route_after_profanity_check(state: NewMessageGraphState) -> str:
     if state.is_profane:
         return END
+    msg_text = state.incoming_message.content.text.strip()
+    if _SIMPLE_MSG_PATTERN.match(msg_text) or len(msg_text) <= 5:
+        return "generate_response"
     return "gather_information"
 
 
 def route_based_on_evaluation(state: NewMessageGraphState) -> str:
-    if state.latest_evaluation_feedback == EvaluationFeedback.PLAN_AGAIN:
-        return "gather_information"
-    elif state.latest_evaluation_feedback == EvaluationFeedback.EXECUTE_AGAIN:
+    if state.latest_evaluation_feedback == EvaluationFeedback.REGATHER:
         return "gather_information"
     elif state.latest_evaluation_feedback == EvaluationFeedback.GENERATE_AGAIN:
         return "generate_response"
