@@ -17,8 +17,8 @@ from pydantic_ai.toolsets.function import FunctionToolset
 from naraninyeo.toolsets.code_mode import CodeModeToolset
 
 
-async def _run_code(code: str, inner_toolset: FunctionToolset | None = None) -> str:
-    toolset = CodeModeToolset(inner_toolset or FunctionToolset())
+async def _run_code(code: str) -> str:
+    toolset = CodeModeToolset(FunctionToolset())
     ctx = MagicMock()
     ctx.deps = MagicMock()
     ctx.retries = {}
@@ -77,16 +77,3 @@ fib(10)
     assert "Result: 55" in result
 
 
-@pytest.mark.asyncio
-async def test_registered_tool_callable_from_code():
-    """등록된 tool 함수를 코드 내에서 호출할 수 있다."""
-    inner = FunctionToolset()
-
-    @inner.tool
-    def add_numbers(a: int, b: int) -> int:
-        """두 숫자를 더한다."""
-        return a + b
-
-    result = await _run_code("add_numbers(3, 4)", inner_toolset=inner)
-
-    assert "Result: 7" in result

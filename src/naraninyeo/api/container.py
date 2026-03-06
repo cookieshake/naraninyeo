@@ -46,8 +46,8 @@ class ConnectionProvider(Provider):
         await pool.close()
 
     @provide
-    async def http_client(self) -> AsyncIterable[httpx.AsyncClient]:
-        async with httpx.AsyncClient() as client:
+    async def http_client(self, settings: Settings) -> AsyncIterable[httpx.AsyncClient]:  # type: ignore[reportUndefinedVariable]
+        async with httpx.AsyncClient(verify=settings.HTTP_SSL_VERIFY) as client:
             yield client
 
 

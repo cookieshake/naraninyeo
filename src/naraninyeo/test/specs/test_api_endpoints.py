@@ -13,8 +13,10 @@ API 엔드포인트 통합 스펙 테스트
 import json
 from datetime import UTC, datetime
 
+import httpx
 import pytest
-from fastapi.testclient import TestClient
+from fastapi import FastAPI
+from httpx import ASGITransport
 
 from naraninyeo.api.routers.bot import CreateBotRequest
 from naraninyeo.core.models import (
@@ -26,21 +28,27 @@ from naraninyeo.core.models import (
 )
 
 
+@pytest.fixture(scope="session")
+async def async_client(test_app: FastAPI) -> httpx.AsyncClient:
+    async with httpx.AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as client:
+        yield client
+
+
 @pytest.mark.asyncio
-async def test_health_check(test_client: TestClient):
+async def test_health_check(async_client: httpx.AsyncClient):
     """GET /는 200을 반환한다."""
-    response = test_client.get("/")
+    response = await async_client.get("/")
 
     assert response.status_code == 200
     assert response.text == "Naraninyeo API is running."
 
 
 @pytest.mark.asyncio
-async def test_create_bot_and_retrieve(test_client: TestClient):
+async def test_create_bot_and_retrieve(async_client: httpx.AsyncClient):
     """POST /bots로 봇을 생성하면 GET /bots에서 조회 가능하다."""
     bot_request = CreateBotRequest(name="스펙테스트봇", author_id="test-author")
 
-    response = test_client.post(
+    response = await async_client.post(
         "/bots",
         content=bot_request.model_dump_json(),
         headers={"Content-Type": "application/json"},
@@ -50,17 +58,17 @@ async def test_create_bot_and_retrieve(test_client: TestClient):
     assert created["bot_name"] == "스펙테스트봇"
     assert "bot_id" in created
 
-    bots = test_client.get("/bots").json()
+    bots = (await async_client.get("/bots")).json()
     assert any(b["bot_id"] == created["bot_id"] for b in bots)
 
 
 @pytest.mark.asyncio
-async def test_new_message_without_reply(test_client: TestClient):
+async def test_new_message_without_reply(async_client: httpx.AsyncClient):
     """reply_needed=false이면 is_final=True이고 generated_message가 없다."""
-    bot_id = _get_or_create_bot(test_client)
+    bot_id = await _get_or_create_bot(async_client)
     payload = _make_new_message_request(bot_id, text="조용히 저장만 해줘", reply_needed=False)
 
-    response = test_client.post(
+    response = await async_client.post(
         "/new_message",
         content=payload.model_dump_json(),
         headers={"Content-Type": "application/json"},
@@ -74,19 +82,19 @@ async def test_new_message_without_reply(test_client: TestClient):
 
 
 @pytest.mark.asyncio
-async def test_new_message_with_reply_streams_response(test_client: TestClient):
+async def test_new_message_with_reply_streams_response(async_client: httpx.AsyncClient):
     """reply_needed=true이면 스트리밍 응답에 generated_message가 포함된 청크가 있다."""
-    bot_id = _get_or_create_bot(test_client)
+    bot_id = await _get_or_create_bot(async_client)
     payload = _make_new_message_request(bot_id, text="안녕! 간단히 인사해줘", reply_needed=True)
 
-    with test_client.stream(
+    async with async_client.stream(
         "POST",
         "/new_message",
         content=payload.model_dump_json(),
         headers={"Content-Type": "application/json"},
     ) as response:
         assert response.status_code == 200
-        chunks = [json.loads(line) for line in response.iter_lines() if line]
+        chunks = [json.loads(line) async for line in response.aiter_lines() if line]
 
     assert len(chunks) > 0
     final_chunks = [c for c in chunks if c.get("is_final")]
@@ -97,11 +105,11 @@ async def test_new_message_with_reply_streams_response(test_client: TestClient):
 
 
 @pytest.mark.asyncio
-async def test_new_message_with_unknown_bot_returns_error(test_client: TestClient):
+async def test_new_message_with_unknown_bot_returns_error(async_client: httpx.AsyncClient):
     """존재하지 않는 bot_id이면 400 에러를 반환한다."""
     payload = _make_new_message_request("non-existent-bot-id", text="테스트", reply_needed=True)
 
-    response = test_client.post(
+    response = await async_client.post(
         "/new_message",
         content=payload.model_dump_json(),
         headers={"Content-Type": "application/json"},
@@ -116,12 +124,12 @@ async def test_new_message_with_unknown_bot_returns_error(test_client: TestClien
 # --- Helpers ---
 
 
-def _get_or_create_bot(client: TestClient) -> str:
-    bots = client.get("/bots").json()
+async def _get_or_create_bot(client: httpx.AsyncClient) -> str:
+    bots = (await client.get("/bots")).json()
     if bots:
         return bots[0]["bot_id"]
     bot_request = CreateBotRequest(name="통합테스트봇", author_id="test-author")
-    response = client.post(
+    response = await client.post(
         "/bots",
         content=bot_request.model_dump_json(),
         headers={"Content-Type": "application/json"},

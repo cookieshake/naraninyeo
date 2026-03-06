@@ -1,6 +1,6 @@
 import time
 from datetime import UTC, datetime
-from typing import AsyncIterable, Iterator
+from typing import AsyncIterable, Iterator  # noqa: F401
 
 import httpx
 import pytest
@@ -8,7 +8,6 @@ from asyncpg import create_pool
 from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from testcontainers.core.container import DockerContainer
 from testcontainers.postgres import PostgresContainer
 
@@ -110,6 +109,7 @@ class TestProvider(Provider):
         base = Settings()
         copy = base.model_copy()
         copy.DEBUG_MODE = True
+        copy.HTTP_SSL_VERIFY = False
         copy.LLAMA_CPP_EMBEDDINGS_URI = llamacpp_container.get_connection_url()
         copy.VCHORD_URI = vchord_container.get_connection_url()
         return copy
@@ -132,7 +132,7 @@ async def _test_container() -> AsyncContainer:
     return container
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 async def test_container() -> AsyncIterable[AsyncContainer]:
     container = await _test_container()
     yield container
@@ -147,65 +147,56 @@ async def _test_app(test_container: AsyncContainer) -> FastAPI:
     return app
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 async def test_app(test_container: AsyncContainer) -> FastAPI:
     return await _test_app(test_container)
 
-
-def _test_client(test_app: FastAPI) -> TestClient:
-    return TestClient(test_app)
-
-
-@pytest.fixture
-def test_client(test_app: FastAPI) -> Iterator[TestClient]:
-    with _test_client(test_app) as client:
-        yield client
 
 
 # Individual service fixtures (resolved from DI container)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 async def naver_search(test_container: AsyncContainer) -> NaverSearch:
     return await test_container.get(NaverSearch)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 async def finance_search(test_container: AsyncContainer) -> FinanceSearch:
     return await test_container.get(FinanceSearch)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 async def web_document_fetch(test_container: AsyncContainer) -> WebDocumentFetch:
     return await test_container.get(WebDocumentFetch)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 async def text_embedder(test_container: AsyncContainer) -> TextEmbedder:
     return await test_container.get(TextEmbedder)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 async def bot_repository(test_container: AsyncContainer) -> BotRepository:
     return await test_container.get(BotRepository)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 async def memory_repository(test_container: AsyncContainer) -> MemoryRepository:
     return await test_container.get(MemoryRepository)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 async def message_repository(test_container: AsyncContainer) -> MessageRepository:
     return await test_container.get(MessageRepository)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 async def clock(test_container: AsyncContainer) -> Clock:
     return await test_container.get(Clock)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 async def id_generator(test_container: AsyncContainer) -> IdGenerator:
     return await test_container.get(IdGenerator)
 

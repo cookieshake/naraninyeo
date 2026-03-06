@@ -36,13 +36,16 @@ async def test_upsert_and_get_before_returns_message(
 @pytest.mark.asyncio
 async def test_upsert_is_idempotent(message_repository: MessageRepository, default_tctx: TenancyContext, make_message):
     """동일 message_id를 두 번 upsert해도 중복 없이 덮어쓴다."""
-    msg = make_message(channel_id="ch-msg-2", text="원본")
+    now = datetime.now(UTC)
+    msg = make_message(channel_id="ch-msg-2", text="원본", timestamp=now - timedelta(seconds=1))
+    anchor = make_message(channel_id="ch-msg-2", timestamp=now)
     await message_repository.upsert(default_tctx, msg)
+    await message_repository.upsert(default_tctx, anchor)
 
     updated = msg.model_copy(update={"content": msg.content.model_copy(update={"text": "수정됨"})})
     await message_repository.upsert(default_tctx, updated)
 
-    results = await message_repository.get_channel_messages_before(default_tctx, "ch-msg-2", "z" * 21, limit=10)
+    results = await message_repository.get_channel_messages_before(default_tctx, "ch-msg-2", anchor.message_id, limit=10)
     matching = [m for m in results if m.message_id == msg.message_id]
     assert len(matching) == 1
 

@@ -45,11 +45,9 @@ async def test_fetch_document_markdown_has_meaningful_content(web_document_fetch
 @pytest.mark.asyncio
 async def test_fetch_document_meta_tags_parsed(web_document_fetch: WebDocumentFetch):
     """meta 태그가 dict로 파싱된다."""
-    # Wikipedia는 다양한 meta 태그를 갖고 있음
-    result = await web_document_fetch.fetch_document("https://ko.wikipedia.org/wiki/파이썬_(프로그래밍_언어)")
+    result = await web_document_fetch.fetch_document("https://www.python.org")
 
     assert isinstance(result.meta_tags, dict)
-    # Wikipedia는 description meta 태그를 가짐
     assert len(result.meta_tags) > 0
 
 

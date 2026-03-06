@@ -19,6 +19,8 @@ class LlamaCppGemmaEmbedder:
 
     @get_tracer(__name__).start_as_current_span("embed_docs")
     async def embed_docs(self, docs: list[str]) -> list[list[float]]:
+        if not docs:
+            return []
         model = await self._get_model()
         transformed = [f"title: none | text: {content}" for content in docs]
         response = await self._client.post(
@@ -30,6 +32,8 @@ class LlamaCppGemmaEmbedder:
 
     @get_tracer(__name__).start_as_current_span("embed_queries")
     async def embed_queries(self, queries: list[str]) -> list[list[float]]:
+        if not queries:
+            return []
         model = await self._get_model()
         transformed = [f"task: search result | query: {content}" for content in queries]
         response = await self._client.post(

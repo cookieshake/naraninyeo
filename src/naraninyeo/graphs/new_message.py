@@ -226,6 +226,7 @@ async def finalize_response(
                 "text": msg.content.text,
             }
         )
+    state.status = "completed"
     return state
 
 
