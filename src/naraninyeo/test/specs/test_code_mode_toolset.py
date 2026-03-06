@@ -75,5 +75,3 @@ fib(10)
     result = await _run_code(code)
 
     assert "Result: 55" in result
-
-

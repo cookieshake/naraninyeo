@@ -14,7 +14,7 @@ class LlamaCppGemmaEmbedder:
         if self._model is None:
             resp = await self._client.get(f"{self.api_url}/v1/models")
             resp.raise_for_status()
-            self._model = resp.json()["data"][0]["id"]
+            self._model = str(resp.json()["data"][0]["id"])
         return self._model
 
     @get_tracer(__name__).start_as_current_span("embed_docs")

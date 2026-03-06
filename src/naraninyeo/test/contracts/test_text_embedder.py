@@ -14,7 +14,7 @@ from naraninyeo.core.interfaces import TextEmbedder
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=True))
     norm_a = math.sqrt(sum(x**2 for x in a))
     norm_b = math.sqrt(sum(x**2 for x in b))
     if norm_a == 0 or norm_b == 0:

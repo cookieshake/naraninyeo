@@ -11,6 +11,7 @@ API 엔드포인트 통합 스펙 테스트
 """
 
 import json
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 
 import httpx
@@ -29,7 +30,7 @@ from naraninyeo.core.models import (
 
 
 @pytest.fixture(scope="session")
-async def async_client(test_app: FastAPI) -> httpx.AsyncClient:
+async def async_client(test_app: FastAPI) -> AsyncGenerator[httpx.AsyncClient, None]:
     async with httpx.AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as client:
         yield client
 

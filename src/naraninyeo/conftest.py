@@ -152,7 +152,6 @@ async def test_app(test_container: AsyncContainer) -> FastAPI:
     return await _test_app(test_container)
 
 
-
 # Individual service fixtures (resolved from DI container)
 
 

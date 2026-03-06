@@ -45,7 +45,9 @@ async def test_upsert_is_idempotent(message_repository: MessageRepository, defau
     updated = msg.model_copy(update={"content": msg.content.model_copy(update={"text": "수정됨"})})
     await message_repository.upsert(default_tctx, updated)
 
-    results = await message_repository.get_channel_messages_before(default_tctx, "ch-msg-2", anchor.message_id, limit=10)
+    results = await message_repository.get_channel_messages_before(
+        default_tctx, "ch-msg-2", anchor.message_id, limit=10
+    )
     matching = [m for m in results if m.message_id == msg.message_id]
     assert len(matching) == 1
 
