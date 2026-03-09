@@ -13,6 +13,7 @@ from naraninyeo.core.interfaces import (
     MemoryRepository,
     MessageRepository,
     NaverSearch,
+    TextEmbedder,
     WebDocumentFetch,
 )
 from naraninyeo.core.models import (
@@ -46,6 +47,7 @@ async def new_message(
     naver_search: FromDishka[NaverSearch],
     finance_search: FromDishka[FinanceSearch],
     web_document_fetch: FromDishka[WebDocumentFetch],
+    text_embedder: FromDishka[TextEmbedder],
 ):
     tctx = TenancyContext(tenant_id="default")
     bot = await bot_repo.get(tctx, new_message_request.bot_id)
@@ -105,11 +107,13 @@ async def new_message(
         )
 
     if new_message_request.reply_needed:
-        channel_memory = await memory_repo.get_channel_memory_items(
+        query_emb = await text_embedder.embed_queries([new_message_request.message.content.text])
+        channel_memory = await memory_repo.search_memories(
             tctx,
             bot_id=new_message_request.bot_id,
             channel_id=new_message_request.message.channel.channel_id,
-            limit=100,
+            query_embedding=query_emb[0],
+            limit=20,
         )
 
         init_state = NewMessageGraphState(

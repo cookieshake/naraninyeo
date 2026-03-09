@@ -77,12 +77,14 @@ class VchordInit:
             channel_id VARCHAR(255) NOT NULL,
             kind VARCHAR(255) NOT NULL,
             content TEXT NOT NULL,
+            content_embedding vector(768),
             created_at TIMESTAMP WITH TIME ZONE NOT NULL,
             updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
             expires_at TIMESTAMP WITH TIME ZONE,
 
             PRIMARY KEY (tenant_id, memory_id)
         );
+        ALTER TABLE memory_items ADD COLUMN IF NOT EXISTS content_embedding vector(768);
     """
 
     async def run(self):

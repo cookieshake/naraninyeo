@@ -142,3 +142,20 @@ async def test_get_channel_memory_items_ordered_by_updated_at_desc(
 
     if len(results) >= 2:
         assert results[0].updated_at >= results[1].updated_at
+
+
+@pytest.mark.asyncio
+async def test_search_memories_returns_relevant_items(
+    memory_repository: MemoryRepository, default_tctx: TenancyContext, make_memory_item, text_embedder
+):
+    """search_memories는 쿼리 임베딩 기반으로 기억을 반환한다."""
+    item = make_memory_item(bot_id="bot-mem-8", channel_id="ch-mem-8", content="파이썬 개발자입니다")
+    await memory_repository.upsert_many(default_tctx, [item])
+
+    query_emb = await text_embedder.embed_queries(["파이썬"])
+    results = await memory_repository.search_memories(
+        default_tctx, "bot-mem-8", "ch-mem-8", query_emb[0], limit=10
+    )
+
+    ids = {r.memory_id for r in results}
+    assert item.memory_id in ids

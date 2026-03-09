@@ -109,8 +109,8 @@ async def _prune_memories(
             pruned_memories.append(merged_memory)
             memory_ids_to_delete.extend(action.ids)
 
-    memories[:] = [memory for memory in memories if memory.memory_id not in memory_ids_to_delete]
-    return memories + pruned_memories
+    remaining = [memory for memory in memories if memory.memory_id not in memory_ids_to_delete]
+    return remaining + pruned_memories
 
 
 async def manage_memory(
@@ -134,8 +134,10 @@ async def manage_memory(
     # Promote old short-term memories to long-term when threshold is reached
     old_short_term = [m for m in short_term if (now - m.created_at).days > 4]
     if len(old_short_term) > 30:
-        promoted = await _prune_memories(state, runtime, short_term, retention_days=7, kind="short_term")
-        short_term = [m for m in short_term if m.memory_id not in {pm.memory_id for pm in promoted}]
+        promoted = await _prune_memories(state, runtime, old_short_term, retention_days=60, kind="long_term")
+        old_ids = {m.memory_id for m in old_short_term}
+        short_term = [m for m in short_term if m.memory_id not in old_ids]
+        long_term.extend(promoted)
 
     # Prune long-term memories if too many accumulated
     if len(long_term) > 100:
