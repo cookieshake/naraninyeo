@@ -86,19 +86,26 @@ async def new_message(
             oldest_message_ts_in_history,
             latest_update_ts,
         )
-        init_state = ManageMemoryGraphState(
+        mem_state = ManageMemoryGraphState(
             current_tctx=tctx,
             current_bot=bot,
             status="processing",
             incoming_message=new_message_request.message,
             latest_history=list(latest_messages),
         )
-        graph_context = ManageMemoryGraphContext(
+        mem_context = ManageMemoryGraphContext(
             clock=clock,
             id_generator=id_generator,
             memory_repository=memory_repo,
         )
-        asyncio.create_task(manage_memory_graph.ainvoke(init_state, context=graph_context))
+
+        async def _run_manage_memory(s: ManageMemoryGraphState, c: ManageMemoryGraphContext) -> None:
+            try:
+                await manage_memory_graph.ainvoke(s, context=c)
+            except Exception:
+                logging.exception("manage_memory_graph failed")
+
+        asyncio.create_task(_run_manage_memory(mem_state, mem_context))
     else:
         logging.info(
             "No need to update memory. Latest memory update ts: %s, Oldest message ts in history: %s",

@@ -121,7 +121,10 @@ class VchordMemoryRepository:
                 FROM memory_items
                 WHERE tenant_id = $1 AND bot_id = $2 AND channel_id = $3
                   AND content_embedding IS NOT NULL
-                ORDER BY content_embedding <-> $4
+                  AND (expires_at IS NULL OR expires_at > NOW())
+                ORDER BY
+                    content_embedding <-> $4
+                    + EXTRACT(EPOCH FROM (NOW() - updated_at)) / 86400.0 * 0.01
                 LIMIT $5
                 """,
                 tctx.tenant_id,
