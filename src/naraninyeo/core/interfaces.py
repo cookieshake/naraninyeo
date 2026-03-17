@@ -43,6 +43,9 @@ class MemoryRepository(Protocol):
     async def get_channel_memory_items(
         self, tctx: TenancyContext, bot_id: str, channel_id: str, limit: int = 100
     ) -> Sequence[MemoryItem]: ...
+    async def search_memories(
+        self, tctx: TenancyContext, bot_id: str, channel_id: str, query_embedding: list[float], limit: int = 20
+    ) -> Sequence[MemoryItem]: ...
     async def get_latest_memory_update_ts(
         self, tctx: TenancyContext, bot_id: str, channel_id: str
     ) -> datetime | None: ...

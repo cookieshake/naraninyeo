@@ -3,29 +3,40 @@ from typing import Sequence
 
 from asyncpg import Pool
 
+from naraninyeo.core.interfaces import TextEmbedder
 from naraninyeo.core.models import MemoryItem, TenancyContext
 
 
 class VchordMemoryRepository:
-    def __init__(self, pool: Pool):
+    def __init__(self, pool: Pool, text_embedder: TextEmbedder):
         self.pool = pool
+        self.text_embedder = text_embedder
+
+    @staticmethod
+    def _format_pgvector(values: Sequence[float]) -> str:
+        return "[" + ",".join(str(component) for component in values) + "]"
 
     async def upsert_many(self, tctx: TenancyContext, memory_items: Sequence[MemoryItem]) -> None:
+        if not memory_items:
+            return
+        contents = [item.content for item in memory_items]
+        embeddings = await self.text_embedder.embed_docs(contents)
         async with self.pool.acquire() as conn:
             async with conn.transaction():
-                for item in memory_items:
+                for item, embedding in zip(memory_items, embeddings):
                     await conn.execute(
                         """
                         INSERT INTO memory_items (
                             tenant_id, memory_id, bot_id, channel_id, kind,
-                            content, created_at, updated_at, expires_at
+                            content, content_embedding, created_at, updated_at, expires_at
                         )
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7::vector, $8, $9, $10)
                         ON CONFLICT (tenant_id, memory_id) DO UPDATE SET
                             bot_id = EXCLUDED.bot_id,
                             channel_id = EXCLUDED.channel_id,
                             kind = EXCLUDED.kind,
                             content = EXCLUDED.content,
+                            content_embedding = EXCLUDED.content_embedding,
                             updated_at = EXCLUDED.updated_at,
                             expires_at = EXCLUDED.expires_at
                         """,
@@ -35,6 +46,7 @@ class VchordMemoryRepository:
                         item.channel_id,
                         item.kind,
                         item.content,
+                        self._format_pgvector(embedding),
                         item.created_at,
                         item.updated_at,
                         item.expires_at,
@@ -82,6 +94,43 @@ class VchordMemoryRepository:
                 tctx.tenant_id,
                 bot_id,
                 channel_id,
+                limit,
+            )
+            return [
+                MemoryItem(
+                    memory_id=row["memory_id"],
+                    bot_id=row["bot_id"],
+                    channel_id=row["channel_id"],
+                    kind=row["kind"],
+                    content=row["content"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"],
+                    expires_at=row["expires_at"],
+                )
+                for row in rows
+            ]
+
+    async def search_memories(
+        self, tctx: TenancyContext, bot_id: str, channel_id: str, query_embedding: list[float], limit: int = 20
+    ) -> Sequence[MemoryItem]:
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT memory_id, bot_id, channel_id, kind,
+                       content, created_at, updated_at, expires_at
+                FROM memory_items
+                WHERE tenant_id = $1 AND bot_id = $2 AND channel_id = $3
+                  AND content_embedding IS NOT NULL
+                  AND (expires_at IS NULL OR expires_at > NOW())
+                ORDER BY
+                    (content_embedding <-> $4::vector)
+                    + LEAST(EXTRACT(EPOCH FROM (NOW() - updated_at)) / 86400.0 * 0.01, 0.1)
+                LIMIT $5
+                """,
+                tctx.tenant_id,
+                bot_id,
+                channel_id,
+                self._format_pgvector(query_embedding),
                 limit,
             )
             return [

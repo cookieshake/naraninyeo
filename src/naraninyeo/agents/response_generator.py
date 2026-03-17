@@ -72,6 +72,10 @@ async def instructions(ctx: RunContext[ResponseGeneratorDeps]) -> str:
 @response_generator.user_prompt
 async def user_prompt(deps: ResponseGeneratorDeps) -> str:
     latest_messages_str = "\n".join(msg.preview for msg in deps.latest_messages)
+    memories_str = "\n".join(
+        f"- [{m.kind}] {m.content.replace(chr(10), ' ')} ({m.updated_at.strftime('%Y-%m-%d')})"
+        for m in deps.memories
+    )
     action_results = [
         (f"{result.source}:\n{result.content if result.content else 'No content'}")
         for result in deps.information_gathering_results
@@ -87,7 +91,7 @@ async def user_prompt(deps: ResponseGeneratorDeps) -> str:
 
 [기억]
 ```
-{"\n".join(f"- {memory.content.replace('\n', ' ')}" for memory in deps.memories)}
+{memories_str}
 ```
 
 [검색결과]

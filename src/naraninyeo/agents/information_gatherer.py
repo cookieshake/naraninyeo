@@ -217,7 +217,9 @@ async def instructions(ctx: RunContext[InformationGathererDeps]) -> str:
 @information_gatherer.user_prompt
 async def user_prompt(deps: InformationGathererDeps) -> str:
     latest_messages_str = "\n".join(msg.preview for msg in deps.latest_messages)
-    memories_str = "\n".join(f"- {mem.content}" for mem in deps.memories)
+    memories_str = "\n".join(
+        f"- [{mem.kind}] {mem.content} ({mem.updated_at.strftime('%Y-%m-%d')})" for mem in deps.memories
+    )
     return f"""
 ## 봇 정보
 ```

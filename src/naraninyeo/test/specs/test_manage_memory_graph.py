@@ -5,10 +5,11 @@
 - 대화 이력이 있으면 메모리 추출 후 DB에 저장
 - 저장된 메모리의 kind="short_term", expires_at은 미래
 - 대화 이력이 없으면 메모리 추출 미실행
+- old short_term 기억이 15개 초과 시 long_term으로 승격
 연동: 실제 LLM (memory_extractor) + testcontainer DB
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from dishka import AsyncContainer
@@ -18,6 +19,7 @@ from naraninyeo.core.models import (
     Author,
     Bot,
     Channel,
+    MemoryItem,
     Message,
     MessageContent,
     TenancyContext,
@@ -155,3 +157,54 @@ async def test_add_memory_without_history_stores_nothing(test_container: AsyncCo
 
     stored = await memory_repo.get_channel_memory_items(tctx, bot.bot_id, channel_id)
     assert len(stored) == 0, f"이력이 없는데 메모리가 저장됨: {stored}"
+
+
+@pytest.mark.asyncio
+async def test_old_short_term_memories_promoted_to_long_term(test_container: AsyncContainer):
+    """4일 이상 된 short_term 기억이 31개 이상이면 long_term으로 승격된다."""
+    memory_repo = await test_container.get(MemoryRepository)
+    clock = await test_container.get(Clock)
+    id_generator = await test_container.get(IdGenerator)
+
+    tctx = TenancyContext(tenant_id="test-mem-tenant-4")
+    bot = _make_bot()
+    channel_id = _nanoid()
+
+    # 5일 전 생성된 short_term 기억 31개 직접 삽입
+    old_time = datetime.now(UTC) - timedelta(days=5)
+    old_memories = []
+    for i in range(31):
+        mem_id = _nanoid()
+        old_memories.append(
+            MemoryItem(
+                memory_id=mem_id,
+                bot_id=bot.bot_id,
+                channel_id=channel_id,
+                kind="short_term",
+                content=f"오래된 기억 {i}",
+                created_at=old_time,
+                updated_at=old_time,
+                expires_at=old_time + timedelta(days=7),
+            )
+        )
+    await memory_repo.upsert_many(tctx, old_memories)
+
+    incoming = _make_message("테스트", channel_id=channel_id)
+    state = ManageMemoryGraphState(
+        current_tctx=tctx,
+        current_bot=bot,
+        status="processing",
+        incoming_message=incoming,
+        latest_history=None,
+    )
+    graph_context = ManageMemoryGraphContext(
+        clock=clock,
+        id_generator=id_generator,
+        memory_repository=memory_repo,
+    )
+
+    await manage_memory_graph.ainvoke(state, context=graph_context)
+
+    stored = await memory_repo.get_channel_memory_items(tctx, bot.bot_id, channel_id, limit=500)
+    long_term = [m for m in stored if m.kind == "long_term"]
+    assert len(long_term) > 0, "승격된 long_term 기억이 없음"
