@@ -118,7 +118,7 @@ async def _prune_memories(
                 channel_id=state.incoming_message.channel.channel_id,
                 kind=kind,
                 content=action.merged_content,
-                created_at=max((m.created_at for m in source_memories), default=now),
+                created_at=min((m.created_at for m in source_memories), default=now),
                 updated_at=now,
                 expires_at=expires_at,
             )
@@ -142,6 +142,7 @@ async def manage_memory(
 
     short_term = [m for m in all_memories if m.kind == "short_term"]
     long_term = [m for m in all_memories if m.kind == "long_term"]
+    modified_ids: set[str] = set()
 
     # Prune short-term memories if too many accumulated
     if len(short_term) > 50:
@@ -150,7 +151,8 @@ async def manage_memory(
     # Promote old short-term memories to long-term when threshold is reached
     old_short_term = [m for m in short_term if (now - m.created_at).days > 4]
     if len(old_short_term) > 15:
-        promoted = await _prune_memories(state, runtime, old_short_term, kind="long_term")
+        promoted = [m.model_copy(update={"kind": "long_term", "expires_at": None}) for m in old_short_term]
+        modified_ids.update(m.memory_id for m in promoted)
         old_ids = {m.memory_id for m in old_short_term}
         short_term = [m for m in short_term if m.memory_id not in old_ids]
         long_term.extend(promoted)
@@ -159,12 +161,15 @@ async def manage_memory(
     if len(long_term) > 50:
         long_term = await _prune_memories(state, runtime, long_term, kind="long_term")
 
-    # Persist the consolidated memory set
+    # Persist the consolidated memory set — only upsert changed/new items
     new_memories = short_term + long_term
+    existing_ids = {m.memory_id for m in all_memories}
     stale_ids = [m.memory_id for m in all_memories if m.memory_id not in {nm.memory_id for nm in new_memories}]
+    changed_memories = [m for m in new_memories if m.memory_id not in existing_ids or m.memory_id in modified_ids]
     if stale_ids:
         await repo.delete_many(tctx, stale_ids)
-    await repo.upsert_many(tctx, new_memories)
+    if changed_memories:
+        await repo.upsert_many(tctx, changed_memories)
     await repo.delete_expired(tctx, now)
 
     return state

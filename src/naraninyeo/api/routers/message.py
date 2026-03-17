@@ -31,6 +31,8 @@ from naraninyeo.graphs.manage_memory import (
 )
 from naraninyeo.graphs.new_message import NewMessageGraphContext, NewMessageGraphState, new_message_graph
 
+_background_tasks: set[asyncio.Task] = set()
+
 message_router = APIRouter()
 
 
@@ -105,7 +107,9 @@ async def new_message(
             except Exception:
                 logging.exception("manage_memory_graph failed")
 
-        asyncio.create_task(_run_manage_memory(mem_state, mem_context))
+        task = asyncio.create_task(_run_manage_memory(mem_state, mem_context))
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
     else:
         logging.info(
             "No need to update memory. Latest memory update ts: %s, Oldest message ts in history: %s",
@@ -114,14 +118,23 @@ async def new_message(
         )
 
     if new_message_request.reply_needed:
-        query_emb = await text_embedder.embed_queries([new_message_request.message.content.text])
-        channel_memory = await memory_repo.search_memories(
-            tctx,
-            bot_id=new_message_request.bot_id,
-            channel_id=new_message_request.message.channel.channel_id,
-            query_embedding=query_emb[0],
-            limit=20,
-        )
+        message_text = new_message_request.message.content.text
+        if message_text:
+            query_emb = await text_embedder.embed_queries([message_text])
+            channel_memory = await memory_repo.search_memories(
+                tctx,
+                bot_id=new_message_request.bot_id,
+                channel_id=new_message_request.message.channel.channel_id,
+                query_embedding=query_emb[0],
+                limit=20,
+            )
+        else:
+            channel_memory = await memory_repo.get_channel_memory_items(
+                tctx,
+                bot_id=new_message_request.bot_id,
+                channel_id=new_message_request.message.channel.channel_id,
+                limit=20,
+            )
 
         init_state = NewMessageGraphState(
             current_tctx=tctx,

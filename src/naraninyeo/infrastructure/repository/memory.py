@@ -30,7 +30,7 @@ class VchordMemoryRepository:
                             tenant_id, memory_id, bot_id, channel_id, kind,
                             content, content_embedding, created_at, updated_at, expires_at
                         )
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7::vector, $8, $9, $10)
                         ON CONFLICT (tenant_id, memory_id) DO UPDATE SET
                             bot_id = EXCLUDED.bot_id,
                             channel_id = EXCLUDED.channel_id,
@@ -123,8 +123,8 @@ class VchordMemoryRepository:
                   AND content_embedding IS NOT NULL
                   AND (expires_at IS NULL OR expires_at > NOW())
                 ORDER BY
-                    content_embedding <-> $4
-                    + EXTRACT(EPOCH FROM (NOW() - updated_at)) / 86400.0 * 0.01
+                    (content_embedding <-> $4::vector)
+                    + LEAST(EXTRACT(EPOCH FROM (NOW() - updated_at)) / 86400.0 * 0.01, 0.1)
                 LIMIT $5
                 """,
                 tctx.tenant_id,

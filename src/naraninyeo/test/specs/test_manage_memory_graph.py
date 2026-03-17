@@ -5,7 +5,7 @@
 - 대화 이력이 있으면 메모리 추출 후 DB에 저장
 - 저장된 메모리의 kind="short_term", expires_at은 미래
 - 대화 이력이 없으면 메모리 추출 미실행
-- old short_term 기억이 30개 초과 시 long_term으로 승격
+- old short_term 기억이 15개 초과 시 long_term으로 승격
 연동: 실제 LLM (memory_extractor) + testcontainer DB
 """
 

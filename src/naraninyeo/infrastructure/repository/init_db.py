@@ -84,7 +84,6 @@ class VchordInit:
 
             PRIMARY KEY (tenant_id, memory_id)
         );
-        ALTER TABLE memory_items ADD COLUMN IF NOT EXISTS content_embedding vector(768);
     """
 
     async def run(self):
